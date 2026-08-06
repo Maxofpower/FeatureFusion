@@ -1,7 +1,6 @@
 ﻿using FeatureFusion.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using static Grpc.Core.Metadata;
 
 namespace FeatureFusion.Infrastructure.EntitiyConfiguration;
 

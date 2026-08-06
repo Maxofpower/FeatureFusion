@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using RabbitMQ.Client;
 using System;
 
@@ -21,12 +22,7 @@ public static class EventBusExtensions
 	{
 		ArgumentNullException.ThrowIfNull(builder);
 
-		builder.AddRabbitMQClient(connectionName, configureConnectionFactory: factory =>
-		{
-			(factory).DispatchConsumersAsync = true;
-		});
-
-		builder.Services.AddHostedService<OutboxWorker<EventBusDbContext>>();
+		builder.AddRabbitMQClient(connectionName);
 
 		builder.Services.AddSingleton<IResiliencePipelineProvider, ResiliencePipelineFactory>();
 		builder.Services.AddScoped<IMessageDeduplicationService, MessageDeduplicationService>();
@@ -49,9 +45,9 @@ public static class EventBusExtensions
 		public IServiceCollection Services => services;
 	}
 	public static IEventBusBuilder AddEventDbContext<TDbContext>(
-	this IEventBusBuilder builder,
-	string connectionString)
-	where TDbContext : DbContext , IEventStoreDbContext
+		this IEventBusBuilder builder,
+		string? connectionString = null)
+		where TDbContext : DbContext, IEventStoreDbContext
 	{
 		ArgumentNullException.ThrowIfNull(builder);
 
@@ -59,26 +55,46 @@ public static class EventBusExtensions
 		{
 			var context = serviceProvider.GetRequiredService<TDbContext>();
 			options.UseNpgsql(context.Database.GetDbConnection())
-				  .ConfigureWarnings(warnings => warnings.Ignore(
-					  RelationalEventId.PendingModelChangesWarning));
-		});	
+				.ConfigureWarnings(warnings => warnings.Ignore(
+					RelationalEventId.PendingModelChangesWarning));
+		});
 
+		// Resolve the connection string at runtime so Aspire/WAF env overrides win
+		// (baking GetConnectionString at registration often captured appsettings localhost).
 		builder.Services.AddDbContextFactory<EventBusDbContext>((provider, options) =>
 		{
-
-			options.UseNpgsql(connectionString)
-				   .ConfigureWarnings(warnings =>
-					   warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
+			var cs = ResolveCatalogConnectionString(provider, connectionString);
+			options.UseNpgsql(cs)
+				.ConfigureWarnings(warnings =>
+					warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
 		}, lifetime: ServiceLifetime.Scoped);
 
 		builder.Services.AddScoped<ITransactionalOutbox, TransactionalOutbox<TDbContext>>();
 
-		builder.Services.AddNpgsqlDataSource(connectionString, dataSourceBuilder =>
+		// Poll the same DbContext type that stores outbox rows (not a parallel EventBusDbContext).
+		builder.Services.AddHostedService<OutboxWorker<TDbContext>>();
+
+		builder.Services.AddSingleton(provider =>
 		{
+			var cs = ResolveCatalogConnectionString(provider, connectionString);
+			var dataSourceBuilder = new NpgsqlDataSourceBuilder(cs);
 			dataSourceBuilder.EnableParameterLogging();
+			return dataSourceBuilder.Build();
 		});
 
 		return new EventBusBuilder(builder.Services);
+	}
+
+	private static string ResolveCatalogConnectionString(IServiceProvider provider, string? connectionString)
+	{
+		if (!string.IsNullOrWhiteSpace(connectionString))
+		{
+			return connectionString;
+		}
+
+		var config = provider.GetRequiredService<IConfiguration>();
+		return config.GetConnectionString("catalogdb")
+			?? throw new InvalidOperationException("Connection string 'catalogdb' was not found.");
 	}
 
 	// when eventstore dbset are not part of dbcontext

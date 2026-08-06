@@ -6,6 +6,12 @@ using FeatureFusion.Infrastructure.CQRS.Adapter;
 
 namespace FeatureFusion.Infrastructure.CQRS
 {
+	/// <summary>
+	/// Default <see cref="IMediator"/> implementation with cached request/pipeline wrappers.
+	/// </summary>
+	/// <remarks>
+	/// LinkedIn: https://www.linkedin.com/feed/update/urn:li:activity:7311311587372367873/
+	/// </remarks>
 	public class Mediator : IMediator
 	{
 

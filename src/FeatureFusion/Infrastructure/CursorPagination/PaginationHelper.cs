@@ -7,6 +7,14 @@ using System.Text;
 using static FeatureFusion.Infrastructure.CursorPagination.CursorFactory;
 using FeatureFusion.Features.Products.Queries;
 
+/// <summary>
+/// Generic bidirectional keyset (cursor) pagination for EF Core queries.
+/// </summary>
+/// <remarks>
+/// LinkedIn: Reusable Cursor (keyset) Pagination —
+/// https://www.linkedin.com/feed/update/urn:li:activity:7325068550614708225/
+/// Catalog: docs/linkedin-posts.md (<c>cursor-pagination</c>).
+/// </remarks>
 public static class PaginationHelper
 {
 	private static readonly JsonSerializerOptions _serializerOptions = new()

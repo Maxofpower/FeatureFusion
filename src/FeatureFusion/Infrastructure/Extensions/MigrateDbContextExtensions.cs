@@ -1,10 +1,10 @@
-﻿using FeatureFusion.Infrastructure.Exetnsion;
+﻿using FeatureFusion.Infrastructure.Extensions;
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 
-namespace FeatureFusion.Infrastructure.Exetnsion;
+namespace FeatureFusion.Infrastructure.Extensions;
 
 internal static class MigrateDbContextExtensions
 {
@@ -53,7 +53,7 @@ internal static class MigrateDbContextExtensions
 		{
 			logger.LogError(ex, "An error occurred while migrating the database used on context {DbContextName}", typeof(TContext).Name);
 
-			activity.SetExceptionTags(ex);
+			activity?.SetExceptionTags(ex);
 
 			throw;
 		}

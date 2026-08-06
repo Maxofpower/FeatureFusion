@@ -1,37 +1,41 @@
-﻿using Aspire.Hosting.Lifecycle;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Aspire.Hosting.Eventing;
+using Aspire.Hosting.Lifecycle;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace FeatureFusion.AppHost
+namespace FeatureFusion.AppHost;
+
+internal static class Extensions
 {
-	internal static class Extensions
+	/// <summary>
+	/// Sets ASPNETCORE_FORWARDEDHEADERS_ENABLED for all projects (eShop AppHost pattern).
+	/// </summary>
+	public static IDistributedApplicationBuilder AddForwardedHeaders(this IDistributedApplicationBuilder builder)
 	{
-			/// <summary>
-			/// Adds a hook to set the ASPNETCORE_FORWARDEDHEADERS_ENABLED environment variable to true for all projects in the application.
-			/// </summary>
-			public static IDistributedApplicationBuilder AddForwardedHeaders(this IDistributedApplicationBuilder builder)
-			{
-				builder.Services.TryAddLifecycleHook<AddForwardHeadersHook>();
-				return builder;
-			}
+		builder.Services.TryAddEventingSubscriber<AddForwardHeadersSubscriber>();
+		return builder;
+	}
 
-			private class AddForwardHeadersHook : IDistributedApplicationLifecycleHook
+	private sealed class AddForwardHeadersSubscriber : IDistributedApplicationEventingSubscriber
+	{
+		public Task SubscribeAsync(
+			IDistributedApplicationEventing eventing,
+			DistributedApplicationExecutionContext executionContext,
+			CancellationToken cancellationToken)
+		{
+			eventing.Subscribe<BeforeStartEvent>((@event, _) =>
 			{
-				public Task BeforeStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
+				foreach (var project in @event.Model.GetProjectResources())
 				{
-					foreach (var p in appModel.GetProjectResources())
+					project.Annotations.Add(new EnvironmentCallbackAnnotation(context =>
 					{
-						p.Annotations.Add(new EnvironmentCallbackAnnotation(context =>
-						{
-							context.EnvironmentVariables["ASPNETCORE_FORWARDEDHEADERS_ENABLED"] = "true";
-						}));
-					}
-
-					return Task.CompletedTask;
+						context.EnvironmentVariables["ASPNETCORE_FORWARDEDHEADERS_ENABLED"] = "true";
+					}));
 				}
-			}
+
+				return Task.CompletedTask;
+			});
+
+			return Task.CompletedTask;
+		}
 	}
 }

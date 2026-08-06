@@ -1,7 +1,7 @@
 ﻿using FeatureFusion.Domain.Entities;
 using FeatureFusion.Dtos;
 
-namespace FeatureFusion.Infrastructure.Exetnsion
+namespace FeatureFusion.Infrastructure.Extensions
 {
 	public static class ProductExtensions
 	{

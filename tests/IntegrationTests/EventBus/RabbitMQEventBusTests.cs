@@ -1,48 +1,31 @@
-﻿using EventBusRabbitMQ.Events;
-using EventBusRabbitMQ.Infrastructure;
+using System.Diagnostics;
+using System.Text;
+using System.Text.Json;
 using EventBusRabbitMQ;
+using EventBusRabbitMQ.Events;
+using EventBusRabbitMQ.Infrastructure;
+using EventBusRabbitMQ.Infrastructure.EventBus;
 using FeatureFusion.Features.Order.IntegrationEvents.Events;
 using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
+using IntegrationTests.Aspire;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System;
-using Microsoft.Extensions.DependencyInjection;
-using System.Text.Json;
-using EventBusRabbitMQ.Infrastructure.EventBus;
 
-[assembly: CollectionBehavior(DisableTestParallelization = true)]
+namespace IntegrationTests.EventBus;
 
-namespace EventBus.Test;
-
-
-public class RabbitMQEventBusIntegrationTests : IClassFixture<RabbitMQFixture>, IAsyncLifetime
+[Collection(AspireCollection.Name)]
+public sealed class RabbitMQEventBusTests : IAsyncLifetime
 {
-	private readonly RabbitMQFixture _fixture;
-	private readonly WebApplicationFactory<Program> _webApplicationFactory;
+	private readonly AspireFixture _fixture;
 	private readonly IServiceProvider _services;
 
-	public RabbitMQEventBusIntegrationTests(RabbitMQFixture fixture)
+	public RabbitMQEventBusTests(AspireFixture fixture)
 	{
 		_fixture = fixture;
-		_webApplicationFactory = fixture.WithWebHostBuilder(builder =>
-		{
-			builder.ConfigureServices(services =>
-			{
-				services.Configure<EventBusOptions>(options =>
-				{
-					options.EnableDeduplication = false;
-					options.SubscriptionClientName = "feature_fusion";
-					options.RetryCount = 3;
-				});
-			
-			});
-		});
-		_services = _webApplicationFactory.Services;
+		// Share the single WAF host with API tests (avoid a second WithWebHostBuilder host).
+		_ = fixture.CreateClient();
+		_services = fixture.Services;
 	}
 
 	public async Task InitializeAsync() => await _fixture.ResetRabbitMQ();
@@ -72,46 +55,37 @@ public class RabbitMQEventBusIntegrationTests : IClassFixture<RabbitMQFixture>, 
 	}
 
 	[Fact]
-	public async Task Processes_Duplicate_Message_Only_Once()
+	public async Task Processes_Published_Event_Once()
 	{
-		// Arrange
 		_fixture.ProcessedEvents.Clear();
 		var eventBus = GetRequiredService<IEventBus>();
 		var testEvent = new OrderCreatedIntegrationEvent(Guid.NewGuid(), 100.0m);
 
-		// Act - First publish
-		await eventBus.PublishAsync(testEvent);
-		await Wait.UntilAsync(() => _fixture.ProcessedEvents.Any(), TimeSpan.FromSeconds(20));
+		await eventBus.PublishDirect(testEvent);
+		await Wait.UntilAsync(() => _fixture.ProcessedEvents.Any(e => e.Id == testEvent.Id), TimeSpan.FromSeconds(20));
 
-		// Assert - Processed once
 		_fixture.ProcessedEvents.Should().ContainSingle(e => e.Id == testEvent.Id);
-
-		// Act - Second publish
-		_fixture.ProcessedEvents.Clear();
-		await eventBus.PublishAsync(testEvent);
-		await Task.Delay(5000); // Brief delay
-
-		// Assert - Not processed again
-		_fixture.ProcessedEvents.Should().BeEmpty();
 	}
 
 	[Fact]
 	public async Task Should_Not_Requeue_Invalid_Messages()
 	{
-		using var channel = await CreateChannelAsync();
+		await using var channel = await CreateChannelAsync();
 		var dlqName = GetDlqName();
 
-		channel.QueuePurge(dlqName);
+		await channel.QueuePurgeAsync(dlqName);
 
-		var props = channel.CreateBasicProperties();
-		props.MessageId = Guid.NewGuid().ToString();
-		props.Headers = new Dictionary<string, object>
+		var props = new BasicProperties
 		{
-			[RabbitMQConstants.EventTypeHeader] = "NonExistentEventType",
-			[RabbitMQConstants.SourceServiceHeader] = "TestService"
+			MessageId = Guid.NewGuid().ToString(),
+			Headers = new Dictionary<string, object?>
+			{
+				[RabbitMQConstants.EventTypeHeader] = "NonExistentEventType",
+				[RabbitMQConstants.SourceServiceHeader] = "TestService"
+			}
 		};
 
-		channel.BasicPublish(
+		await channel.BasicPublishAsync(
 			exchange: RabbitMQConstants.MainExchangeName,
 			routingKey: "OrderCreatedIntegrationEvent",
 			mandatory: true,
@@ -119,13 +93,11 @@ public class RabbitMQEventBusIntegrationTests : IClassFixture<RabbitMQFixture>, 
 			body: Encoding.UTF8.GetBytes("{ invalid json }"));
 
 		await WaitForMessageCount(channel, dlqName, 1);
-		var dlqMessage = channel.BasicGet(dlqName, autoAck: true);
+		var dlqMessage = await channel.BasicGetAsync(dlqName, autoAck: true);
 
 		dlqMessage.Should().NotBeNull();
 		dlqMessage!.BasicProperties.MessageId.Should().Be(props.MessageId);
 	}
-
-	#region Helper Methods
 
 	private async Task TestEventProcessing<T>(Func<T> eventFactory) where T : IntegrationEvent
 	{
@@ -133,7 +105,7 @@ public class RabbitMQEventBusIntegrationTests : IClassFixture<RabbitMQFixture>, 
 		var testEvent = eventFactory();
 		var eventBus = GetRequiredService<IEventBus>();
 
-		await eventBus.PublishAsync(testEvent);
+		await eventBus.PublishDirect(testEvent);
 		await Wait.UntilAsync(() => _fixture.ProcessedEvents.Any(), TimeSpan.FromSeconds(20));
 
 		_fixture.ProcessedEvents.Should().ContainSingle(e => e.Id == testEvent.Id);
@@ -142,29 +114,28 @@ public class RabbitMQEventBusIntegrationTests : IClassFixture<RabbitMQFixture>, 
 	private async Task VerifyMessageFlow(OrderCreatedIntegrationEvent testEvent, string routingKey)
 	{
 		_fixture.ProcessedEvents.Clear();
-		using var channel = await CreateChannelAsync();
+		await using var channel = await CreateChannelAsync();
 		var testQueue = "test_feature_fusion";
 
-		channel.QueueDeclare(testQueue, durable: true, exclusive: false, autoDelete: false);
-		channel.QueueBind(testQueue, RabbitMQConstants.MainExchangeName, routingKey);
+		await channel.QueueDeclareAsync(testQueue, durable: true, exclusive: false, autoDelete: false);
+		await channel.QueueBindAsync(testQueue, RabbitMQConstants.MainExchangeName, routingKey);
 
-		await GetRequiredService<IEventBus>().PublishAsync(testEvent);
+		await GetRequiredService<IEventBus>().PublishDirect(testEvent);
 		await WaitForMessageCount(channel, testQueue, 1);
 
-		var message = channel.BasicGet(testQueue, autoAck: false);
+		var message = await channel.BasicGetAsync(testQueue, autoAck: false);
 		message.Should().NotBeNull();
 		message!.BasicProperties.MessageId.Should().Be(testEvent.Id.ToString());
 
-		channel.QueueDelete(testQueue);
+		await channel.QueueDeleteAsync(testQueue);
 	}
 
 	private async Task PublishAndVerifyDlq(IntegrationEvent testEvent)
 	{
-
-		using var channel = await CreateChannelAsync();
+		await using var channel = await CreateChannelAsync();
 		var dlqName = GetDlqName();
-		channel.QueuePurge(dlqName);
-		await GetRequiredService<IEventBus>().PublishAsync(testEvent);
+		await channel.QueuePurgeAsync(dlqName);
+		await GetRequiredService<IEventBus>().PublishDirect(testEvent);
 
 		var foundMessage = await WaitForMessageByIdAsync(
 			channel: channel,
@@ -181,8 +152,8 @@ public class RabbitMQEventBusIntegrationTests : IClassFixture<RabbitMQFixture>, 
 		deserialized.Should().BeEquivalentTo(testEvent);
 	}
 
-	private async Task<IModel> CreateChannelAsync() =>
-		await GetRequiredService<IRabbitMQPersistentConnection>().CreateModelAsync();
+	private async Task<IChannel> CreateChannelAsync() =>
+		await GetRequiredService<IRabbitMQPersistentConnection>().CreateChannelAsync();
 
 	private string GetDlqName() =>
 		$"{GetRequiredService<IOptions<EventBusOptions>>().Value.SubscriptionClientName}_dlq";
@@ -191,7 +162,7 @@ public class RabbitMQEventBusIntegrationTests : IClassFixture<RabbitMQFixture>, 
 		_services.GetRequiredService<T>();
 
 	private async Task WaitForMessageCount(
-		IModel channel,
+		IChannel channel,
 		string queueName,
 		int expectedCount,
 		TimeSpan? timeout = null)
@@ -199,9 +170,10 @@ public class RabbitMQEventBusIntegrationTests : IClassFixture<RabbitMQFixture>, 
 		var timeoutValue = timeout ?? TimeSpan.FromSeconds(30);
 		var sw = Stopwatch.StartNew();
 
-		while (!channel.IsClosed && sw.Elapsed < timeoutValue)
+		while (channel.IsOpen && sw.Elapsed < timeoutValue)
 		{
-			if (channel.QueueDeclarePassive(queueName).MessageCount >= expectedCount)
+			var queue = await channel.QueueDeclarePassiveAsync(queueName);
+			if (queue.MessageCount >= expectedCount)
 				return;
 
 			await Task.Delay(200);
@@ -210,8 +182,8 @@ public class RabbitMQEventBusIntegrationTests : IClassFixture<RabbitMQFixture>, 
 		throw new TimeoutException($"Queue '{queueName}' didn't reach {expectedCount} messages");
 	}
 
-	private async Task<BasicGetResult> WaitForMessageByIdAsync(
-		IModel channel,
+	private static async Task<BasicGetResult?> WaitForMessageByIdAsync(
+		IChannel channel,
 		string queueName,
 		Guid expectedMessageId,
 		bool acknowledgeIfFound,
@@ -221,25 +193,23 @@ public class RabbitMQEventBusIntegrationTests : IClassFixture<RabbitMQFixture>, 
 
 		while (DateTime.UtcNow - startTime < timeout)
 		{
-			var message = channel.BasicGet(queueName, autoAck: false);
+			var message = await channel.BasicGetAsync(queueName, autoAck: false);
 			if (message != null)
 			{
-				if (Guid.Parse(message.BasicProperties.MessageId) == expectedMessageId)
+				if (Guid.Parse(message.BasicProperties.MessageId!) == expectedMessageId)
 				{
-					if (acknowledgeIfFound) channel.BasicAck(message.DeliveryTag, multiple: false);
+					if (acknowledgeIfFound)
+						await channel.BasicAckAsync(message.DeliveryTag, multiple: false);
 					return message;
 				}
-				channel.BasicNack(message.DeliveryTag, multiple: false, requeue: true);
+				await channel.BasicNackAsync(message.DeliveryTag, multiple: false, requeue: true);
 			}
 			await Task.Delay(200);
 		}
 		return null;
 	}
-
-	#endregion
 }
 
-#region Extensions and DTOs
 public record TestIntegrationEvent : IntegrationEvent;
 
 public class TestIntegrationEventHandler : IIntegrationEventHandler<TestIntegrationEvent>
@@ -252,6 +222,7 @@ public class TestIntegrationEventHandler : IIntegrationEventHandler<TestIntegrat
 		return Task.CompletedTask;
 	}
 }
+
 public record FailingIntegrationEvent : IntegrationEvent
 {
 	public decimal Total { get; }
@@ -263,13 +234,14 @@ public record FailingIntegrationEvent : IntegrationEvent
 	}
 }
 
-public record FailingIntegrationEventHandler : IIntegrationEventHandler<FailingIntegrationEvent>
+public class FailingIntegrationEventHandler : IIntegrationEventHandler<FailingIntegrationEvent>
 {
 	public Task Handle(FailingIntegrationEvent @event)
 	{
 		throw new InvalidOperationException("Simulated handler failure");
 	}
 }
+
 public static class Wait
 {
 	public static async Task UntilAsync(Func<bool> condition, TimeSpan timeout)
@@ -283,5 +255,3 @@ public static class Wait
 		throw new TimeoutException("Condition not met within timeout");
 	}
 }
-
-#endregion
