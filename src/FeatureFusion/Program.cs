@@ -5,7 +5,7 @@ using Enyim.Caching.Configuration;
 using EventBusRabbitMQ;
 using FeatureFusion.Features.Order.IntegrationEvents.EventHandling;
 using FeatureFusion.Features.Order.IntegrationEvents.Events;
-using FeatureFusion.Infrastructure.Exetnsion;
+using FeatureFusion.Infrastructure.Extensions;
 
 using FeatureManagementFilters.API.V2;
 
@@ -105,10 +105,7 @@ ConfigureRequestPipeline(app);
 
 void ConfigureSwaggerUI(WebApplication app)
 {
-	app.UseSwagger(c=>
-	{
-		c.OpenApiVersion = Microsoft.OpenApi.OpenApiSpecVersion.OpenApi2_0;
-	});
+	app.UseSwagger();
 	app.UseSwaggerUI(options =>
 	{
 		var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();

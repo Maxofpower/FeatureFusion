@@ -1,7 +1,7 @@
 ﻿using Asp.Versioning.Conventions;
 using FeatureFusion.Domain.Entities;
 using FeatureFusion.Dtos;
-using FeatureFusion.Infrastructure.Exetnsion;
+using FeatureFusion.Infrastructure.Extensions;
 using FeatureManagementFilters.Services.ProductService;
 using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;

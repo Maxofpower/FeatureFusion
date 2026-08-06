@@ -1,5 +1,4 @@
-﻿using Dapper;
-using EventBusRabbitMQ.Domain;
+﻿using EventBusRabbitMQ.Domain;
 using EventBusRabbitMQ.Events;
 using EventBusRabbitMQ.Infrastructure;
 using EventBusRabbitMQ.Infrastructure.EventBus;
@@ -16,18 +15,15 @@ public class OutboxWorker<TDbContext> : BackgroundService where TDbContext : DbC
 {
 	private readonly IServiceProvider _serviceProvider;
 	private readonly ILogger<OutboxWorker<TDbContext>> _logger;
-	private readonly TimeSpan _interval = TimeSpan.FromSeconds(5);
-	private NpgsqlDataSource _dataSource;
+	private readonly TimeSpan _interval = TimeSpan.FromSeconds(2);
 	private readonly int BatchSize = 20;
 	private const int MaxErrorLength = 500;
 
 
-	public OutboxWorker(IServiceProvider serviceProvider, ILogger<OutboxWorker<TDbContext>> logger
-		, NpgsqlDataSource dataSource)
+	public OutboxWorker(IServiceProvider serviceProvider, ILogger<OutboxWorker<TDbContext>> logger)
 	{
 		_serviceProvider = serviceProvider;
 		_logger = logger;
-		_dataSource = dataSource;
 	}
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -38,13 +34,14 @@ public class OutboxWorker<TDbContext> : BackgroundService where TDbContext : DbC
 			{
 				await ProcessPendingMessagesAsync(stoppingToken);
 			}
+			catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UndefinedTable)
+			{
+				// Schema not applied yet (migration hosted service still running / failed once).
+				_logger.LogDebug(ex, "Outbox table not ready yet; will retry");
+			}
 			catch (Exception ex) when (ex is not OperationCanceledException)
 			{
 				_logger.LogError(ex, "Error processing outbox messages");
-			}
-			catch(Exception ex)
-			{
-				_logger.LogError(ex, "dapper query exception");
 			}
 
 			await Task.Delay(_interval, stoppingToken);
@@ -54,13 +51,16 @@ public class OutboxWorker<TDbContext> : BackgroundService where TDbContext : DbC
 	private async Task ProcessPendingMessagesAsync(CancellationToken stoppingToken)
 	{
 		using var scope = _serviceProvider.CreateScope();
-		var dbContext = scope.ServiceProvider.GetRequiredService<TDbContext>(); // Use the service's specific DbContext
+		var dbContext = scope.ServiceProvider.GetRequiredService<TDbContext>();
 		var eventBus = scope.ServiceProvider.GetRequiredService<IEventBus>();
 		var subscriptionInfo = scope.ServiceProvider.GetRequiredService<IOptions<EventBusSubscriptionInfo>>();
 
-		
-		var messages = await QueryPendingMessagesAsync(dbContext, stoppingToken);
-	
+		var messages = await dbContext.Set<OutboxMessage>()
+			.AsNoTracking()
+			.Where(m => m.ProcessedAt == null)
+			.OrderBy(m => m.CreatedAt)
+			.Take(BatchSize)
+			.ToListAsync(stoppingToken);
 
 		foreach (var message in messages)
 		{
@@ -74,10 +74,7 @@ public class OutboxWorker<TDbContext> : BackgroundService where TDbContext : DbC
 					continue;
 				}
 
-				await MarkMessageAsProcessingAsync(dbContext, message, stoppingToken);
-
-				// Deserialize the message payload into the resolved event type
-				var @event = JsonSerializer.Deserialize(message.Payload, eventType,
+				var @event = JsonSerializer.Deserialize(message.Payload!, eventType,
 					subscriptionInfo.Value.JsonSerializerOptions) as IntegrationEvent;
 
 				if (@event == null || @event.Id != message.Id)
@@ -88,16 +85,7 @@ public class OutboxWorker<TDbContext> : BackgroundService where TDbContext : DbC
 					continue;
 				}
 
-				if (@event is not IntegrationEvent integrationEvent)
-				{
-					await MarkMessageAsFailedAsync(dbContext, message,
-						$"Deserialized object is not an IntegrationEvent (Type: {eventType.Name})",
-						stoppingToken);
-					continue;
-				}
-
 				await eventBus.PublishDirect((dynamic)@event, ct: stoppingToken);
-
 				await MarkMessageAsProcessedAsync(dbContext, message, stoppingToken);
 			}
 			catch (JsonException jsonEx)
@@ -112,34 +100,6 @@ public class OutboxWorker<TDbContext> : BackgroundService where TDbContext : DbC
 			}
 		}
 	}
-	private async Task<List<OutboxMessage>> QueryPendingMessagesAsync(TDbContext dbContext,	CancellationToken ct)
-	{
-		await using var connection = await _dataSource.OpenConnectionAsync(ct);
-		await using var transaction = await connection.BeginTransactionAsync(ct);
-		 var result = (await connection.QueryAsync<OutboxMessage>(
-		@"
-        SELECT id AS Id, event_type AS EventType, 
-         payload::text::bytea AS Payload
-       , created_at AS CreatedAt, retry_count AS RetryCount
-        FROM outbox_messages
-        WHERE processed_at IS NULL
-        ORDER BY created_at 
-        LIMIT @BatchSize
-        ",
-		new { BatchSize}, 
-		transaction: transaction)).AsList();
-		return result;
-	}
-
-	private async Task MarkMessageAsProcessingAsync(
-		TDbContext dbContext,
-		OutboxMessage message,
-		CancellationToken ct)
-	{
-		message.Status = MessageStatus.Processing;
-		message.ProcessedAt = DateTime.UtcNow;
-		await dbContext.SaveChangesAsync(ct);
-	}
 
 	private async Task MarkMessageAsProcessedAsync(
 		TDbContext dbContext,
@@ -147,8 +107,10 @@ public class OutboxWorker<TDbContext> : BackgroundService where TDbContext : DbC
 		CancellationToken ct)
 	{
 		message.Status = MessageStatus.Processed;
+		message.ProcessedAt ??= DateTime.UtcNow;
 		message.CompletedAt = DateTime.UtcNow;
 		message.Error = null;
+		dbContext.Update(message);
 		await dbContext.SaveChangesAsync(ct);
 	}
 
@@ -161,6 +123,7 @@ public class OutboxWorker<TDbContext> : BackgroundService where TDbContext : DbC
 		message.Status = MessageStatus.Failed;
 		message.Error = error.Length > MaxErrorLength ? error[..MaxErrorLength] : error;
 		message.RetryCount++;
+		dbContext.Update(message);
 		await dbContext.SaveChangesAsync(ct);
 	}
 
@@ -172,22 +135,5 @@ public class OutboxWorker<TDbContext> : BackgroundService where TDbContext : DbC
 	{
 		_logger.LogError(ex, "Failed to process outbox message {MessageId}", message.Id);
 		await MarkMessageAsFailedAsync(dbContext, message, ex.Message, ct);
-	}
-
-	private Type? ResolveEventType(string eventTypeName, EventBusSubscriptionInfo info)
-	{
-		if (info.EventTypes.TryGetValue(eventTypeName, out var knownType))
-			return knownType;
-
-		// Fallback: scan all loaded assemblies
-		var allTypes = AppDomain.CurrentDomain.GetAssemblies()
-			.SelectMany(a =>
-			{
-				try { return a.GetTypes(); } catch { return Array.Empty<Type>(); }
-			})
-			.Where(t => typeof(IntegrationEvent).IsAssignableFrom(t) && !t.IsAbstract)
-			.ToList();
-
-		return allTypes.FirstOrDefault(t => t.Name == eventTypeName);
 	}
 }

@@ -5,6 +5,16 @@
 	using Microsoft.Extensions.Caching.Distributed;
 	using Microsoft.Extensions.Caching.Hybrid;
 
+	/// <summary>
+	/// IdempotentFusion: applies ULID <c>Idempotency-Key</c> handling via Redis-backed status tracking (optional lock).
+	/// </summary>
+	/// <remarks>
+	/// LinkedIn (IdentifiedCommand / MediatR pattern):
+	/// https://www.linkedin.com/feed/update/urn:li:activity:7303686809891356676/
+	/// LinkedIn (IdempotentFusion in this repo):
+	/// https://www.linkedin.com/feed/update/urn:li:activity:7309149985307029504/
+	/// Catalog: docs/linkedin-posts.md (<c>idempotency-mediatr</c>, <c>idempotentfusion</c>).
+	/// </remarks>
 	[AttributeUsage(AttributeTargets.Method)]
 	public class IdempotentAttribute : Attribute, IFilterFactory
 	{

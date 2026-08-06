@@ -26,7 +26,7 @@ public sealed class MemcachedFixture : IAsyncLifetime
 		_memcachedContainer = new ContainerBuilder()
 			.WithImage("memcached:latest")
 			.WithPortBinding(11211, assignRandomHostPort: true)
-			.WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(11211))
+			.WithWaitStrategy(Wait.ForUnixContainer().UntilInternalTcpPortIsAvailable(11211))
 			.Build();
 	}
 

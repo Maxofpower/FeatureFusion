@@ -16,9 +16,11 @@
 
 
 	/// <summary>
-	/// A Hybrid (Memcached + in-memory (falback)) cache‑backed fixed window rate limiter that uses CAS operations
-	/// to atomically update a counter. This implementation is generic by partition key.
+	/// A hybrid (Memcached + in-memory fallback) fixed-window rate limiter using CAS updates per partition key.
 	/// </summary>
+	/// <remarks>
+	/// Used by the YARP ApiGateway distributed rate-limiting demo. See README (Distributed rate limiting).
+	/// </remarks>
 	public class MemcachedFixedWindowRateLimiter<TKey> : RateLimiter
 	{
 		private readonly string _partitionKey;

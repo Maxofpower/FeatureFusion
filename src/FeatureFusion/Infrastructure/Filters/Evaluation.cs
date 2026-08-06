@@ -1,5 +1,12 @@
 ﻿using Microsoft.FeatureManagement;
 
+/// <summary>
+/// Feature filter that enables greeting features for users with a VIP claim.
+/// </summary>
+/// <remarks>
+/// Part of the Feature Management demos in this lab. See README and docs/linkedin-posts.md.
+/// Filter alias: <c>UseGreeting</c>.
+/// </remarks>
 [FilterAlias("UseGreeting")]
 public class UseGreetingFilter : IFeatureFilter
 {

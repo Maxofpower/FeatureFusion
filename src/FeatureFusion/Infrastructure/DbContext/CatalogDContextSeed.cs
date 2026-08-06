@@ -1,5 +1,5 @@
 ﻿using FeatureFusion.Domain.Entities;
-using FeatureFusion.Infrastructure.Exetnsion;
+using FeatureFusion.Infrastructure.Extensions;
 using FeatureManagementFilters.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;

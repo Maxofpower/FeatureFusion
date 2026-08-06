@@ -1,4 +1,4 @@
-﻿namespace FeatureFusion.Infrastructure.Exetnsion
+﻿namespace FeatureFusion.Infrastructure.Extensions
 {
 	using Microsoft.AspNetCore.Mvc;
 	using System.Collections.Generic;

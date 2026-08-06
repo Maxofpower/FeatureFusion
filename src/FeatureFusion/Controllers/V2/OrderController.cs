@@ -38,9 +38,12 @@ namespace FeatureFusion.Controllers.V2
 				return BadRequest(validationResult.ProblemDetails);
 			}
 		
-			var createOrderResult= await _mediator.Send(request);
-			
-			return Ok(createOrderResult);
+			var createOrderResult = await _mediator.Send(request);
+
+			// Unwrap Result so JSON serialization does not touch Result.Error on success.
+			return createOrderResult.Match<ActionResult<OrderResponse>>(
+				onSuccess: value => Ok(value),
+				onFailure: (error, statusCode) => StatusCode(statusCode, error));
 		}
 
 	}

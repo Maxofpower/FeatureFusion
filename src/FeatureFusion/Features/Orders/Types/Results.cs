@@ -1,11 +1,15 @@
 ﻿public readonly struct Result<T>
 {
 	private readonly T _value;
-	private readonly string _error= string.Empty;
+	private readonly string _error = string.Empty;
 	private readonly int _statusCode;
 
-	public T Value => _value ?? throw new InvalidOperationException("No value for failed result");
-	public string Error => _error ?? throw new InvalidOperationException("No error for successful result");
+	[System.Text.Json.Serialization.JsonIgnore]
+	public T Value => IsSuccess ? _value! : throw new InvalidOperationException("No value for failed result");
+
+	[System.Text.Json.Serialization.JsonIgnore]
+	public string Error => !IsSuccess ? _error! : throw new InvalidOperationException("No error for successful result");
+
 	public int StatusCode => _statusCode;
 	public bool IsSuccess => _error is null;
 

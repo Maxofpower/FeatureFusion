@@ -104,8 +104,9 @@ publish/
 *.Publish.xml
 *.pubxml
 
-#Launch settings
+# Launch settings (user-specific URLs) — keep AppHost profile tracked so Docker runtime env ships with the lab
 **/Properties/launchSettings.json
+!**/FeatureFusion.AppHost.AppHost/Properties/launchSettings.json
 
 # NuGet Packages Directory
 ## TODO: If you have NuGet Package Restore enabled, uncomment the next line
@@ -168,4 +169,24 @@ $RECYCLE.BIN/
 glob:*.user
 *.patch
 *.hg
+
+# Local agent / IDE / Cursor — never push to public GitHub
+.cursor/
+**/.cursor/
+*.plan.md
+**/*.plan.md
+**/*.plan.mdc
+**/plans/
+**/.cursor/plans/
+docs/scratch/
+**/agent-tools/
+**/agent-transcripts/
+
+# Docs policy: only root README.md and docs/linkedin-posts.md may be pushed.
+# Keep ADRs, verification notes, scratch, and plans local-only.
+docs/**
+!docs/linkedin-posts.md
+
+# Local-only polluted/autogen solutions
+src/src.sln
 

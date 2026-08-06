@@ -3,7 +3,7 @@ using FeatureFusion.Dtos;
 using FeatureFusion.Features.Products.Queries;
 using FeatureFusion.Infrastructure.Context;
 using FeatureFusion.Infrastructure.CursorPagination;
-using FeatureFusion.Infrastructure.Exetnsion;
+using FeatureFusion.Infrastructure.Extensions;
 using FeatureManagementFilters.Infrastructure.Caching;
 using Microsoft.EntityFrameworkCore;
 using Polly;

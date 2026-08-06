@@ -33,9 +33,8 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using static FeatureFusion.Features.Orders.Commands.CreateOrderCommandHandler;
-using static Microsoft.IO.RecyclableMemoryStreamManager;
 
-namespace FeatureFusion.Infrastructure.Exetnsion
+namespace FeatureFusion.Infrastructure.Extensions
 {
 	public static class ServiceConfigurationExtensions
 	{
@@ -237,8 +236,7 @@ namespace FeatureFusion.Infrastructure.Exetnsion
 
 			services.AddSingleton<IValidatorProvider, ValidatorProvider>();
 
-			services.AddHostedService<AppInitializer>();
-
+			// AppInitializer is registered in AddApplicationServices after DB migrations.
 		}
 
 		public static IServiceCollection AddMediatorServices(this IServiceCollection services, params Assembly[] assemblies)
@@ -368,13 +366,16 @@ namespace FeatureFusion.Infrastructure.Exetnsion
 						errorCodesToAdd: null); ;
 				});
 			});
-			var cnnectionString = builder.Configuration.GetConnectionString("catalogdb");
-			builder.AddRabbitMqEventBus("eventbus")
-						  .AddSubscription<OrderCreatedIntegrationEvent, OrderCreatedIntegrationEventHandler>()
-						  .AddEventDbContext<CatalogDbContext>(connectionString: cnnectionString);
-
-			
+			// Migrations must register before OutboxWorker / AppInitializer so
+			// MigrationHostedService.StartAsync completes before they begin work.
 			builder.Services.AddMigration<CatalogDbContext, CatalogDContextSeed>();
+
+			// Resolve catalogdb from config at runtime (Aspire/WAF injects ConnectionStrings__catalogdb).
+			builder.AddRabbitMqEventBus("eventbus")
+				.AddSubscription<OrderCreatedIntegrationEvent, OrderCreatedIntegrationEventHandler>()
+				.AddEventDbContext<CatalogDbContext>();
+
+			builder.Services.AddHostedService<AppInitializer>();
 		}
 	}
 
