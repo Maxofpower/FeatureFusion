@@ -1,5 +1,5 @@
 ﻿using FeatureFusion.Infrastructure.Filters;
-using FeatureFusion.Infrastructure.CQRS;
+using BuildingBlocks.Mediator;
 using FeatureFusion.Models;
 using FeatureManagementFilters.Models;
 using FeatureManagementFilters.Services.FeatureToggleService;
@@ -20,11 +20,11 @@ namespace FeatureFusion.Controllers.V2
 	public class ProductController : Controller
 	{
 		private readonly GetProductsCommandValidator _validator;
-		private readonly IMediator _mediator;
-		public ProductController(GetProductsCommandValidator validator, IMediator mediator)
+		private readonly ISender _sender;
+		public ProductController(GetProductsCommandValidator validator, ISender sender)
 		{
 			_validator = validator;
-			_mediator = mediator;
+			_sender = sender;
 		}
 
 		// with cursor-pagination
@@ -44,7 +44,7 @@ namespace FeatureFusion.Controllers.V2
 					return TypedResults.BadRequest(validationResult.ProblemDetails);
 				}
 
-				var result = await _mediator.Send(command, cancellationToken);
+				var result = await _sender.Send(command, cancellationToken);
 
 				return result.ToHttpResult();
 			}

@@ -1,0 +1,108 @@
+#nullable enable
+
+namespace BuildingBlocks.Mediator
+{
+    public interface ISender
+    {
+        System.Threading.Tasks.Task Send<TCommand>(TCommand command, System.Threading.CancellationToken cancellationToken = default) where TCommand : BuildingBlocks.Mediator.ICommand;
+        System.Threading.Tasks.Task<TResponse> Send<TResponse>(BuildingBlocks.Mediator.ICommand<TResponse> command, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<TResponse> Send<TResponse>(BuildingBlocks.Mediator.IQuery<TResponse> query, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<object?> Send(object message, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IMediator : BuildingBlocks.Mediator.ISender { }
+    public interface ICommand : BuildingBlocks.Mediator.ICommand<BuildingBlocks.Mediator.Unit> { }
+    public interface ICommand<out TResponse> { }
+    public interface IQuery<out TResponse> { }
+    public interface ICommandHandler<in TCommand> where TCommand : BuildingBlocks.Mediator.ICommand
+    {
+        System.Threading.Tasks.Task Handle(TCommand command, System.Threading.CancellationToken cancellationToken);
+    }
+    public interface ICommandHandler<in TCommand, TResponse> where TCommand : BuildingBlocks.Mediator.ICommand<TResponse>
+    {
+        System.Threading.Tasks.Task<TResponse> Handle(TCommand command, System.Threading.CancellationToken cancellationToken);
+    }
+    public interface IQueryHandler<in TQuery, TResponse> where TQuery : BuildingBlocks.Mediator.IQuery<TResponse>
+    {
+        System.Threading.Tasks.Task<TResponse> Handle(TQuery query, System.Threading.CancellationToken cancellationToken);
+    }
+    public delegate System.Threading.Tasks.Task<TResponse> RequestHandlerDelegate<TResponse>(System.Threading.CancellationToken cancellationToken = default);
+    public interface IPipelineBehavior<in TRequest, TResponse> where TRequest : notnull
+    {
+        System.Threading.Tasks.Task<TResponse> Handle(TRequest request, BuildingBlocks.Mediator.RequestHandlerDelegate<TResponse> next, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public sealed class Mediator : BuildingBlocks.Mediator.IMediator
+    {
+        public Mediator(System.IServiceProvider serviceProvider) { }
+        public Mediator(System.IServiceProvider serviceProvider, BuildingBlocks.Mediator.Telemetry.MediatorSendTelemetry? telemetry) { }
+        public System.Threading.Tasks.Task Send<TCommand>(TCommand command, System.Threading.CancellationToken cancellationToken = default) where TCommand : BuildingBlocks.Mediator.ICommand { throw null!; }
+        public System.Threading.Tasks.Task<TResponse> Send<TResponse>(BuildingBlocks.Mediator.ICommand<TResponse> command, System.Threading.CancellationToken cancellationToken = default) { throw null!; }
+        public System.Threading.Tasks.Task<TResponse> Send<TResponse>(BuildingBlocks.Mediator.IQuery<TResponse> query, System.Threading.CancellationToken cancellationToken = default) { throw null!; }
+        public System.Threading.Tasks.Task<object?> Send(object message, System.Threading.CancellationToken cancellationToken = default) { throw null!; }
+    }
+    public readonly struct Unit : System.IEquatable<BuildingBlocks.Mediator.Unit>, System.IComparable<BuildingBlocks.Mediator.Unit>, System.IComparable
+    {
+        public static ref readonly BuildingBlocks.Mediator.Unit Value { get { throw null!; } }
+        public static System.Threading.Tasks.Task<BuildingBlocks.Mediator.Unit> Task { get { throw null!; } }
+        public int CompareTo(BuildingBlocks.Mediator.Unit other) { throw null!; }
+        public override int GetHashCode() { throw null!; }
+        public bool Equals(BuildingBlocks.Mediator.Unit other) { throw null!; }
+        public override bool Equals(object? obj) { throw null!; }
+        public static bool operator ==(BuildingBlocks.Mediator.Unit first, BuildingBlocks.Mediator.Unit second) { throw null!; }
+        public static bool operator !=(BuildingBlocks.Mediator.Unit first, BuildingBlocks.Mediator.Unit second) { throw null!; }
+        public override string ToString() { throw null!; }
+    }
+}
+namespace BuildingBlocks.Mediator.DependencyInjection
+{
+    public sealed class MediatorConfiguration
+    {
+        public Microsoft.Extensions.DependencyInjection.ServiceLifetime Lifetime { get { throw null!; } set { } }
+        public Microsoft.Extensions.DependencyInjection.ServiceLifetime HandlerLifetime { get { throw null!; } set { } }
+        public bool ValidateOnStartup { get { throw null!; } set { } }
+        public BuildingBlocks.Mediator.DependencyInjection.MediatorConfiguration RegisterServicesFromAssembly(System.Reflection.Assembly assembly) { throw null!; }
+        public BuildingBlocks.Mediator.DependencyInjection.MediatorConfiguration RegisterServicesFromAssemblyContaining<T>() { throw null!; }
+        public BuildingBlocks.Mediator.DependencyInjection.MediatorConfiguration UseTelemetry(System.Action<BuildingBlocks.Mediator.Telemetry.MediatorTelemetryOptions>? configure = null) { throw null!; }
+        public BuildingBlocks.Mediator.DependencyInjection.MediatorConfiguration AddBehavior<TBehavior>() where TBehavior : class { throw null!; }
+        public BuildingBlocks.Mediator.DependencyInjection.MediatorConfiguration AddBehavior<TBehavior>(int order) where TBehavior : class { throw null!; }
+        public BuildingBlocks.Mediator.DependencyInjection.MediatorConfiguration AddOpenBehavior(System.Type openBehaviorType, Microsoft.Extensions.DependencyInjection.ServiceLifetime serviceLifetime = Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient) { throw null!; }
+        public BuildingBlocks.Mediator.DependencyInjection.MediatorConfiguration AddOpenBehavior(System.Type openBehaviorType, int order, Microsoft.Extensions.DependencyInjection.ServiceLifetime serviceLifetime = Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient) { throw null!; }
+    }
+    public static class MediatorServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddMediator(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Action<BuildingBlocks.Mediator.DependencyInjection.MediatorConfiguration> configure) { throw null!; }
+    }
+}
+namespace BuildingBlocks.Mediator.Pipeline
+{
+    public abstract class CommandPipelineBehavior<TRequest, TResponse> : BuildingBlocks.Mediator.IPipelineBehavior<TRequest, TResponse> where TRequest : notnull
+    {
+        public System.Threading.Tasks.Task<TResponse> Handle(TRequest request, BuildingBlocks.Mediator.RequestHandlerDelegate<TResponse> next, System.Threading.CancellationToken cancellationToken = default) { throw null!; }
+        protected abstract System.Threading.Tasks.Task<TResponse> HandleCommand(TRequest request, BuildingBlocks.Mediator.RequestHandlerDelegate<TResponse> next, System.Threading.CancellationToken cancellationToken);
+    }
+    public abstract class QueryPipelineBehavior<TRequest, TResponse> : BuildingBlocks.Mediator.IPipelineBehavior<TRequest, TResponse> where TRequest : notnull
+    {
+        public System.Threading.Tasks.Task<TResponse> Handle(TRequest request, BuildingBlocks.Mediator.RequestHandlerDelegate<TResponse> next, System.Threading.CancellationToken cancellationToken = default) { throw null!; }
+        protected abstract System.Threading.Tasks.Task<TResponse> HandleQuery(TRequest request, BuildingBlocks.Mediator.RequestHandlerDelegate<TResponse> next, System.Threading.CancellationToken cancellationToken);
+    }
+    public static class MessageKind
+    {
+        public static bool IsCommand(object request) { throw null!; }
+        public static bool IsQuery(object request) { throw null!; }
+    }
+}
+namespace BuildingBlocks.Mediator.Telemetry
+{
+    public sealed class MediatorTelemetryOptions
+    {
+        public string ActivitySourceName { get { throw null!; } set { } }
+        public bool RecordException { get { throw null!; } set { } }
+        public bool EnableLogging { get { throw null!; } set { } }
+    }
+    public sealed class MediatorSendTelemetry
+    {
+        public MediatorSendTelemetry(Microsoft.Extensions.Options.IOptions<BuildingBlocks.Mediator.Telemetry.MediatorTelemetryOptions> options, Microsoft.Extensions.Logging.ILoggerFactory loggerFactory) { }
+        public string ActivitySourceName { get { throw null!; } }
+        public System.Diagnostics.ActivitySource Source { get { throw null!; } }
+        public System.Threading.Tasks.Task<TResponse> TraceAsync<TResponse>(System.Type messageType, string messageKind, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<TResponse>> send, System.Threading.CancellationToken cancellationToken) { throw null!; }
+    }
+}

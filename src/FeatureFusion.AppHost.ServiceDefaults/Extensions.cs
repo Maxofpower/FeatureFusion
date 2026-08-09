@@ -58,7 +58,9 @@ public static class Extensions
             })
             .WithTracing(tracing =>
             {
+                // ApplicationName + BuildingBlocks.Mediator so Aspire Dashboard shows mediator Send activities/tags.
                 tracing.AddSource(builder.Environment.ApplicationName)
+                    .AddSource("BuildingBlocks.Mediator")
                     .AddAspNetCoreInstrumentation()
                     // Uncomment the following line to enable gRPC instrumentation (requires the OpenTelemetry.Instrumentation.GrpcNetClient package)
                     //.AddGrpcClientInstrumentation()

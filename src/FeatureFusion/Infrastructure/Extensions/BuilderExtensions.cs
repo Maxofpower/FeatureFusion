@@ -6,8 +6,6 @@ using FeatureFusion.Features.Order.IntegrationEvents.EventHandling;
 using FeatureFusion.Features.Order.IntegrationEvents.Events;
 using FeatureFusion.Infrastructure.Caching;
 using FeatureFusion.Infrastructure.Context;
-using FeatureFusion.Infrastructure.CQRS;
-using FeatureFusion.Infrastructure.CQRS.Adapter;
 using FeatureFusion.Infrastructure.Filters;
 using FeatureFusion.Infrastructure.ValidationProvider;
 using FeatureFusion.Models;
@@ -23,6 +21,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Microsoft.FeatureManagement;
@@ -209,28 +208,10 @@ namespace FeatureFusion.Infrastructure.Extensions
 
 			services.AddScoped<IIntegrationEventService, IntegrationEventService>();
 
-			var validators = GetValidators();
-
-			//Fluent Validator
+			// FluentValidation: dual-register for IValidatorProvider (non-generic)
+			// and host ValidationBehavior (closed IValidator<T>).
 			services.AddFluentValidationAutoValidation();
-
-			foreach (var validator in validators)
-			{
-				services.Add(
-					new ServiceDescriptor(
-						serviceType: typeof(IValidator),
-						implementationType: validator,
-						lifetime: ServiceLifetime.Singleton));
-
-				services.Add(
-				   new ServiceDescriptor(
-					   serviceType: validator,
-					   implementationType: validator,
-					   lifetime: ServiceLifetime.Singleton));
-			}
-
-			// services.AddValidatorsFromAssembly(typeof(Program).Assembly);
-
+			services.AddFluentValidatorsFromAssemblies(Assembly.GetExecutingAssembly());
 
 			services.AddSingleton<IRedisConnectionWrapper, RedisConnectionWrapper>();
 
@@ -239,61 +220,6 @@ namespace FeatureFusion.Infrastructure.Extensions
 			// AppInitializer is registered in AddApplicationServices after DB migrations.
 		}
 
-		public static IServiceCollection AddMediatorServices(this IServiceCollection services, params Assembly[] assemblies)
-		{
-
-			services.Scan(scan => scan
-				.FromAssemblies(assemblies)
-				.AddClasses(classes => classes.AssignableToAny(
-					typeof(IRequestHandler<>),
-					typeof(IRequestHandler<,>)))
-				.AsImplementedInterfaces()
-				.WithTransientLifetime());
-
-
-			services.Scan(scan => scan
-				.FromAssemblies(assemblies)
-				.AddClasses(classes => classes.AssignableTo(typeof(IPipelineBehavior<,>)))
-				.AsImplementedInterfaces()
-				.WithTransientLifetime());
-
-			#region void adaptor
-			var voidCommandTypes = assemblies
-				.SelectMany(a => a.GetTypes())
-				.Where(t => typeof(IRequest).IsAssignableFrom(t) &&
-						   !typeof(IRequest<>).IsAssignableFrom(t) &&
-						   !t.IsAbstract && !t.IsInterface)
-				.ToList();
-
-			foreach (var commandType in voidCommandTypes)
-			{
-				var adapterType = typeof(VoidCommandAdapter<>).MakeGenericType(commandType);
-				var serviceType = typeof(IRequestHandler<,>).MakeGenericType(
-					typeof(RequestAdapter<>).MakeGenericType(commandType),
-					typeof(Unit));
-
-				services.AddTransient(serviceType, provider =>
-				{
-					var innerHandlerType = typeof(IRequestHandler<>).MakeGenericType(commandType);
-					var innerHandler = provider.GetRequiredService(innerHandlerType);
-					return ActivatorUtilities.CreateInstance(provider, adapterType, innerHandler);
-				});
-			}
-			#endregion
-
-			services.AddTransient(typeof(IRequestHandler<,>).MakeGenericType(typeof(RequestAdapter<>), typeof(Unit)),
-				provider =>
-				{
-					var requestType = typeof(RequestAdapter<>).GetGenericArguments()[0];
-					var innerHandlerType = typeof(IRequestHandler<>).MakeGenericType(requestType);
-					var innerHandler = provider.GetRequiredService(innerHandlerType);
-					var adapterType = typeof(VoidCommandAdapter<>).MakeGenericType(requestType);
-					return ActivatorUtilities.CreateInstance(provider, adapterType, innerHandler);
-				});
-			services.AddScoped<IMediator, Mediator>();
-
-			return services;
-		}
 		public static class HealthCheckExtensions
 		{
 			public static Task WriteResponse(HttpContext context, HealthReport report)
@@ -313,44 +239,45 @@ namespace FeatureFusion.Infrastructure.Extensions
 			}
 		}
 
-		public static void AddAllValidators(this IServiceCollection services, params Assembly[] assemblies)
+		/// <summary>
+		/// Registers concrete FluentValidation validators as non-generic <see cref="IValidator"/>
+		/// (for <see cref="IValidatorProvider"/>) and each closed <c>IValidator&lt;T&gt;</c>
+		/// (for host <c>ValidationBehavior</c>). Skips abstract and open-generic types.
+		/// </summary>
+		public static IServiceCollection AddFluentValidatorsFromAssemblies(
+			this IServiceCollection services,
+			params Assembly[] assemblies)
 		{
-			if (assemblies == null || assemblies.Length == 0)
-			{
-				// If no assemblies are provided, scan the current assembly
+			if (assemblies is null || assemblies.Length == 0)
 				assemblies = new[] { Assembly.GetExecutingAssembly() };
-			}
 
-			foreach (var assembly in assemblies)
+			var validatorTypes = assemblies
+				.SelectMany(a => a.GetTypes())
+				.Where(t => t is { IsClass: true, IsAbstract: false, IsGenericTypeDefinition: false })
+				.Where(typeof(IValidator).IsAssignableFrom)
+				.ToList();
+
+			foreach (var validatorType in validatorTypes)
 			{
-				// Find all types that inherit from BaseValidator<T>
-				var validatorTypes = assembly.GetTypes()
-					.Where(t => t.BaseType != null &&
-								 t.BaseType.IsGenericType &&
-								 t.BaseType.GetGenericTypeDefinition() == typeof(BaseValidator<>))
-					.ToList();
+				services.TryAddEnumerable(ServiceDescriptor.Singleton(typeof(IValidator), validatorType));
+				services.TryAdd(ServiceDescriptor.Singleton(validatorType, validatorType));
 
-				foreach (var validatorType in validatorTypes)
+				foreach (var closed in validatorType.GetInterfaces()
+					         .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IValidator<>)))
 				{
-					// Get the generic type argument (TModel) from BaseValidator<TModel>
-					var modelType = validatorType.BaseType.GetGenericArguments()[0];
+					if (services.Any(d => d.ServiceType == closed && d.ImplementationType == validatorType))
+						continue;
 
-					// Register the validator as IValidator<TModel>
-					var validatorInterface = typeof(IValidator<>).MakeGenericType(modelType);
-					services.AddScoped(validatorInterface, validatorType);
+					services.Add(ServiceDescriptor.Singleton(closed, validatorType));
 				}
 			}
-		}
-		private static IEnumerable<Type> GetValidators()
-		{
-			Assembly[] assemblies = new[] { Assembly.GetExecutingAssembly() };
 
-			var validators = assemblies.SelectMany(ass => ass.GetTypes())
-					.Where(typeof(IValidator).IsAssignableFrom)
-					.Where(t => !t.GetTypeInfo().IsAbstract);
-
-			return validators;
+			return services;
 		}
+
+		/// <summary>Obsolete alias — prefer <see cref="AddFluentValidatorsFromAssemblies"/>.</summary>
+		public static void AddAllValidators(this IServiceCollection services, params Assembly[] assemblies)
+			=> services.AddFluentValidatorsFromAssemblies(assemblies);
 
 		public static void AddApplicationServices(this IHostApplicationBuilder builder)
 		{

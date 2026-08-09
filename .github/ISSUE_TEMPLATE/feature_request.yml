@@ -1,0 +1,25 @@
+name: Feature request
+
+description: Suggest an enhancement for BuildingBlocks.Mediator
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+    validations:
+      required: true
+  - type: checkboxes
+    id: v1
+    attributes:
+      label: Scope check
+      options:
+        - label: I have read the v1 non-goals (no Publish/streams in core)
+          required: true

@@ -1,0 +1,133 @@
+name: Mediator release
+
+# Publishes BuildingBlocks.Mediator when a mediator-v* tag is pushed or a GitHub Release is published.
+# Always: test, pack, attach .nupkg / .snupkg to the GitHub Release.
+# nuget.org: Trusted Publishing via NuGet/login (OIDC). Requires repo secret NUGET_USER
+# (nuget.org profile name) and a Trusted Publishing policy for this workflow + environment nuget.
+# If NUGET_USER is unset, nuget.org push is skipped (GitHub Release assets still attach).
+#
+# Tag format: mediator-vX.Y.Z must match <Version> in BuildingBlocks.Mediator.csproj.
+# Example: git tag mediator-v1.0.1 && git push origin mediator-v1.0.1
+
+on:
+  release:
+    types: [published]
+  push:
+    tags:
+      - "mediator-v*"
+  workflow_dispatch:
+    inputs:
+      publish_nuget:
+        description: "Push to nuget.org (requires Trusted Publishing + NUGET_USER)"
+        type: boolean
+        default: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: nuget
+    permissions:
+      id-token: write
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Resolve version
+        id: ver
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROJECT_VERSION=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' src/BuildingBlocks.Mediator/BuildingBlocks.Mediator.csproj | head -1)
+          echo "project=$PROJECT_VERSION" >> "$GITHUB_OUTPUT"
+          REF="${GITHUB_REF_NAME}"
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            TAG="$REF"
+            STRIPPED="${TAG#mediator-v}"
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+            echo "from_tag=$STRIPPED" >> "$GITHUB_OUTPUT"
+            if [[ "$STRIPPED" != "$PROJECT_VERSION" ]]; then
+              echo "::error::Tag version ($STRIPPED) does not match project <Version> ($PROJECT_VERSION)"
+              exit 1
+            fi
+          else
+            echo "tag=" >> "$GITHUB_OUTPUT"
+            echo "from_tag=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build analyzers
+        run: dotnet build src/BuildingBlocks.Mediator.Analyzers/BuildingBlocks.Mediator.Analyzers.csproj -c Release
+
+      - name: Test library
+        run: dotnet test tests/BuildingBlocks.Mediator.Tests/BuildingBlocks.Mediator.Tests.csproj -c Release --verbosity minimal
+
+      - name: Test analyzers
+        run: dotnet test tests/BuildingBlocks.Mediator.Analyzers.Tests/BuildingBlocks.Mediator.Analyzers.Tests.csproj -c Release --verbosity minimal
+
+      - name: Pack
+        run: dotnet pack src/BuildingBlocks.Mediator/BuildingBlocks.Mediator.csproj -c Release -o artifacts/nuget -p:ContinuousIntegrationBuild=true
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages-release
+          path: |
+            artifacts/nuget/*.nupkg
+            artifacts/nuget/*.snupkg
+          if-no-files-found: error
+
+      - name: Attach packages to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
+        with:
+          files: |
+            artifacts/nuget/*.nupkg
+            artifacts/nuget/*.snupkg
+
+      - name: Create GitHub Release for tag
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: BuildingBlocks.Mediator ${{ steps.ver.outputs.project }}
+          generate_release_notes: true
+          files: |
+            artifacts/nuget/*.nupkg
+            artifacts/nuget/*.snupkg
+
+      - name: NuGet login (Trusted Publishing OIDC)
+        if: ${{ secrets.NUGET_USER != '' && (github.event_name != 'workflow_dispatch' || inputs.publish_nuget) }}
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push to nuget.org
+        if: ${{ secrets.NUGET_USER != '' && (github.event_name != 'workflow_dispatch' || inputs.publish_nuget) && steps.login.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for pkg in artifacts/nuget/*.nupkg; do
+            dotnet nuget push "$pkg" \
+              --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
+              --source https://api.nuget.org/v3/index.json \
+              --skip-duplicate
+          done
+          for spkg in artifacts/nuget/*.snupkg; do
+            dotnet nuget push "$spkg" \
+              --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
+              --source https://api.nuget.org/v3/index.json \
+              --skip-duplicate || true
+          done
+
+      - name: Dry-run notice
+        if: ${{ secrets.NUGET_USER == '' || (github.event_name == 'workflow_dispatch' && !inputs.publish_nuget) }}
+        run: |
+          echo "Skipped nuget.org push (NUGET_USER unset or publish_nuget=false)."
+          echo "GitHub Release and workflow artifacts are still produced for tag/release triggers."

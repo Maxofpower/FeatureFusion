@@ -1,5 +1,5 @@
 ﻿using FeatureFusion.Infrastructure.Filters;
-using FeatureFusion.Infrastructure.CQRS;
+using BuildingBlocks.Mediator;
 using FeatureManagementFilters.Models;
 using FeatureManagementFilters.Services.FeatureToggleService;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -15,11 +15,11 @@ namespace FeatureFusion.Controllers.V2
 	public class OrderController : Controller
 	{
 		private readonly OrderRequestValidator _validator;
-		private readonly IMediator _mediator;
-		public OrderController(OrderRequestValidator validator,IMediator mediator)
+		private readonly ISender _sender;
+		public OrderController(OrderRequestValidator validator, ISender sender)
 		{
 			_validator = validator;
-			_mediator = mediator;
+			_sender = sender;
 		}
 
 		// to test idempotent-filter , validation , mediator , rabbitmq
@@ -38,7 +38,7 @@ namespace FeatureFusion.Controllers.V2
 				return BadRequest(validationResult.ProblemDetails);
 			}
 		
-			var createOrderResult = await _mediator.Send(request);
+			var createOrderResult = await _sender.Send(request);
 
 			// Unwrap Result so JSON serialization does not touch Result.Error on success.
 			return createOrderResult.Match<ActionResult<OrderResponse>>(

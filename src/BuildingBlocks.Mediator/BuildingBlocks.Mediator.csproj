@@ -1,0 +1,78 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <WarningsAsErrors>CS1591</WarningsAsErrors>
+    <RootNamespace>BuildingBlocks.Mediator</RootNamespace>
+
+    <!-- Packaging -->
+    <IsPackable>true</IsPackable>
+    <PackageId>BuildingBlocks.Mediator</PackageId>
+    <Title>BuildingBlocks.Mediator</Title>
+    <Version>1.0.0</Version>
+    <Authors>Mohammad Hasan Hosseini</Authors>
+    <Company>Mohammad Hasan Hosseini</Company>
+    <Copyright>Copyright (c) 2026 Mohammad Hasan Hosseini</Copyright>
+    <Description>CQRS Send + ordered pipeline mediator building blocks for .NET 10 (net10.0). ICommand/IQuery, ISender, UseTelemetry, ValidateOnStartup. No Scrutor dependency.</Description>
+    <PackageTags>mediator;cqrs;pipeline;dotnet</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/Maxofpower/FeatureManagement</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Maxofpower/FeatureManagement</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>PACKAGE_README.md</PackageReadmeFile>
+    <PackageIcon>mediator-icon.png</PackageIcon>
+    <PackageReleaseNotes>See CHANGELOG.md in the repository for release notes.</PackageReleaseNotes>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="PACKAGE_README.md" Pack="true" PackagePath="\" />
+    <None Include="mediator-icon.png" Pack="true" PackagePath="\" />
+    <None Include="PublicAPI.Shipped.txt" Pack="false" />
+    <None Include="PublicAPI.Unshipped.txt" Pack="false" />
+    <None Include="AOT.md" Pack="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.0" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BuildingBlocks.Mediator.Analyzers\BuildingBlocks.Mediator.Analyzers.csproj"
+                      ReferenceOutputAssembly="false"
+                      PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="BuildingBlocks.Mediator.Tests" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackMediatorAnalyzers</TargetsForTfmSpecificContentInPackage>
+  </PropertyGroup>
+
+  <Target Name="PackMediatorAnalyzers" DependsOnTargets="ResolveProjectReferences">
+    <PropertyGroup>
+      <_MediatorAnalyzerDll>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\BuildingBlocks.Mediator.Analyzers\bin\$(Configuration)\netstandard2.0\BuildingBlocks.Mediator.Analyzers.dll'))</_MediatorAnalyzerDll>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(_MediatorAnalyzerDll)')"
+           Text="Mediator analyzer DLL not found at '$(_MediatorAnalyzerDll)'. Build BuildingBlocks.Mediator.Analyzers first." />
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="$(_MediatorAnalyzerDll)">
+        <PackagePath>analyzers/dotnet/cs</PackagePath>
+      </TfmSpecificPackageFile>
+    </ItemGroup>
+  </Target>
+
+</Project>
