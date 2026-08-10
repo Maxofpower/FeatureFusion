@@ -1,0 +1,61 @@
+name: Mediator CI
+
+# Runs when BuildingBlocks.Mediator sources, tests, analyzers, or this workflow change.
+# Packs the NuGet package as a CI artifact; does not publish to nuget.org.
+
+on:
+  push:
+    paths:
+      - "src/BuildingBlocks.Mediator/**"
+      - "src/BuildingBlocks.Mediator.Analyzers/**"
+      - "tests/BuildingBlocks.Mediator.Tests/**"
+      - "tests/BuildingBlocks.Mediator.Analyzers.Tests/**"
+      - "benchmarks/BuildingBlocks.Mediator.Benchmarks/**"
+      - ".github/workflows/mediator.yml"
+  pull_request:
+    paths:
+      - "src/BuildingBlocks.Mediator/**"
+      - "src/BuildingBlocks.Mediator.Analyzers/**"
+      - "tests/BuildingBlocks.Mediator.Tests/**"
+      - "tests/BuildingBlocks.Mediator.Analyzers.Tests/**"
+      - "benchmarks/BuildingBlocks.Mediator.Benchmarks/**"
+      - ".github/workflows/mediator.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: mediator-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-pack:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Build analyzers
+        run: dotnet build src/BuildingBlocks.Mediator.Analyzers/BuildingBlocks.Mediator.Analyzers.csproj -c Release
+
+      - name: Test library
+        run: dotnet test tests/BuildingBlocks.Mediator.Tests/BuildingBlocks.Mediator.Tests.csproj -c Release --verbosity minimal
+
+      - name: Test analyzers
+        run: dotnet test tests/BuildingBlocks.Mediator.Analyzers.Tests/BuildingBlocks.Mediator.Analyzers.Tests.csproj -c Release --verbosity minimal
+
+      - name: Pack
+        run: dotnet pack src/BuildingBlocks.Mediator/BuildingBlocks.Mediator.csproj -c Release -o artifacts/nuget -p:ContinuousIntegrationBuild=true
+
+      - name: Upload nupkg
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages
+          path: |
+            artifacts/nuget/*.nupkg
+            artifacts/nuget/*.snupkg
+          if-no-files-found: error

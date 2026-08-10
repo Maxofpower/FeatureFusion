@@ -1,0 +1,29 @@
+name: Bug report
+
+description: Report a bug in BuildingBlocks.Mediator
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. Please check docs/building-blocks/TEST_MATRIX.md first.
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: Minimal steps or code sample
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Package version
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual
+    validations:
+      required: true

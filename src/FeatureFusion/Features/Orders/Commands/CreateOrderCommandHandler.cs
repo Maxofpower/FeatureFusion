@@ -1,4 +1,4 @@
-﻿using FeatureFusion.Infrastructure.CQRS;
+﻿using BuildingBlocks.Mediator;
 using FeatureManagementFilters.Models;
 using static FeatureFusion.Controllers.V2.OrderController;
 using static FeatureFusion.Features.Orders.Commands.CreateOrderCommandHandler;
@@ -10,7 +10,7 @@ using FeatureFusion.Domain.Entities;
 
 namespace FeatureFusion.Features.Orders.Commands
 {
-	public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Result<OrderResponse>>
+	public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, Result<OrderResponse>>
 	{
 		private readonly IServiceProvider _serviceProvider;
 		private readonly CatalogDbContext _catalogDbContext;

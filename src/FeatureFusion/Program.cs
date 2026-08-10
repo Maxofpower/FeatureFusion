@@ -1,14 +1,17 @@
 using Asp.Versioning.ApiExplorer;
 using BenchmarkDotNet.Running;
+using BuildingBlocks.Mediator.DependencyInjection;
 using Enyim.Caching;
 using Enyim.Caching.Configuration;
 using EventBusRabbitMQ;
+using FeatureFusion.Features.MediatorDemo.Endpoints;
 using FeatureFusion.Features.Order.IntegrationEvents.EventHandling;
 using FeatureFusion.Features.Order.IntegrationEvents.Events;
+using FeatureFusion.Infrastructure.Behaviors;
+using FeatureFusion.Infrastructure.Exceptions;
 using FeatureFusion.Infrastructure.Extensions;
-
 using FeatureManagementFilters.API.V2;
-
+using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,7 +39,17 @@ builder.Services.AddFeatureManagementWithFilters<UseGreetingFilter>();
 
 builder.Services.RegisterServices();
 
-builder.Services.AddMediatorServices(Assembly.GetExecutingAssembly());
+builder.Services.AddExceptionHandler<ValidationExceptionHandler>();
+
+builder.Services.AddMediator(cfg =>
+{
+	cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
+    // Host pipeline behaviors (order: lower = outermost). 
+    // Telemetry is NOT a pipeline — optional Send wrap.
+    cfg.AddOpenBehavior(typeof(ValidationBehavior<,>), order: 0);
+	cfg.UseTelemetry();
+	cfg.ValidateOnStartup = true;
+});
 
 
 builder.Services.AddApiVersioningWithReader();
@@ -118,10 +131,9 @@ void ConfigureSwaggerUI(WebApplication app)
 
 void ConfigureRequestPipeline(WebApplication app)
 {
-	if (app.Environment.IsDevelopment())
-	{
-		app.UseDeveloperExceptionPage();
-	}
+	// IExceptionHandler (e.g. ValidationException → 400). Do not stack UseDeveloperExceptionPage
+	// after this — it turns handled ValidationExceptions into opaque 500s in Development/tests.
+	app.UseExceptionHandler();
 
 	app.UseHttpsRedirection();
 	app.UseAuthorization();
@@ -132,6 +144,7 @@ void ConfigureRequestPipeline(WebApplication app)
 #endregion
 
 app.MapGreetingApiV2();
+app.MapMediatorDemoEndpoints();
 
 #region memchached prestart up validation if enabled
 // Pre-startup validation for memcached and redis

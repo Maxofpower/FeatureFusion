@@ -1,0 +1,1 @@
+# New public API for 1.0.0 — shipped at tag; keep empty for subsequent unshipped deltas.

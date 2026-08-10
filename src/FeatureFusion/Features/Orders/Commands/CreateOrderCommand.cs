@@ -1,5 +1,5 @@
 ﻿using FeatureFusion.Dtos;
-using FeatureFusion.Infrastructure.CQRS;
+using BuildingBlocks.Mediator;
 using FeatureManagementFilters.Models.Validator;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
@@ -8,7 +8,7 @@ using static FeatureFusion.Features.Orders.Commands.CreateOrderCommandHandler;
 
 namespace FeatureFusion.Features.Orders.Commands
 {
-	public class CreateOrderCommand : IRequest<Result<OrderResponse>>
+	public class CreateOrderCommand : ICommand<Result<OrderResponse>>
 	{
 		public int ProductId { get; set; }
 		public int Quantity { get; set; }

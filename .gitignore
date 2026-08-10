@@ -182,11 +182,20 @@ docs/scratch/
 **/agent-tools/
 **/agent-transcripts/
 
-# Docs policy: only root README.md and docs/linkedin-posts.md may be pushed.
-# Keep ADRs, verification notes, scratch, and plans local-only.
+# Docs policy: root README.md + curated docs may be pushed.
+# Keep scratch, verification notes, and plans local-only.
 docs/**
 !docs/linkedin-posts.md
+!docs/building-blocks/
+!docs/building-blocks/**
+!docs/adr/
+!docs/adr/**
 
 # Local-only polluted/autogen solutions
 src/src.sln
+
+# Local pack / smoke artifacts
+artifacts/
+*.nupkg
+*.snupkg
 

@@ -1,5 +1,5 @@
 ﻿using FeatureFusion.Dtos;
-using FeatureFusion.Infrastructure.CQRS;
+using BuildingBlocks.Mediator;
 using FeatureFusion.Infrastructure.CursorPagination;
 using Swashbuckle.AspNetCore.Annotations;
 using System.ComponentModel.DataAnnotations;
@@ -7,7 +7,7 @@ using System.Text.Json.Serialization;
 
 namespace FeatureFusion.Features.Products.Queries
 {
-	public sealed record GetProductsQuery : IRequest<Result<PagedResult<ProductDto>>>
+	public sealed record GetProductsQuery : IQuery<Result<PagedResult<ProductDto>>>
 	{
 		[SwaggerParameter(Description = "Maximum number of items to return")]
 		[Range(1, 100)]

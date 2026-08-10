@@ -1,4 +1,4 @@
-﻿using FeatureFusion.Infrastructure.CQRS;
+﻿using BuildingBlocks.Mediator;
 using FeatureManagementFilters.Models;
 using static FeatureFusion.Controllers.V2.OrderController;
 using static FeatureFusion.Features.Orders.Commands.CreateOrderCommandHandler;
@@ -6,9 +6,9 @@ using StackExchange.Redis;
 using FeatureFusion.Domain.Entities;
 namespace FeatureFusion.Features.Orders.Commands
 {
-	public class CreateOrderCommandVoidHandler : IRequestHandler<CreateOrderCommandVoid>
+	public class CreateOrderCommandVoidHandler : ICommandHandler<CreateOrderCommandVoid>
 	{
-		public Task Handle(CreateOrderCommandVoid request, CancellationToken cancellationToken)
+		public Task Handle(CreateOrderCommandVoid command, CancellationToken cancellationToken)
 		{
 			// Static in-memory product
 			var product = new Product
@@ -30,14 +30,14 @@ namespace FeatureFusion.Features.Orders.Commands
 
 			var orderId = Ulid.NewUlid();
 
-			var orderTotal = product.Price * request.Quantity;
+			var orderTotal = product.Price * command.Quantity;
 
 			var response = new OrderResponse
 			{
 				OrderId = orderId,
 				CustomerName = customer.Name,
 				ProductName = product.Name,
-				Quantity = request.Quantity,
+				Quantity = command.Quantity,
 				TotalAmount = orderTotal,
 				OrderDate = DateTime.UtcNow,
 				Message = "Order created successfully."

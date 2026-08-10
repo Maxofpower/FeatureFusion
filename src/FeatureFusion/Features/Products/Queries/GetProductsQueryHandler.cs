@@ -1,6 +1,6 @@
 ﻿using FeatureFusion.Dtos;
 using FeatureFusion.Features.Order.IntegrationEvents;
-using FeatureFusion.Infrastructure.CQRS;
+using BuildingBlocks.Mediator;
 using FeatureFusion.Infrastructure.CursorPagination;
 using FeatureManagementFilters.Services.ProductService;
 using static FeatureFusion.Infrastructure.CursorPagination.CursorFactory;
@@ -8,7 +8,7 @@ using static FeatureFusion.Infrastructure.CursorPagination.CursorFactory;
 namespace FeatureFusion.Features.Products.Queries
 {
 	public sealed class GetProductsQueryHandler
-	: IRequestHandler<GetProductsQuery, Result<PagedResult<ProductDto>>>
+	: IQueryHandler<GetProductsQuery, Result<PagedResult<ProductDto>>>
 	{
 		private readonly IServiceProvider _serviceProvider;
 

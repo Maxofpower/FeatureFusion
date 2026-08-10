@@ -1,30 +1,30 @@
 ﻿using FeatureFusion.Dtos;
-using FeatureFusion.Infrastructure.CQRS;
+using BuildingBlocks.Mediator;
 using FeatureManagementFilters.Models.Validator;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
-using static FeatureFusion.Features.Orders.Commands.CreateOrderCommandHandler;
-
 
 namespace FeatureFusion.Features.Orders.Commands
 {
-	public class CreateOrderCommandVoid : IRequest
+	public class CreateOrderCommandVoid : ICommand
 	{
 		public int ProductId { get; set; }
 		public int Quantity { get; set; }
 		public int CustomerId { get; set; }
 	}
-	public class CreateOrderCommandVoidValidator : BaseValidator<CreateOrderCommand>
-	{
-		private readonly ILogger<OrderRequestValidator> _logger;
 
-		public CreateOrderCommandVoidValidator(ILogger<OrderRequestValidator> logger)
+	public class CreateOrderCommandVoidValidator : BaseValidator<CreateOrderCommandVoid>
+	{
+		private readonly ILogger<CreateOrderCommandVoidValidator> _logger;
+
+		public CreateOrderCommandVoidValidator(ILogger<CreateOrderCommandVoidValidator> logger)
 		{
 			_logger = logger;
 			RuleFor(x => x.Quantity)
-		   .GreaterThan(0).WithMessage("Quantity must be greater than 0");
+				.GreaterThan(0).WithMessage("Quantity must be greater than 0");
 		}
-		public async Task<ValidationResult> ValidateWithResultAsync(CreateOrderCommand item)
+
+		public async Task<ValidationResult> ValidateWithResultAsync(CreateOrderCommandVoid item)
 		{
 			var validationResult = await ValidateAsync(item);
 
@@ -37,7 +37,7 @@ namespace FeatureFusion.Features.Orders.Commands
 						group => group.Select(e => e.ErrorMessage).ToArray()
 					);
 
-				_logger.LogError($"validation error on {nameof(GreetingDto)}: {validationErrors}");
+				_logger.LogError("validation error on {Command}: {Errors}", nameof(CreateOrderCommandVoid), validationErrors);
 
 				var problemDetails = new ValidationProblemDetails
 				{
@@ -52,5 +52,4 @@ namespace FeatureFusion.Features.Orders.Commands
 			return ValidationResult.Success();
 		}
 	}
-
 }

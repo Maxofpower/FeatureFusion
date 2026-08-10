@@ -6,7 +6,8 @@
 
 [![.NET](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![Aspire](https://img.shields.io/badge/Aspire-13.4-C3002F?logo=dotnet&logoColor=white)](https://learn.microsoft.com/dotnet/aspire/)
-[![License](https://img.shields.io/github/license/Maxofpower/FeatureManagement)](LICENSE.txt)
+[![NuGet · BuildingBlocks.Mediator](https://img.shields.io/nuget/v/BuildingBlocks.Mediator.svg?label=NuGet%20·%20BuildingBlocks.Mediator&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Mediator)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
 [![Stars](https://img.shields.io/github/stars/Maxofpower/FeatureManagement?style=social)](https://github.com/Maxofpower/FeatureManagement/stargazers)
 [![Last commit](https://img.shields.io/github/last-commit/Maxofpower/FeatureManagement)](https://github.com/Maxofpower/FeatureManagement/commits)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-mhhoseini-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/mhhoseini/)
@@ -43,12 +44,12 @@
 | Event bus | RabbitMQ + transactional outbox/inbox, DLQ, dedup hooks |
 | Aspire | AppHost orchestration for Postgres, Redis, RabbitMQ, Memcached |
 | IdempotentFusion | ULID `Idempotency-Key` + Redis status tracking + optional lock |
-| Mediator (CQRS) | Manual Mediator + pipeline behaviors |
+| Mediator (CQRS) | **`BuildingBlocks.Mediator`** NuGet — CQRS Send + ordered pipeline, telemetry, startup validation |
 | API surface | Versioned controllers + Minimal APIs, FluentValidation patterns |
 | Gateway | YARP reverse proxy + Memcached distributed rate limiting |
 | Caching | Redis / Memcached / memory managers + middleware demos |
 | Pagination | **Generic bidirectional keyset (cursor) pagination** — type-safe Base64 cursors, dynamic sort, expression trees |
-| Design patterns | Mediator, Adapter, Decorator, CoR, Strategy, and more — see below |
+| Design patterns | Mediator, Decorator, CoR, Strategy, and more — see below |
 
 Also covered in the lab: app/DB initializers, middleware dynamic caching, Aspire AppHost integration tests, and performance-minded practices (OTel hooks, resilience).
 
@@ -98,6 +99,7 @@ flowchart LR
 
 ```text
 src/
+  BuildingBlocks.Mediator/          # CQRS Send + pipeline NuGet building block (ISender, ICommand/IQuery, Unit; no Scrutor)
   FeatureFusion/                    # Web API (Features/, Infrastructure/, Controllers, Minimal APIs)
   EventBusRabbitMQ/                 # Reusable RabbitMQ event bus library
   FeatureFusion.ApiGateway/         # YARP + Memcached rate limiter
@@ -202,14 +204,78 @@ Conditional features via Microsoft.FeatureManagement and custom filters (e.g. VI
 
 REST idempotency with ULID keys and Redis status tracking (`POST /api/v2/Order/order`).
 
-- [Idempotency with MediatR/CQRS](https://www.linkedin.com/feed/update/urn:li:activity:7303686809891356676/)
+- [Idempotency with CQRS](https://www.linkedin.com/feed/update/urn:li:activity:7303686809891356676/)
 - [IdempotentFusion project](https://www.linkedin.com/feed/update/urn:li:activity:7309149985307029504/)
 
-### Manual Mediator + pipeline behaviors
+### BuildingBlocks.Mediator (CQRS Send + pipeline)
 
-Hand-rolled CQRS Mediator with cached wrappers and void-request Adapter.
+[![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Mediator.svg?logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Mediator)
+[![Downloads](https://img.shields.io/nuget/dt/BuildingBlocks.Mediator.svg)](https://www.nuget.org/packages/BuildingBlocks.Mediator)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
 
-- [Mediator Pattern + Pipeline Behavior](https://www.linkedin.com/feed/update/urn:li:activity:7311311587372367873/)
+Extracted as the **`BuildingBlocks.Mediator`** NuGet package — CQRS-first `ICommand` / `IQuery`, Send + ordered pipeline, opt-in `UseTelemetry`, `ValidateOnStartup`, configurable `HandlerLifetime`, open-generic handler support, exact-one handler resolution, and a built-in scanner (no Scrutor). Metrics/validation via host `AddOpenBehavior`. Ships Roslyn analyzers (BBM001/BBM002). No Publish/notifications.
+
+> **Disclaimer:** Not designed to replace other mediator or messaging packages — for developers who want **manual control** over design patterns (registration, pipeline, validation, telemetry) rather than a batteries-included framework.
+
+#### How to use
+
+**1. Install** (requires **.NET 10**):
+
+```bash
+dotnet add package BuildingBlocks.Mediator
+```
+
+**2. Define a command/query and its handler** — one handler per message:
+
+```csharp
+public sealed record CreateOrder(string Product, int Qty) : ICommand<Guid>;
+
+public sealed class CreateOrderHandler : ICommandHandler<CreateOrder, Guid>
+{
+    public Task<Guid> Handle(CreateOrder command, CancellationToken ct)
+        => Task.FromResult(Guid.NewGuid());
+}
+```
+
+**3. Register** — scan for handlers, add host behaviors, opt into telemetry/validation:
+
+```csharp
+builder.Services.AddMediator(cfg =>
+{
+    cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
+    cfg.AddOpenBehavior(typeof(ValidationBehavior<,>), order: 0); // lower = outermost
+    cfg.UseTelemetry();          // optional Send wrap (not a pipeline behavior)
+    cfg.ValidateOnStartup = true; // fail fast on missing/duplicate handlers
+});
+```
+
+**4. Send** — inject `ISender` (narrower than `IMediator`) and dispatch:
+
+```csharp
+public sealed class OrdersController(ISender sender) : ControllerBase
+{
+    [HttpPost]
+    public Task<Guid> Create(CreateOrder command, CancellationToken ct)
+        => sender.Send(command, ct);
+}
+```
+
+| Capability | What it does |
+|------------|--------------|
+| `ICommand` / `ICommand<T>` / `IQuery<T>` | CQRS message contracts; void commands via `ICommand : ICommand<Unit>` |
+| `AddOpenBehavior(type, order)` | Ordered pipeline behaviors (lower `order` = outermost) |
+| `UseTelemetry()` | Optional `ActivitySource` wrap around the whole Send (not a pipeline step) |
+| `ValidateOnStartup` | Fails fast when a message has zero or multiple handlers |
+| `HandlerLifetime` | Transient (default) / Scoped / Singleton for discovered handlers |
+| Open-generic handlers | Closed on demand (e.g. `Handler<T> : ICommandHandler<Cmd<T>, T>`) |
+| Analyzers BBM001 / BBM002 | Catch wrong handler kind and same-compilation missing handlers |
+
+- Package: [NuGet · BuildingBlocks.Mediator](https://www.nuget.org/packages/BuildingBlocks.Mediator)
+- Code: [`src/BuildingBlocks.Mediator`](src/BuildingBlocks.Mediator)
+- Docs: [getting-started](docs/building-blocks/getting-started.md) · [concepts](docs/building-blocks/concepts.md) · [pipeline-behaviors](docs/building-blocks/pipeline-behaviors.md) · [cookbook](docs/building-blocks/cookbook.md)
+- Freeze: [`docs/building-blocks/mediator.md`](docs/building-blocks/mediator.md)
+- ADR: [`docs/adr/0001-mediator-building-blocks-in-monorepo.md`](docs/adr/0001-mediator-building-blocks-in-monorepo.md)
+- [Mediator Pattern + Pipeline Behavior](https://www.linkedin.com/feed/update/urn:li:activity:7311311587372367873/) (prior post; building-blocks revision planned)
 
 ### API versioning & validation
 
@@ -233,9 +299,9 @@ Reusable, type-safe keyset pagination for EF Core: Base64 JSON cursors (last val
 
 | Pattern | Where it shows up |
 |---------|-------------------|
-| **Mediator** | `Infrastructure/CQRS` — send + pipeline behaviors |
+| **Mediator / CQRS** | `BuildingBlocks.Mediator` — `ICommand`/`IQuery` Send + pipeline; host handlers in FeatureFusion |
 | **CQRS** | `Features/.../Commands` + `Queries` with dedicated handlers |
-| **Adapter** | Void-request adapter bridging `IRequest` / `Unit` |
+| **Void command** | `ICommand : ICommand<Unit>` — concrete type in pipeline (no Adapter / `IRequest`) |
 | **Decorator** | Pipeline behaviors; EventBus handler decorators in tests |
 | **Singleton** | Cached mediator wrappers / long-lived Redis multiplexer |
 | **Factory** | Resilience / connection helpers; `CursorFactory`; gateway Memcached factory |
@@ -300,4 +366,4 @@ API / functional coverage uses the **Aspire** fixture in `IntegrationTests` (dyn
 
 PRs welcome. Prefer vertical-slice feature folders, XML docs on public APIs, constants over magic strings, and tests + catalog updates when behavior changes.
 
-License: [LICENSE.txt](LICENSE.txt)
+License: **MIT** — see [LICENSE.txt](LICENSE.txt).
