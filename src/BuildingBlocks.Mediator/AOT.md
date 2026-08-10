@@ -5,7 +5,7 @@ handler and pipeline wrappers (`Mediator`, `RequestHandlerWrappers`, `PipelineBe
 
 ## Guidance
 
-- **net10.0 JIT / server apps:** fully supported (primary target).
+- **net8.0 / net9.0 / net10.0 JIT / server apps:** fully supported.
 - **Native AOT:** not fully supported in v1. Trimming may remove closed handler/behavior constructions
   that are only referenced via reflection.
 - If you need AOT later: prefer source-generated registration (future) or explicit closed registrations

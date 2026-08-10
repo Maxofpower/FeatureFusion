@@ -1,6 +1,7 @@
 # BuildingBlocks.Mediator v1.0 — test matrix
 
-Release gate: scenarios below are covered by `tests/BuildingBlocks.Mediator.Tests`.
+Release gate: scenarios below are covered by `tests/BuildingBlocks.Mediator.Tests`
+on **`net8.0`**, **`net9.0`**, and **`net10.0`** (same suite per TFM).
 
 ## Supported
 

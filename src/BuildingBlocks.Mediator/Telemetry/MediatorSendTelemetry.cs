@@ -84,7 +84,9 @@ public sealed class MediatorSendTelemetry
 
 			if (_options.RecordException)
 			{
+#if NET9_0_OR_GREATER
 				activity?.AddException(ex);
+#endif
 				activity?.SetTag("exception.type", ex.GetType().FullName);
 				activity?.SetTag("exception.message", ex.Message);
 			}

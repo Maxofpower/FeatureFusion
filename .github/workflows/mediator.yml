@@ -37,12 +37,15 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "10.0.x"
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
 
       - name: Build analyzers
         run: dotnet build src/BuildingBlocks.Mediator.Analyzers/BuildingBlocks.Mediator.Analyzers.csproj -c Release
 
-      - name: Test library
+      - name: Test library (net8 / net9 / net10)
         run: dotnet test tests/BuildingBlocks.Mediator.Tests/BuildingBlocks.Mediator.Tests.csproj -c Release --verbosity minimal
 
       - name: Test analyzers

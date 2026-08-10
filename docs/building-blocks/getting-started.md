@@ -2,7 +2,7 @@
 
 > **Disclaimer:** BuildingBlocks.Mediator is **not** designed to replace other mediator or messaging packages. It is a focused CQRS Send + pipeline building block for developers who want **manual control** over design patterns — registration, pipeline order, validation, telemetry, and host composition — rather than a batteries-included framework.
 
-**Requires .NET 10** (`net10.0`).
+**Requires .NET 8+** (`net8.0` / `net9.0` / `net10.0`).
 
 ## Install
 
