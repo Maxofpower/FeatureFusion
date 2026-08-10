@@ -29,6 +29,9 @@ jobs:
     permissions:
       id-token: write
       contents: write
+    # secrets cannot be used in step `if:` — map to env first
+    env:
+      NUGET_USER: ${{ secrets.NUGET_USER }}
 
     steps:
       - uses: actions/checkout@v4
@@ -101,14 +104,14 @@ jobs:
             artifacts/nuget/*.snupkg
 
       - name: NuGet login (Trusted Publishing OIDC)
-        if: ${{ secrets.NUGET_USER != '' && (github.event_name != 'workflow_dispatch' || inputs.publish_nuget) }}
+        if: ${{ env.NUGET_USER != '' && (github.event_name != 'workflow_dispatch' || inputs.publish_nuget) }}
         id: login
         uses: NuGet/login@v1
         with:
-          user: ${{ secrets.NUGET_USER }}
+          user: ${{ env.NUGET_USER }}
 
       - name: Push to nuget.org
-        if: ${{ secrets.NUGET_USER != '' && (github.event_name != 'workflow_dispatch' || inputs.publish_nuget) && steps.login.outcome == 'success' }}
+        if: ${{ env.NUGET_USER != '' && (github.event_name != 'workflow_dispatch' || inputs.publish_nuget) && steps.login.outcome == 'success' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -127,7 +130,7 @@ jobs:
           done
 
       - name: Dry-run notice
-        if: ${{ secrets.NUGET_USER == '' || (github.event_name == 'workflow_dispatch' && !inputs.publish_nuget) }}
+        if: ${{ env.NUGET_USER == '' || (github.event_name == 'workflow_dispatch' && !inputs.publish_nuget) }}
         run: |
           echo "Skipped nuget.org push (NUGET_USER unset or publish_nuget=false)."
           echo "GitHub Release and workflow artifacts are still produced for tag/release triggers."
