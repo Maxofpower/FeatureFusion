@@ -219,7 +219,7 @@ Extracted as the **`BuildingBlocks.Mediator`** NuGet package — CQRS-first `ICo
 
 #### How to use
 
-**1. Install** (requires **.NET 10**):
+**1. Install** (requires **.NET 8+**):
 
 ```bash
 dotnet add package BuildingBlocks.Mediator

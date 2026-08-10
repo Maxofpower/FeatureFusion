@@ -9,7 +9,7 @@ CQRS-first **Send** + ordered **pipeline** mediator for .NET — `ICommand` / `I
 
 ## Requirements
 
-- **.NET 10** (`net10.0`) — v1 ships this TFM only (no multi-targeting)
+- **.NET 8**, **.NET 9**, or **.NET 10** (`net8.0` / `net9.0` / `net10.0`)
 
 ## Install
 

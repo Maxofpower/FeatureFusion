@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
@@ -13,12 +13,12 @@
     <IsPackable>true</IsPackable>
     <PackageId>BuildingBlocks.Mediator</PackageId>
     <Title>BuildingBlocks.Mediator</Title>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <Authors>Mohammad Hasan Hosseini</Authors>
     <Company>Mohammad Hasan Hosseini</Company>
     <Copyright>Copyright (c) 2026 Mohammad Hasan Hosseini</Copyright>
-    <Description>CQRS Send + ordered pipeline mediator building blocks for .NET 10 (net10.0). ICommand/IQuery, ISender, UseTelemetry, ValidateOnStartup. No Scrutor dependency.</Description>
-    <PackageTags>mediator;cqrs;pipeline;dotnet</PackageTags>
+    <Description>CQRS Send + ordered pipeline mediator building blocks. ICommand/IQuery, ISender, UseTelemetry, ValidateOnStartup, open-generic handlers. No Scrutor dependency.</Description>
+    <PackageTags>mediator;cqrs;pipeline;dotnet;net8;net9;net10</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/Maxofpower/FeatureManagement</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Maxofpower/FeatureManagement</RepositoryUrl>
@@ -41,10 +41,11 @@
     <None Include="AOT.md" Pack="false" />
   </ItemGroup>
 
+  <!-- Pin to 8.0.x so net8/net9 consumers are not forced onto Extensions 10. -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
   </ItemGroup>
 
@@ -62,7 +63,8 @@
     <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackMediatorAnalyzers</TargetsForTfmSpecificContentInPackage>
   </PropertyGroup>
 
-  <Target Name="PackMediatorAnalyzers" DependsOnTargets="ResolveProjectReferences">
+  <Target Name="PackMediatorAnalyzers" DependsOnTargets="ResolveProjectReferences"
+          Condition="'$(TargetFramework)' == 'net8.0'">
     <PropertyGroup>
       <_MediatorAnalyzerDll>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\BuildingBlocks.Mediator.Analyzers\bin\$(Configuration)\netstandard2.0\BuildingBlocks.Mediator.Analyzers.dll'))</_MediatorAnalyzerDll>
     </PropertyGroup>
