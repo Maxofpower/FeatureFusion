@@ -1,6 +1,6 @@
 # Cookbook — host pipeline recipes
 
-BuildingBlocks.Mediator does **not** ship FluentValidation or metrics. Register host behaviors with `AddOpenBehavior`.
+BuildingBlocks.Mediator does **not** ship FluentValidation. Register host validation with `AddOpenBehavior`. Send metrics are opt-in via `UseTelemetry()` (Meter); extra host metrics can still be a behavior.
 
 ## Validation (FluentValidation)
 
@@ -93,11 +93,11 @@ Open `IPipelineBehavior<,>` that logs request type before/after `next`. Place ou
 
 ## Metrics
 
-Same pattern as logging — host-owned open behavior. Keep metrics out of `UseTelemetry`.
+`UseTelemetry()` records histogram `mediator.send.duration` (ms) and counter `mediator.send` on meter `BuildingBlocks.Mediator` unless `EnableMetrics = false`. Extra RED/business metrics stay host-owned via `AddOpenBehavior` or `ICommandPipelineBehavior`.
 
 ## Command-only / query-only
 
-Derive from `CommandPipelineBehavior<,>` or `QueryPipelineBehavior<,>` (see [pipeline-behaviors.md](pipeline-behaviors.md)).
+Prefer `ICommandPipelineBehavior` / `IQueryPipelineBehavior` (and `AddOpenCommandBehavior` / `AddOpenQueryBehavior`) so the opposite kind is never constructed. `CommandPipelineBehavior` / `QueryPipelineBehavior` remain valid 1.0.1 runtime-skip bases. See [pipeline-behaviors.md](pipeline-behaviors.md).
 
 ## Caching
 

@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\BuildingBlocks.Aspire.Hosting.SigNoz\BuildingBlocks.Aspire.Hosting.SigNoz.csproj" />
+    <ProjectReference Include="..\..\..\src\BuildingBlocks\Aspire.Hosting.SigNoz\BuildingBlocks.Aspire.Hosting.SigNoz.csproj" />
   </ItemGroup>
 
 </Project>

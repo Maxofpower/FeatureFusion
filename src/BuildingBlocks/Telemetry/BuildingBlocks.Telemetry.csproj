@@ -16,19 +16,19 @@
     <IsPackable>true</IsPackable>
     <PackageId>BuildingBlocks.Telemetry</PackageId>
     <Title>BuildingBlocks.Telemetry</Title>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <Authors>Mohammad Hasan Hosseini</Authors>
     <Company>Mohammad Hasan Hosseini</Company>
     <Copyright>Copyright (c) 2026 Mohammad Hasan Hosseini</Copyright>
     <Description>Config-driven OpenTelemetry metrics, logging, and tracing for .NET. Stable instrumentations (ASP.NET Core, HttpClient, Runtime, Npgsql, SqlClient) plus source-only MassTransit/EventBus/Mediator; OTLP, Console, and Azure Monitor exporters.</Description>
     <PackageTags>opentelemetry;telemetry;tracing;metrics;logging;otlp;applicationinsights;aspire;sqlclient;net8;net9;net10</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/Maxofpower/FeatureManagement</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/Maxofpower/FeatureManagement</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/Maxofpower/FeatureFusion</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Maxofpower/FeatureFusion</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>PACKAGE_README.md</PackageReadmeFile>
     <PackageIcon>telemetry-icon.png</PackageIcon>
-    <PackageReleaseNotes>See CHANGELOG.md in the repository for release notes.</PackageReleaseNotes>
+    <PackageReleaseNotes>1.0.1: IntegrateMediator also AddMeter(BuildingBlocks.Mediator) so Send metrics export with traces; TelemetryDefaults.MediatorMeter. https://github.com/Maxofpower/FeatureFusion/blob/main/CHANGELOG.md</PackageReleaseNotes>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <IncludeSymbols>true</IncludeSymbols>
@@ -38,6 +38,7 @@
 
   <ItemGroup>
     <None Include="PACKAGE_README.md" Pack="true" PackagePath="\" />
+    <None Include="AGENTS.md" Pack="true" PackagePath="\" />
     <None Include="telemetry-icon.png" Pack="true" PackagePath="\" />
     <None Include="PublicAPI.Shipped.txt" Pack="false" />
     <None Include="PublicAPI.Unshipped.txt" Pack="false" />

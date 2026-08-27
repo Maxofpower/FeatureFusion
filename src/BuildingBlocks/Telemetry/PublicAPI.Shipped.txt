@@ -87,6 +87,7 @@ namespace BuildingBlocks.Telemetry
     public static class TelemetryDefaults
     {
         public const string MediatorActivitySource = "BuildingBlocks.Mediator";
+        public const string MediatorMeter = "BuildingBlocks.Mediator";
         public const string MassTransitActivitySource = "MassTransit";
         public const string EventBusActivitySource = "EventBus";
     }

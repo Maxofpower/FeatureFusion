@@ -5,6 +5,11 @@ Config-driven OpenTelemetry metrics, logging, and tracing for .NET.
 [![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Telemetry.svg)](https://www.nuget.org/packages/BuildingBlocks.Telemetry)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## What's new in 1.0.1
+
+- `IntegrateMediator` also `AddMeter("BuildingBlocks.Mediator")` so Send metrics export with traces
+- `TelemetryDefaults.MediatorMeter` (same name as the mediator ActivitySource)
+
 ## Requirements
 
 - **.NET 8**, **.NET 9**, or **.NET 10** (`net8.0` / `net9.0` / `net10.0`)
@@ -67,8 +72,8 @@ Endpoints, OTLP headers, and connection strings are never logged. Silence it wit
 
 ## Docs
 
-- [Telemetry guide](https://github.com/Maxofpower/FeatureManagement/blob/main/docs/building-blocks/telemetry.md)
-- [CHANGELOG](https://github.com/Maxofpower/FeatureManagement/blob/main/CHANGELOG.md)
+- [Telemetry guide](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/telemetry.md)
+- [CHANGELOG](https://github.com/Maxofpower/FeatureFusion/blob/main/CHANGELOG.md)
 
 ## License
 

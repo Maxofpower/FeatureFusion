@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\BuildingBlocks.Telemetry\BuildingBlocks.Telemetry.csproj" />
+    <ProjectReference Include="..\..\..\src\BuildingBlocks\Telemetry\BuildingBlocks.Telemetry.csproj" />
   </ItemGroup>
 
 </Project>

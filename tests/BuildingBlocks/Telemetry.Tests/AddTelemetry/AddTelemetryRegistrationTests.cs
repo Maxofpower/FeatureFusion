@@ -60,6 +60,8 @@ public sealed class AddTelemetryRegistrationTests
     public void Mediator_activity_source_name_matches_defaults()
     {
         Assert.Equal("BuildingBlocks.Mediator", TelemetryDefaults.MediatorActivitySource);
+        Assert.Equal("BuildingBlocks.Mediator", TelemetryDefaults.MediatorMeter);
+        Assert.Equal(TelemetryDefaults.MediatorActivitySource, TelemetryDefaults.MediatorMeter);
         Assert.Equal("MassTransit", TelemetryDefaults.MassTransitActivitySource);
         Assert.Equal("EventBus", TelemetryDefaults.EventBusActivitySource);
     }

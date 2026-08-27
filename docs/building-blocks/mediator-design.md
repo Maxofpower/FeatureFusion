@@ -39,7 +39,7 @@ sequenceDiagram
 ## Pipeline order
 
 1. Sort registered behaviors by explicit `order` (ascending), then registration index.
-2. `UseTelemetry` is optional Send enrichment (ActivitySource), not a pipeline behavior.
+2. `UseTelemetry` is optional Send enrichment (ActivitySource + Meter), not a pipeline behavior.
 3. Runtime chain: first in DI enumerable = outermost (`Reverse` when composing).
 
 ## Non-goals (v1)

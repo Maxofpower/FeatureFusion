@@ -19,8 +19,8 @@ namespace BuildingBlocks.Mediator.DependencyInjection;
 /// </para>
 /// <para>
 /// <see cref="UseTelemetry"/> is optional. When enabled it registers an ActivitySource
-/// (name configurable) and wraps each Send around the full pipeline + handler — it does
-/// <strong>not</strong> add a pipeline behavior.
+/// (name configurable) and, unless metrics are disabled, a Meter, and wraps each Send around
+/// the full pipeline + handler — it does <strong>not</strong> add a pipeline behavior.
 /// </para>
 /// </remarks>
 /// <example>
@@ -75,16 +75,20 @@ public sealed class MediatorConfiguration
 		=> RegisterServicesFromAssembly(typeof(T).Assembly);
 
 	/// <summary>
-	/// Enables optional Send enrichment via a configurable <see cref="System.Diagnostics.ActivitySource"/>.
+	/// Enables optional Send enrichment via a configurable <see cref="System.Diagnostics.ActivitySource"/>
+	/// and, unless <see cref="MediatorTelemetryOptions.EnableMetrics"/> is false, a
+	/// <see cref="System.Diagnostics.Metrics.Meter"/>.
 	/// Activity wraps the full pipeline + handler (not a pipeline behavior). Omit this call for zero telemetry overhead.
 	/// </summary>
-	/// <param name="configure">Optional; set <see cref="MediatorTelemetryOptions.ActivitySourceName"/> and logging/exception flags.</param>
+	/// <param name="configure">Optional; set <see cref="MediatorTelemetryOptions.ActivitySourceName"/>, meter, logging, and exception flags.</param>
 	public MediatorConfiguration UseTelemetry(Action<MediatorTelemetryOptions>? configure = null)
 	{
 		var options = new MediatorTelemetryOptions();
 		configure?.Invoke(options);
 		if (string.IsNullOrWhiteSpace(options.ActivitySourceName))
 			throw new ArgumentException("ActivitySourceName must be a non-empty string when UseTelemetry is enabled.", nameof(configure));
+		if (string.IsNullOrWhiteSpace(options.MeterName))
+			options.MeterName = options.ActivitySourceName;
 		TelemetryOptions = options;
 		return this;
 	}
@@ -150,20 +154,7 @@ public sealed class MediatorConfiguration
 		int? order,
 		ServiceLifetime serviceLifetime)
 	{
-		ArgumentNullException.ThrowIfNull(openBehaviorType);
-
-		if (!openBehaviorType.IsGenericTypeDefinition)
-			throw new ArgumentException(
-				$"{openBehaviorType.Name} must be an open generic type definition (e.g. MyBehavior&lt;,&gt;).",
-				nameof(openBehaviorType));
-
-		var implementsPipeline = openBehaviorType.GetInterfaces()
-			.Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IPipelineBehavior<,>));
-
-		if (!implementsPipeline)
-			throw new ArgumentException(
-				$"{openBehaviorType.Name} must implement IPipelineBehavior&lt;,&gt;.",
-				nameof(openBehaviorType));
+		EnsureOpenPipelineBehavior(openBehaviorType, typeof(IPipelineBehavior<,>), nameof(openBehaviorType));
 
 		var index = _nextRegistrationIndex++;
 		var effectiveOrder = order ?? index;
@@ -177,6 +168,97 @@ public sealed class MediatorConfiguration
 			index));
 
 		return this;
+	}
+
+	/// <summary>
+	/// Registers an open-generic command-only pipeline behavior
+	/// (must implement <see cref="Pipeline.ICommandPipelineBehavior{TCommand,TResponse}"/>).
+	/// When order is omitted, registration order is used (first registered = outermost).
+	/// </summary>
+	public MediatorConfiguration AddOpenCommandBehavior(
+		Type openBehaviorType,
+		ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+		=> AddOpenCommandBehavior(openBehaviorType, order: null, serviceLifetime);
+
+	/// <summary>
+	/// Registers an open-generic command-only pipeline behavior with an explicit
+	/// <paramref name="order"/> (lower = outermost).
+	/// </summary>
+	public MediatorConfiguration AddOpenCommandBehavior(
+		Type openBehaviorType,
+		int order,
+		ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+		=> AddOpenCommandBehavior(openBehaviorType, (int?)order, serviceLifetime);
+
+	internal MediatorConfiguration AddOpenCommandBehavior(
+		Type openBehaviorType,
+		int? order,
+		ServiceLifetime serviceLifetime)
+	{
+		EnsureOpenPipelineBehavior(
+			openBehaviorType,
+			typeof(Pipeline.ICommandPipelineBehavior<,>),
+			nameof(openBehaviorType),
+			"ICommandPipelineBehavior");
+		return AddOpenBehavior(openBehaviorType, order, serviceLifetime);
+	}
+
+	/// <summary>
+	/// Registers an open-generic query-only pipeline behavior
+	/// (must implement <see cref="Pipeline.IQueryPipelineBehavior{TQuery,TResponse}"/>).
+	/// When order is omitted, registration order is used (first registered = outermost).
+	/// </summary>
+	public MediatorConfiguration AddOpenQueryBehavior(
+		Type openBehaviorType,
+		ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+		=> AddOpenQueryBehavior(openBehaviorType, order: null, serviceLifetime);
+
+	/// <summary>
+	/// Registers an open-generic query-only pipeline behavior with an explicit
+	/// <paramref name="order"/> (lower = outermost).
+	/// </summary>
+	public MediatorConfiguration AddOpenQueryBehavior(
+		Type openBehaviorType,
+		int order,
+		ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+		=> AddOpenQueryBehavior(openBehaviorType, (int?)order, serviceLifetime);
+
+	internal MediatorConfiguration AddOpenQueryBehavior(
+		Type openBehaviorType,
+		int? order,
+		ServiceLifetime serviceLifetime)
+	{
+		EnsureOpenPipelineBehavior(
+			openBehaviorType,
+			typeof(Pipeline.IQueryPipelineBehavior<,>),
+			nameof(openBehaviorType),
+			"IQueryPipelineBehavior");
+		return AddOpenBehavior(openBehaviorType, order, serviceLifetime);
+	}
+
+	private static void EnsureOpenPipelineBehavior(
+		Type openBehaviorType,
+		Type requiredOpenInterface,
+		string paramName,
+		string? requiredInterfaceDisplayName = null)
+	{
+		ArgumentNullException.ThrowIfNull(openBehaviorType);
+
+		if (!openBehaviorType.IsGenericTypeDefinition)
+			throw new ArgumentException(
+				$"{openBehaviorType.Name} must be an open generic type definition (e.g. MyBehavior&lt;,&gt;).",
+				paramName);
+
+		var implements = openBehaviorType.GetInterfaces()
+			.Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == requiredOpenInterface);
+
+		if (!implements)
+		{
+			var iface = requiredInterfaceDisplayName ?? "IPipelineBehavior";
+			throw new ArgumentException(
+				$"{openBehaviorType.Name} must implement {iface}&lt;,&gt;.",
+				paramName);
+		}
 	}
 }
 

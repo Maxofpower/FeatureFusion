@@ -1,6 +1,6 @@
-# BuildingBlocks.Mediator v1.0 — test matrix
+# BuildingBlocks.Mediator v1.1 — test matrix
 
-Release gate: scenarios below are covered by `tests/BuildingBlocks.Mediator.Tests`
+Release gate: scenarios below are covered by `tests/BuildingBlocks/Mediator.Tests`
 on **`net8.0`**, **`net9.0`**, and **`net10.0`** (same suite per TFM).
 
 ## Supported
@@ -9,9 +9,10 @@ on **`net8.0`**, **`net9.0`**, and **`net10.0`** (same suite per TFM).
 |------|-----------|
 | Send | Command / query / void; interface variables; `Send(object)`; nested Send |
 | Pipeline | Registration order + explicit `order`; short-circuit; throw before/after; open + closed |
-| Filters | `CommandPipelineBehavior` / `QueryPipelineBehavior` skip opposite kind |
+| Filters (1.0) | `CommandPipelineBehavior` / `QueryPipelineBehavior` skip opposite kind |
+| Typed behaviors (1.1) | `ICommandPipelineBehavior` not constructed for queries; `IQueryPipelineBehavior` not constructed for commands; both in one pipeline isolate by kind; void commands; mixed with unconstrained; open-generic messages (`EchoCommand<T>` / `EchoQuery<T>`); `Result<T>` / nested `Result<PagedResult<T>>` / `IReadOnlyList<T>`; wrong kind / unconstrained / 1.0 filter base / closed type / null rejected with `ArgumentException`/`ArgumentNullException` and the matching interface name |
 | DI scan | Finds closed + open-generic handlers; Skip if pre-registered; ignores abstract/non-public |
-| Telemetry | Success / fault / omit; Activity wraps full pipeline |
+| Telemetry | Success / fault / omit; Activity wraps full pipeline; Meter duration + send counter; `EnableMetrics = false`; custom meter name |
 | ValidateOnStartup | Missing / duplicate / orphan / off; open-generic satisfies closed message |
 | Handler lifetime | `HandlerLifetime` Transient/Scoped/Singleton on discovered handlers |
 | Ambiguous handlers | Send throws when multiple closed (or multiple open) matches |
@@ -30,9 +31,9 @@ on **`net8.0`**, **`net9.0`**, and **`net10.0`** (same suite per TFM).
 | Exception handlers (recover) | Faults rethrow |
 | Pre/post processors | Use behaviors |
 | Non-generic `IQuery` | Type does not exist |
-| FV / metrics / Scrutor / other mediators in core | No package references |
+| FV / Scrutor / other mediators in core | No package references (Meter is BCL `System.Diagnostics.Metrics`) |
 | Open-generic `HandlerLifetime` | Always Transient via ActivatorUtilities |
 
 ## Edge
 
-Null message → `ArgumentNullException`; unknown `Send(object)` → `ArgumentException`; missing handler → `InvalidOperationException` with type name; bad `AddOpenBehavior` → `ArgumentException`; AddMediator without assembly → `InvalidOperationException`.
+Null message → `ArgumentNullException`; unknown `Send(object)` → `ArgumentException`; missing handler → `InvalidOperationException` with type name; bad `AddOpenBehavior` / `AddOpenCommandBehavior` / `AddOpenQueryBehavior` → `ArgumentException`; AddMediator without assembly → `InvalidOperationException`.

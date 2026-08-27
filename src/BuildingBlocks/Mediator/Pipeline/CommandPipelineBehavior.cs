@@ -4,6 +4,11 @@ namespace BuildingBlocks.Mediator.Pipeline;
 /// Pipeline behavior that runs only for command requests (<see cref="ICommand"/> / <see cref="ICommand{TResponse}"/>).
 /// Queries skip straight to the next delegate without invoking <see cref="HandleCommand"/>.
 /// </summary>
+/// <remarks>
+/// Prefer <see cref="ICommandPipelineBehavior{TCommand,TResponse}"/> for new open generics so MS.DI
+/// does not construct this type for queries. This base remains supported (1.0.1 contract): it is
+/// unconstrained and skips the opposite kind at runtime.
+/// </remarks>
 /// <typeparam name="TRequest">Request type.</typeparam>
 /// <typeparam name="TResponse">Response type (use <see cref="Unit"/> for void commands).</typeparam>
 /// <example>

@@ -1,1 +1,1 @@
-# New public API for 1.0.0 — shipped at tag; keep empty for subsequent unshipped deltas.
+# New public API since 1.0.1 — move into PublicAPI.Shipped.txt when cutting the next version.

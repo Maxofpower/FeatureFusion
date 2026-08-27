@@ -82,8 +82,8 @@ A previously seeded copy is replaced when its layout sections no longer match th
 
 ## Docs
 
-- [Telemetry guide](https://github.com/Maxofpower/FeatureManagement/blob/main/docs/building-blocks/telemetry.md)
-- [CHANGELOG](https://github.com/Maxofpower/FeatureManagement/blob/main/CHANGELOG.md)
+- [Telemetry guide](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/telemetry.md)
+- [CHANGELOG](https://github.com/Maxofpower/FeatureFusion/blob/main/CHANGELOG.md)
 
 ## License
 

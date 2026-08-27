@@ -82,7 +82,7 @@ Filter the category `BuildingBlocks.Telemetry.Internal.Pipeline.TelemetryStartup
 
 | Library | Emits | Host opt-in |
 |---------|-------|-------------|
-| `BuildingBlocks.Mediator` | `ActivitySource` + `ILogger` via `UseTelemetry()` | `IntegrateMediator` |
+| `BuildingBlocks.Mediator` | `ActivitySource` + Meter + `ILogger` via `UseTelemetry()` | `IntegrateMediator` (`AddSource` + `AddMeter`) |
 | EventBusRabbitMQ | `ActivitySource("EventBus")` | `Instrumentation.EventBus` |
 | SqlClient | Contrib `AddSqlClientInstrumentation` | `Instrumentation.SqlClient` + optional `ConfigureSqlClient` |
 
@@ -91,7 +91,7 @@ Filter the category `BuildingBlocks.Telemetry.Internal.Pipeline.TelemetryStartup
 | Key | Default | Meaning |
 |-----|---------|---------|
 | `EnableTracing` / `EnableMetrics` / `EnableLogging` | `true` | Pillar toggles |
-| `IntegrateMediator` | `true` | Source `BuildingBlocks.Mediator` |
+| `IntegrateMediator` | `true` | Source + meter `BuildingBlocks.Mediator` |
 | `Instrumentation.AspNetCore` | `true` | HTTP traces + metrics |
 | `Instrumentation.HttpClient` / `Runtime` / `Npgsql` | `true` | Stable |
 | `Instrumentation.IncludeFrameworkMeters` | `true` | Hosting, Kestrel, Routing, Diagnostics, Auth, MemoryPool, Http, DNS |
@@ -110,7 +110,7 @@ Vertical slices under `Internal/`: `Pipeline/`, `Exporters/`, `Instrumentations/
 
 ## SigNoz click-through (local Aspire)
 
-AppHost: `AddSigNoz().WithUi().WithDashboards()` + `WithSigNozOtlpExporter`. FeatureFusion AppHost binds UI port and admin credentials from the `SigNoz` config section (override with `SigNoz__AdminPassword`, `SigNoz__UiPort`, …) and omits `WithDataVolume()` (writable layer still persists when `Lifetime = Persistent`; sqlite volume always persists). After traffic: **Services** → **Traces** (waterfall) → **Metrics** / **Logs**. Filter spans with `telemetry.component`. Dashboard tiles use SigNoz **View in Traces**.
+AppHost: `AddSigNoz().WithUi().WithDashboards()` + `WithSigNozOtlpExporter`. FeatureFusion AppHost uses `WithUiFromConfiguration` (`src/Lab/FeatureFusion.AppHost/appsettings.Development.json`): **`dev@local.test` / `DevPassword123!`**. Override with `SigNoz__AdminEmail`, `SigNoz__AdminPassword`, `SigNoz__UiPort`, …. The UI still requires login; root-user env only skips signup. Custom lab credentials are not shown on the Aspire connection panel. Omits `WithDataVolume()` (writable layer still persists when `Lifetime = Persistent`; sqlite volume always persists). After traffic: **Services** → **Traces** (waterfall) → **Metrics** / **Logs**. Filter spans with `telemetry.component`. Dashboard tiles use SigNoz **View in Traces**.
 
 The seeded **BuildingBlocks Telemetry** dashboard has four sections — Service RED, Components (grouped by
 `telemetry.component`), Runtime (both `dotnet.*` and `process.runtime.dotnet.*` metric names, so panels work on
@@ -129,5 +129,5 @@ failing with ClickHouse `code: 754` / child process exit 2.
 
 ## Related
 
-- [BuildingBlocks.Aspire.Hosting.SigNoz](../../src/BuildingBlocks.Aspire.Hosting.SigNoz/PACKAGE_README.md)
+- [BuildingBlocks.Aspire.Hosting.SigNoz](../../src/BuildingBlocks/Aspire.Hosting.SigNoz/PACKAGE_README.md)
 - [deploy/signoz/alerts](../../deploy/signoz/alerts/README.md)

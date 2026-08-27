@@ -13,19 +13,19 @@
     <IsPackable>true</IsPackable>
     <PackageId>BuildingBlocks.Mediator</PackageId>
     <Title>BuildingBlocks.Mediator</Title>
-    <Version>1.0.1</Version>
+    <Version>1.1.0</Version>
     <Authors>Mohammad Hasan Hosseini</Authors>
     <Company>Mohammad Hasan Hosseini</Company>
     <Copyright>Copyright (c) 2026 Mohammad Hasan Hosseini</Copyright>
-    <Description>CQRS Send + ordered pipeline mediator building blocks. ICommand/IQuery, ISender, UseTelemetry, ValidateOnStartup, open-generic handlers. No Scrutor dependency.</Description>
-    <PackageTags>mediator;cqrs;pipeline;dotnet;net8;net9;net10</PackageTags>
+    <Description>CQRS Send + ordered pipeline mediator building blocks. ICommand/IQuery, ISender, typed command/query behaviors, UseTelemetry (traces + metrics), ValidateOnStartup, open-generic handlers. No Scrutor dependency.</Description>
+    <PackageTags>mediator;cqrs;isender;icommand;iquery;pipeline-behavior;opentelemetry;aspnetcore;dependency-injection;net8;net9;net10</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/Maxofpower/FeatureManagement</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/Maxofpower/FeatureManagement</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/Maxofpower/FeatureFusion</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Maxofpower/FeatureFusion</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>PACKAGE_README.md</PackageReadmeFile>
     <PackageIcon>mediator-icon.png</PackageIcon>
-    <PackageReleaseNotes>See CHANGELOG.md in the repository for release notes.</PackageReleaseNotes>
+    <PackageReleaseNotes>1.1.0: Typed ICommandPipelineBehavior/IQueryPipelineBehavior; AddOpenCommandBehavior/AddOpenQueryBehavior; opt-in Send metrics (mediator.send.duration, mediator.send). Drop-in from 1.0.1. https://github.com/Maxofpower/FeatureFusion/blob/main/CHANGELOG.md</PackageReleaseNotes>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <IncludeSymbols>true</IncludeSymbols>
@@ -35,6 +35,7 @@
 
   <ItemGroup>
     <None Include="PACKAGE_README.md" Pack="true" PackagePath="\" />
+    <None Include="AGENTS.md" Pack="true" PackagePath="\" />
     <None Include="mediator-icon.png" Pack="true" PackagePath="\" />
     <None Include="PublicAPI.Shipped.txt" Pack="false" />
     <None Include="PublicAPI.Unshipped.txt" Pack="false" />
@@ -50,7 +51,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\BuildingBlocks.Mediator.Analyzers\BuildingBlocks.Mediator.Analyzers.csproj"
+    <ProjectReference Include="..\Mediator.Analyzers\BuildingBlocks.Mediator.Analyzers.csproj"
                       ReferenceOutputAssembly="false"
                       PrivateAssets="all" />
   </ItemGroup>
@@ -66,7 +67,7 @@
   <Target Name="PackMediatorAnalyzers" DependsOnTargets="ResolveProjectReferences"
           Condition="'$(TargetFramework)' == 'net8.0'">
     <PropertyGroup>
-      <_MediatorAnalyzerDll>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\BuildingBlocks.Mediator.Analyzers\bin\$(Configuration)\netstandard2.0\BuildingBlocks.Mediator.Analyzers.dll'))</_MediatorAnalyzerDll>
+      <_MediatorAnalyzerDll>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\Mediator.Analyzers\bin\$(Configuration)\netstandard2.0\BuildingBlocks.Mediator.Analyzers.dll'))</_MediatorAnalyzerDll>
     </PropertyGroup>
     <Error Condition="!Exists('$(_MediatorAnalyzerDll)')"
            Text="Mediator analyzer DLL not found at '$(_MediatorAnalyzerDll)'. Build BuildingBlocks.Mediator.Analyzers first." />

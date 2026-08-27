@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using BuildingBlocks.Mediator.DependencyInjection;
 using BuildingBlocks.Mediator.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
@@ -246,6 +247,111 @@ public sealed class TelemetryRegistrationTests
 		Assert.Contains("ActivitySourceName", ex.Message, StringComparison.Ordinal);
 	}
 
+	[Fact]
+	public async Task UseTelemetry_OnSuccess_RecordsDurationAndSendCounter()
+	{
+		using var metrics = new MetricSink("BuildingBlocks.Mediator.Tests");
+
+		using var sp = TestHost.BuildWithAddMediator(
+			cfg =>
+			{
+				cfg.RegisterServicesFromAssembly(typeof(AssemblyMarker).Assembly);
+				cfg.UseTelemetry(o => o.ActivitySourceName = "BuildingBlocks.Mediator.Tests");
+			},
+			s => s.AddTransient<ICommandHandler<CreateOrder, OrderResult>, CreateOrderHandler>());
+
+		_ = await sp.GetRequiredService<ISender>().Send(new CreateOrder("A", 1));
+
+		var duration = Assert.Single(metrics.Doubles, d => d.Instrument == "mediator.send.duration");
+		Assert.True(duration.Value >= 0);
+		Assert.Equal("command", duration.Tags["mediator.message_kind"]);
+		Assert.Equal("CreateOrder", duration.Tags["mediator.request_name"]);
+
+		var count = Assert.Single(metrics.Longs, d => d.Instrument == "mediator.send");
+		Assert.Equal(1L, count.Value);
+		Assert.Equal(true, count.Tags["mediator.success"]);
+		Assert.Equal("command", count.Tags["mediator.message_kind"]);
+	}
+
+	[Fact]
+	public async Task UseTelemetry_OnFault_RecordsFailedSendCounter_AndRethrows()
+	{
+		using var metrics = new MetricSink("BuildingBlocks.Mediator.Tests");
+
+		using var sp = TestHost.BuildWithAddMediator(
+			cfg =>
+			{
+				cfg.RegisterServicesFromAssembly(typeof(AssemblyMarker).Assembly);
+				cfg.UseTelemetry(o => o.ActivitySourceName = "BuildingBlocks.Mediator.Tests");
+			},
+			s => s.AddTransient<ICommandHandler<CreateOrder, OrderResult>, ThrowingCreateOrderHandler>());
+
+		await Assert.ThrowsAsync<InvalidOperationException>(
+			() => sp.GetRequiredService<ISender>().Send(new CreateOrder("A", 1)));
+
+		var count = Assert.Single(metrics.Longs, d => d.Instrument == "mediator.send");
+		Assert.Equal(1L, count.Value);
+		Assert.Equal(false, count.Tags["mediator.success"]);
+		Assert.Single(metrics.Doubles, d => d.Instrument == "mediator.send.duration");
+	}
+
+	[Fact]
+	public async Task UseTelemetry_EnableMetricsFalse_DoesNotRecord()
+	{
+		using var metrics = new MetricSink("BuildingBlocks.Mediator.Tests");
+
+		using var sp = TestHost.BuildWithAddMediator(
+			cfg =>
+			{
+				cfg.RegisterServicesFromAssembly(typeof(AssemblyMarker).Assembly);
+				cfg.UseTelemetry(o =>
+				{
+					o.ActivitySourceName = "BuildingBlocks.Mediator.Tests";
+					o.EnableMetrics = false;
+				});
+			},
+			s => s.AddTransient<ICommandHandler<CreateOrder, OrderResult>, CreateOrderHandler>());
+
+		_ = await sp.GetRequiredService<ISender>().Send(new CreateOrder("A", 1));
+		Assert.Empty(metrics.Doubles);
+		Assert.Empty(metrics.Longs);
+	}
+
+	[Fact]
+	public async Task UseTelemetry_Omitted_DoesNotRecordMetrics()
+	{
+		using var metrics = new MetricSink("BuildingBlocks.Mediator.Tests");
+
+		await using var sp = TestHost.Build(s =>
+			s.AddTransient<ICommandHandler<CreateOrder, OrderResult>, CreateOrderHandler>());
+
+		_ = await sp.GetRequiredService<ISender>().Send(new CreateOrder("A", 1));
+		Assert.Empty(metrics.Doubles);
+		Assert.Empty(metrics.Longs);
+	}
+
+	[Fact]
+	public async Task UseTelemetry_CustomMeterName_IsHonored()
+	{
+		const string meterName = "BuildingBlocks.Mediator.CustomMeter";
+		using var metrics = new MetricSink(meterName);
+
+		using var sp = TestHost.BuildWithAddMediator(
+			cfg =>
+			{
+				cfg.RegisterServicesFromAssembly(typeof(AssemblyMarker).Assembly);
+				cfg.UseTelemetry(o =>
+				{
+					o.ActivitySourceName = "BuildingBlocks.Mediator.Tests";
+					o.MeterName = meterName;
+				});
+			},
+			s => s.AddTransient<ICommandHandler<CreateOrder, OrderResult>, CreateOrderHandler>());
+
+		_ = await sp.GetRequiredService<ISender>().Send(new CreateOrder("A", 1));
+		Assert.Single(metrics.Longs, d => d.Instrument == "mediator.send");
+	}
+
 	private static ActivityListener CreateListener(List<Activity> sink, string sourceName = "BuildingBlocks.Mediator.Tests")
 	{
 		var listener = new ActivityListener
@@ -256,5 +362,39 @@ public sealed class TelemetryRegistrationTests
 		};
 		ActivitySource.AddActivityListener(listener);
 		return listener;
+	}
+
+	private sealed class MetricSink : IDisposable
+	{
+		private readonly MeterListener _listener;
+
+		public List<(string Instrument, double Value, Dictionary<string, object?> Tags)> Doubles { get; } = new();
+
+		public List<(string Instrument, long Value, Dictionary<string, object?> Tags)> Longs { get; } = new();
+
+		public MetricSink(string meterName)
+		{
+			_listener = new MeterListener();
+			_listener.InstrumentPublished = (instrument, listener) =>
+			{
+				if (instrument.Meter.Name == meterName)
+					listener.EnableMeasurementEvents(instrument);
+			};
+			_listener.SetMeasurementEventCallback<double>((instrument, value, tags, _) =>
+				Doubles.Add((instrument.Name, value, ToDictionary(tags))));
+			_listener.SetMeasurementEventCallback<long>((instrument, value, tags, _) =>
+				Longs.Add((instrument.Name, value, ToDictionary(tags))));
+			_listener.Start();
+		}
+
+		public void Dispose() => _listener.Dispose();
+
+		private static Dictionary<string, object?> ToDictionary(ReadOnlySpan<KeyValuePair<string, object?>> tags)
+		{
+			var map = new Dictionary<string, object?>(StringComparer.Ordinal);
+			foreach (var tag in tags)
+				map[tag.Key] = tag.Value;
+			return map;
+		}
 	}
 }
