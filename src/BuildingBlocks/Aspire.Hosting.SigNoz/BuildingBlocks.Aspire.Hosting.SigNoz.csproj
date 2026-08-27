@@ -22,12 +22,12 @@
     <Description>Aspire AppHost (local-dev) integration for SigNoz. AddSigNoz() provisions ClickHouse, ZooKeeper, telemetrystore migrator, OTLP collector, and UI; WithDashboards() seeds ASP.NET / BuildingBlocks dashboards; WithSigNozOtlpExporter() wires projects to the collector.</Description>
     <PackageTags>aspire;hosting;signoz;opentelemetry;observability;otlp</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/Maxofpower/FeatureManagement</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/Maxofpower/FeatureManagement</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/Maxofpower/FeatureFusion</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Maxofpower/FeatureFusion</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>PACKAGE_README.md</PackageReadmeFile>
     <PackageIcon>signoz-icon.png</PackageIcon>
-    <PackageReleaseNotes>See CHANGELOG.md in the repository for release notes.</PackageReleaseNotes>
+    <PackageReleaseNotes>1.0.0: AddSigNoz (ClickHouse, ZooKeeper, migrator, OTLP collector, UI); WithUi; WithDashboards; WithDataVolume/WithDataBindMount; WithSigNozOtlpExporter on ProjectResource. Local-dev only. https://github.com/Maxofpower/FeatureFusion/blob/main/CHANGELOG.md</PackageReleaseNotes>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <IncludeSymbols>true</IncludeSymbols>
@@ -37,6 +37,7 @@
 
   <ItemGroup>
     <None Include="PACKAGE_README.md" Pack="true" PackagePath="\" />
+    <None Include="AGENTS.md" Pack="true" PackagePath="\" />
     <None Include="signoz-icon.png" Pack="true" PackagePath="\" />
     <None Include="PublicAPI.Shipped.txt" Pack="false" />
     <None Include="PublicAPI.Unshipped.txt" Pack="false" />

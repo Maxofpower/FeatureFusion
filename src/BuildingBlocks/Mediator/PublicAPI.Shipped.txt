@@ -66,6 +66,10 @@ namespace BuildingBlocks.Mediator.DependencyInjection
         public BuildingBlocks.Mediator.DependencyInjection.MediatorConfiguration AddBehavior<TBehavior>(int order) where TBehavior : class { throw null!; }
         public BuildingBlocks.Mediator.DependencyInjection.MediatorConfiguration AddOpenBehavior(System.Type openBehaviorType, Microsoft.Extensions.DependencyInjection.ServiceLifetime serviceLifetime = Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient) { throw null!; }
         public BuildingBlocks.Mediator.DependencyInjection.MediatorConfiguration AddOpenBehavior(System.Type openBehaviorType, int order, Microsoft.Extensions.DependencyInjection.ServiceLifetime serviceLifetime = Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient) { throw null!; }
+        public BuildingBlocks.Mediator.DependencyInjection.MediatorConfiguration AddOpenCommandBehavior(System.Type openBehaviorType, Microsoft.Extensions.DependencyInjection.ServiceLifetime serviceLifetime = Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient) { throw null!; }
+        public BuildingBlocks.Mediator.DependencyInjection.MediatorConfiguration AddOpenCommandBehavior(System.Type openBehaviorType, int order, Microsoft.Extensions.DependencyInjection.ServiceLifetime serviceLifetime = Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient) { throw null!; }
+        public BuildingBlocks.Mediator.DependencyInjection.MediatorConfiguration AddOpenQueryBehavior(System.Type openBehaviorType, Microsoft.Extensions.DependencyInjection.ServiceLifetime serviceLifetime = Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient) { throw null!; }
+        public BuildingBlocks.Mediator.DependencyInjection.MediatorConfiguration AddOpenQueryBehavior(System.Type openBehaviorType, int order, Microsoft.Extensions.DependencyInjection.ServiceLifetime serviceLifetime = Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient) { throw null!; }
     }
     public static class MediatorServiceCollectionExtensions
     {
@@ -84,6 +88,8 @@ namespace BuildingBlocks.Mediator.Pipeline
         public System.Threading.Tasks.Task<TResponse> Handle(TRequest request, BuildingBlocks.Mediator.RequestHandlerDelegate<TResponse> next, System.Threading.CancellationToken cancellationToken = default) { throw null!; }
         protected abstract System.Threading.Tasks.Task<TResponse> HandleQuery(TRequest request, BuildingBlocks.Mediator.RequestHandlerDelegate<TResponse> next, System.Threading.CancellationToken cancellationToken);
     }
+    public interface ICommandPipelineBehavior<in TCommand, TResponse> : BuildingBlocks.Mediator.IPipelineBehavior<TCommand, TResponse> where TCommand : BuildingBlocks.Mediator.ICommand<TResponse> { }
+    public interface IQueryPipelineBehavior<in TQuery, TResponse> : BuildingBlocks.Mediator.IPipelineBehavior<TQuery, TResponse> where TQuery : BuildingBlocks.Mediator.IQuery<TResponse> { }
     public static class MessageKind
     {
         public static bool IsCommand(object request) { throw null!; }
@@ -95,14 +101,18 @@ namespace BuildingBlocks.Mediator.Telemetry
     public sealed class MediatorTelemetryOptions
     {
         public string ActivitySourceName { get { throw null!; } set { } }
+        public string MeterName { get { throw null!; } set { } }
         public bool RecordException { get { throw null!; } set { } }
         public bool EnableLogging { get { throw null!; } set { } }
+        public bool EnableMetrics { get { throw null!; } set { } }
     }
-    public sealed class MediatorSendTelemetry
+    public sealed class MediatorSendTelemetry : System.IDisposable
     {
         public MediatorSendTelemetry(Microsoft.Extensions.Options.IOptions<BuildingBlocks.Mediator.Telemetry.MediatorTelemetryOptions> options, Microsoft.Extensions.Logging.ILoggerFactory loggerFactory) { }
         public string ActivitySourceName { get { throw null!; } }
+        public string? MeterName { get { throw null!; } }
         public System.Diagnostics.ActivitySource Source { get { throw null!; } }
         public System.Threading.Tasks.Task<TResponse> TraceAsync<TResponse>(System.Type messageType, string messageKind, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<TResponse>> send, System.Threading.CancellationToken cancellationToken) { throw null!; }
+        public void Dispose() { }
     }
 }

@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\BuildingBlocks.Mediator\BuildingBlocks.Mediator.csproj" />
+    <ProjectReference Include="..\..\..\src\BuildingBlocks\Mediator\BuildingBlocks.Mediator.csproj" />
   </ItemGroup>
 
 </Project>

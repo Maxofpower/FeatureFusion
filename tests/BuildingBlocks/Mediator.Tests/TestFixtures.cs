@@ -500,3 +500,52 @@ public sealed class NotifyOrderCreatedHandler : ICommandHandler<NotifyOrderCreat
 		return Task.CompletedTask;
 	}
 }
+
+public sealed class ConstrainedBehaviorCounter
+{
+	public int CommandConstructions;
+	public int QueryConstructions;
+	public readonly List<string> Log = new();
+}
+
+public sealed class ConstrainedCommandBehavior<TCommand, TResponse> : Pipeline.ICommandPipelineBehavior<TCommand, TResponse>
+	where TCommand : ICommand<TResponse>
+{
+	private readonly ConstrainedBehaviorCounter _counter;
+
+	public ConstrainedCommandBehavior(ConstrainedBehaviorCounter counter)
+	{
+		_counter = counter;
+		Interlocked.Increment(ref _counter.CommandConstructions);
+	}
+
+	public Task<TResponse> Handle(
+		TCommand request,
+		RequestHandlerDelegate<TResponse> next,
+		CancellationToken cancellationToken = default)
+	{
+		_counter.Log.Add($"constrained-cmd:{typeof(TCommand).Name}");
+		return next(cancellationToken);
+	}
+}
+
+public sealed class ConstrainedQueryBehavior<TQuery, TResponse> : Pipeline.IQueryPipelineBehavior<TQuery, TResponse>
+	where TQuery : IQuery<TResponse>
+{
+	private readonly ConstrainedBehaviorCounter _counter;
+
+	public ConstrainedQueryBehavior(ConstrainedBehaviorCounter counter)
+	{
+		_counter = counter;
+		Interlocked.Increment(ref _counter.QueryConstructions);
+	}
+
+	public Task<TResponse> Handle(
+		TQuery request,
+		RequestHandlerDelegate<TResponse> next,
+		CancellationToken cancellationToken = default)
+	{
+		_counter.Log.Add($"constrained-query:{typeof(TQuery).Name}");
+		return next(cancellationToken);
+	}
+}

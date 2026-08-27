@@ -1,18 +1,23 @@
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace BuildingBlocks.Mediator.Telemetry;
 
 /// <summary>
-/// Optional Send enrichment (Activity + logging + exception observation).
+/// Optional Send enrichment (Activity + logging + exception observation + opt-in metrics).
 /// Wraps the full pipeline + handler — not registered as an <see cref="IPipelineBehavior{TRequest,TResponse}"/>.
 /// </summary>
-public sealed class MediatorSendTelemetry
+public sealed class MediatorSendTelemetry : IDisposable
 {
 	private readonly ActivitySource _activitySource;
 	private readonly MediatorTelemetryOptions _options;
 	private readonly ILogger _logger;
+	private readonly Meter? _meter;
+	private readonly Histogram<double>? _duration;
+	private readonly Counter<long>? _send;
+	private bool _disposed;
 
 	/// <summary>Creates Send telemetry using configured options.</summary>
 	public MediatorSendTelemetry(
@@ -22,10 +27,23 @@ public sealed class MediatorSendTelemetry
 		_options = options.Value;
 		_activitySource = new ActivitySource(_options.ActivitySourceName);
 		_logger = loggerFactory.CreateLogger("BuildingBlocks.Mediator.Telemetry");
+
+		if (_options.EnableMetrics)
+		{
+			var meterName = string.IsNullOrWhiteSpace(_options.MeterName)
+				? _options.ActivitySourceName
+				: _options.MeterName;
+			_meter = new Meter(meterName);
+			_duration = _meter.CreateHistogram<double>("mediator.send.duration", unit: "ms");
+			_send = _meter.CreateCounter<long>("mediator.send");
+		}
 	}
 
 	/// <summary>Activity source name (for host <c>AddSource</c>).</summary>
 	public string ActivitySourceName => _activitySource.Name;
+
+	/// <summary>Meter name when metrics are enabled; otherwise <see langword="null"/>.</summary>
+	public string? MeterName => _meter?.Name;
 
 	/// <summary>The underlying <see cref="ActivitySource"/>.</summary>
 	public ActivitySource Source => _activitySource;
@@ -41,6 +59,7 @@ public sealed class MediatorSendTelemetry
 		Func<CancellationToken, Task<TResponse>> send,
 		CancellationToken cancellationToken)
 	{
+		ObjectDisposedException.ThrowIf(_disposed, this);
 		ArgumentNullException.ThrowIfNull(messageType);
 		ArgumentNullException.ThrowIfNull(messageKind);
 		ArgumentNullException.ThrowIfNull(send);
@@ -64,6 +83,8 @@ public sealed class MediatorSendTelemetry
 			activity?.SetTag("mediator.success", true);
 			activity?.SetTag("mediator.duration_ms", stopwatch.ElapsedMilliseconds);
 
+			RecordMetrics(requestName, messageKind, success: true, stopwatch.Elapsed.TotalMilliseconds);
+
 			if (_options.EnableLogging)
 			{
 				_logger.LogInformation(
@@ -81,6 +102,8 @@ public sealed class MediatorSendTelemetry
 			activity?.SetTag("mediator.success", false);
 			activity?.SetTag("mediator.duration_ms", stopwatch.ElapsedMilliseconds);
 			activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+			RecordMetrics(requestName, messageKind, success: false, stopwatch.Elapsed.TotalMilliseconds);
 
 			if (_options.RecordException)
 			{
@@ -103,5 +126,36 @@ public sealed class MediatorSendTelemetry
 
 			throw;
 		}
+	}
+
+	/// <inheritdoc />
+	public void Dispose()
+	{
+		if (_disposed)
+			return;
+		_disposed = true;
+		_meter?.Dispose();
+		_activitySource.Dispose();
+	}
+
+	private void RecordMetrics(string requestName, string messageKind, bool success, double elapsedMs)
+	{
+		if (_duration is null || _send is null)
+			return;
+
+		var durationTags = new TagList
+		{
+			{ "mediator.message_kind", messageKind },
+			{ "mediator.request_name", requestName },
+		};
+		_duration.Record(elapsedMs, durationTags);
+
+		var countTags = new TagList
+		{
+			{ "mediator.message_kind", messageKind },
+			{ "mediator.request_name", requestName },
+			{ "mediator.success", success },
+		};
+		_send.Add(1, countTags);
 	}
 }

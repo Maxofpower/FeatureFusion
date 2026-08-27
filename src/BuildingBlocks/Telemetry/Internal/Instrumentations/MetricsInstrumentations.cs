@@ -42,6 +42,11 @@ internal static class MetricsInstrumentations
 
         SqlClientInstrumentation.ApplyMetricsIfEnabled(metrics, options);
 
+        if (options.IntegrateMediator)
+        {
+            metrics.AddMeter(TelemetryDefaults.MediatorMeter);
+        }
+
         foreach (var meter in options.Meters)
         {
             if (!string.IsNullOrWhiteSpace(meter))

@@ -13,7 +13,7 @@ dotnet add package BuildingBlocks.Mediator
 Or project reference in this monorepo:
 
 ```xml
-<ProjectReference Include="..\BuildingBlocks.Mediator\BuildingBlocks.Mediator.csproj" />
+<ProjectReference Include="..\..\BuildingBlocks\Mediator\BuildingBlocks.Mediator.csproj" />
 ```
 
 ## Register
@@ -72,5 +72,26 @@ await sender.Send(new CreateOrder("SKU", 1), ct);
 var dto = await sender.Send(new GetOrder(id), ct);
 await sender.Send(new CancelOrder(id), ct);
 ```
+
+## Command-only vs query-only (1.1)
+
+Prefer constrained interfaces so MS.DI does not construct the type for the opposite kind:
+
+```csharp
+public sealed class AuditCommands<TCommand, TResponse> : ICommandPipelineBehavior<TCommand, TResponse>
+    where TCommand : ICommand<TResponse>
+{
+    public Task<TResponse> Handle(TCommand command, RequestHandlerDelegate<TResponse> next, CancellationToken ct)
+        => next(ct);
+}
+
+cfg.AddOpenCommandBehavior(typeof(AuditCommands<,>), order: 10);
+```
+
+`IQueryPipelineBehavior` / `AddOpenQueryBehavior` are the read-side pair. `CommandPipelineBehavior` / `QueryPipelineBehavior` from 1.0.1 still work (runtime skip). See [pipeline-behaviors.md](pipeline-behaviors.md).
+
+## Telemetry
+
+`cfg.UseTelemetry()` wraps Send with an ActivitySource and (by default) a Meter named `BuildingBlocks.Mediator`. Host must `AddSource` / `AddMeter` that name (`BuildingBlocks.Telemetry` does this when `IntegrateMediator` is true). Omit `UseTelemetry()` for zero overhead; `EnableMetrics = false` keeps traces only.
 
 Next: [concepts.md](concepts.md) · [pipeline-behaviors.md](pipeline-behaviors.md) · [cookbook.md](cookbook.md)

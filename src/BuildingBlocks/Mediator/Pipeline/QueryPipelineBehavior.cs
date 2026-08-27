@@ -4,6 +4,11 @@ namespace BuildingBlocks.Mediator.Pipeline;
 /// Pipeline behavior that runs only for query requests (<see cref="IQuery{TResponse}"/>).
 /// Commands skip straight to the next delegate without invoking <see cref="HandleQuery"/>.
 /// </summary>
+/// <remarks>
+/// Prefer <see cref="IQueryPipelineBehavior{TQuery,TResponse}"/> for new open generics so MS.DI
+/// does not construct this type for commands. This base remains supported (1.0.1 contract): it is
+/// unconstrained and skips the opposite kind at runtime.
+/// </remarks>
 /// <typeparam name="TRequest">Request type.</typeparam>
 /// <typeparam name="TResponse">Response type.</typeparam>
 /// <example>

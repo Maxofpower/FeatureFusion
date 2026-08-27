@@ -5,6 +5,30 @@ All notable changes to **BuildingBlocks** packages in this repository are docume
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## BuildingBlocks.Mediator [1.1.0] - 2026-08-27
+
+### Added
+
+- `ICommandPipelineBehavior<,>` / `IQueryPipelineBehavior<,>` — compile-time command vs query pipelines (MS.DI does not construct the opposite kind)
+- `AddOpenCommandBehavior` / `AddOpenQueryBehavior` — fail fast when the type is not constrained
+- Opt-in Send metrics on `UseTelemetry()`: histogram `mediator.send.duration` (ms), counter `mediator.send` (tags `mediator.success`, `mediator.message_kind`, `mediator.request_name`); `EnableMetrics` (default true), `MeterName` (defaults to `ActivitySourceName`)
+
+### Changed
+
+- NuGet README rewritten for usage (quick start, typed behaviors, telemetry)
+- 1.0.1 `CommandPipelineBehavior` / `QueryPipelineBehavior` unchanged (not obsolete)
+
+### Notes
+
+- Drop-in upgrade from 1.0.1. No Publish / `INotification`. Host OpenTelemetry must `AddMeter("BuildingBlocks.Mediator")` (BuildingBlocks.Telemetry `IntegrateMediator` does this from 1.0.1).
+
+## BuildingBlocks.Telemetry [1.0.1] - 2026-08-27
+
+### Added
+
+- `TelemetryDefaults.MediatorMeter` (same name as `MediatorActivitySource`)
+- `IntegrateMediator` also `AddMeter` so mediator Send metrics export with traces
+
 ## BuildingBlocks.Telemetry [1.0.0] - 2026-08-25
 
 ### Added

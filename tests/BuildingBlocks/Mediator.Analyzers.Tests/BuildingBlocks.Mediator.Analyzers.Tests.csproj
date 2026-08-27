@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\BuildingBlocks.Mediator.Analyzers\BuildingBlocks.Mediator.Analyzers.csproj" />
+    <ProjectReference Include="..\..\..\src\BuildingBlocks\Mediator.Analyzers\BuildingBlocks.Mediator.Analyzers.csproj" />
   </ItemGroup>
 
 </Project>

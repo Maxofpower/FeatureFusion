@@ -74,7 +74,8 @@ public sealed class TelemetryOptions
     public List<string> Meters { get; set; } = [];
 
     /// <summary>
-    /// When <c>true</c>, automatically adds the <see cref="TelemetryDefaults.MediatorActivitySource"/> source.
+    /// When <c>true</c>, automatically adds <see cref="TelemetryDefaults.MediatorActivitySource"/>
+    /// to tracing and <see cref="TelemetryDefaults.MediatorMeter"/> to metrics.
     /// Default: <c>true</c>.
     /// </summary>
     public bool IntegrateMediator { get; set; } = true;

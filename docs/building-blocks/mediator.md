@@ -1,7 +1,7 @@
-# BuildingBlocks.Mediator — public interface freeze (v1)
+# BuildingBlocks.Mediator — public interface freeze (v1.1)
 
-**Status:** NuGet-ready 1.0.0 (CQRS-first Send + pipeline; no Scrutor)  
-**Date:** 2026-08-08  
+**Status:** NuGet 1.1.0 (CQRS-first Send + pipeline; typed command/query behaviors; UseTelemetry traces + metrics)  
+**Date:** 2026-08-27  
 **Author:** Mohammad Hasan Hosseini  
 **LinkedIn (prior):** https://www.linkedin.com/feed/update/urn:li:activity:7311311587372367873/  
 **Catalog:** `docs/linkedin-posts.md` → `mediator` / `mediator-building-blocks`
@@ -17,10 +17,11 @@ services.AddMediator(cfg =>
 {
     cfg.RegisterServicesFromAssembly(typeof(MyHandler).Assembly);
     cfg.AddOpenBehavior(typeof(ValidationBehavior<,>), order: 0);
-    // Optional ActivitySource enrichment around Send (not a pipeline behavior)
+    cfg.AddOpenCommandBehavior(typeof(AuditCommands<,>), order: 10);
     cfg.UseTelemetry(o =>
     {
         o.ActivitySourceName = "BuildingBlocks.Mediator";
+        o.EnableMetrics = true;
         o.RecordException = true;
         o.EnableLogging = true;
     });
@@ -38,7 +39,7 @@ Prefer `ISender` at call sites.
 
 - Explicit `order` (lower = outermost) beats registration order when set.
 - When omitted, registration index is used (first = outermost).
-- `UseTelemetry()` optionally wraps Send with an ActivitySource (pipeline + handler); omit for no telemetry.
+- `UseTelemetry()` optionally wraps Send with an ActivitySource and Meter (pipeline + handler); omit for no telemetry.
 
 ### Host validation (optional)
 
@@ -66,7 +67,8 @@ See [cookbook.md](cookbook.md).
 `IMediator : ISender` (Send only — no Publish).  
 Handlers: `ICommandHandler<>` / `ICommandHandler<,>` / `IQueryHandler<,>`.  
 Pipeline: `IPipelineBehavior<,>` — order via registration or explicit `order`.  
-Filters: `CommandPipelineBehavior` / `QueryPipelineBehavior`.  
+Typed filters: `ICommandPipelineBehavior` / `IQueryPipelineBehavior` (preferred); `AddOpenCommandBehavior` / `AddOpenQueryBehavior`.  
+1.0 filters: `CommandPipelineBehavior` / `QueryPipelineBehavior` (runtime skip; not obsolete).  
 Void commands: `ICommand : ICommand<Unit>` — behaviors on concrete type + `Unit`.  
 Scanner: built-in (no Scrutor).
 
@@ -74,14 +76,17 @@ Scanner: built-in (no Scrutor).
 
 | API | Includes | Excludes |
 |-----|----------|----------|
-| `UseTelemetry` | Activity/traces, optional ILogger, exception **observation** (rethrow) | Metrics, exception *handlers* |
-| `AddOpenBehavior` | Host cross-cutting (metrics, validation, …) | — |
+| `UseTelemetry` | Activity/traces, optional Meter (`mediator.send` / `mediator.send.duration`), optional ILogger, exception **observation** (rethrow) | Exception *handlers* |
+| `AddOpenBehavior` | Host cross-cutting (validation, extra metrics, …) | — |
+| `AddOpenCommandBehavior` / `AddOpenQueryBehavior` | Constrained open generics; fail fast if the type is not command/query-only | Unconstrained `IPipelineBehavior<,>` |
 | `HandlerLifetime` | Lifetime for discovered handlers (default Transient) | Open-generic always Transient |
 | `ValidateOnStartup` | Exactly one handler per public/nested-public closed message | — |
+
+1.0.1 hosts upgrade without code changes. New interfaces are optional.
 
 ---
 
 ## Layout
 
-`src/BuildingBlocks.Mediator/` — Abstractions, Implementation, DependencyInjection, Pipeline, Telemetry, analyzers packed from `BuildingBlocks.Mediator.Analyzers`.  
-Demo host validation: `FeatureFusion/Infrastructure/Behaviors/ValidationBehavior.cs`.
+`src/BuildingBlocks/Mediator/` — Abstractions, Implementation, DependencyInjection, Pipeline, Telemetry, analyzers packed from `BuildingBlocks.Mediator.Analyzers`.  
+Demo host validation: `src/Lab/FeatureFusion/Infrastructure/Behaviors/ValidationBehavior.cs`.
