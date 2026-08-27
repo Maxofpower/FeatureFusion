@@ -34,6 +34,8 @@
     <PackageReference Include="Microsoft.OpenApi" Version="1.6.25" />
     <!-- Pin above EnyimMemcachedCore's vulnerable MessagePack 2.5.192 (NU1902/NU1903). -->
     <PackageReference Include="MessagePack" Version="3.1.8" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.18.0-beta.1" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.StackExchangeRedis" Version="1.18.0-beta.1" />
     <PackageReference Include="StackExchange.Redis" Version="2.9.32" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.3.2" />
     <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="7.3.2" />

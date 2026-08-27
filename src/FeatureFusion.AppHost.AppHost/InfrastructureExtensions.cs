@@ -13,6 +13,7 @@ internal static class InfrastructureExtensions
 			.WithEndpoint(name: "memcached", port: 11211, targetPort: 11211, isProxied: false);
 
 		var redis = builder.AddRedis("redis")
+			.WithPassword(null) // Local-dev: avoid password mismatch with Redis__ConnectionString wiring
 			.WithDataVolume("redis_data")
 			.WithPersistence(
 				interval: TimeSpan.FromMinutes(5),

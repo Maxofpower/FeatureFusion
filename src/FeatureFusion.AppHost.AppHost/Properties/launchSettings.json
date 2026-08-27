@@ -12,6 +12,11 @@
         "ASPIRE_CONTAINER_RUNTIME": "docker",
         "DOTNET_ASPIRE_CONTAINER_RUNTIME": "docker",
         "DOCKER_HOST": "npipe:////./pipe/dockerDesktopLinuxEngine",
+        "SigNoz__UiPort": "8080",
+        "SigNoz__AdminEmail": "dev@local.test",
+        "SigNoz__AdminPassword": "DevPassword123!",
+        "SigNoz__AdminName": "Dev Admin",
+        "SigNoz__OrgName": "DevOrg",
         "DOTNET_DASHBOARD_OTLP_ENDPOINT_URL": "https://localhost:21175",
         "DOTNET_RESOURCE_SERVICE_ENDPOINT_URL": "https://localhost:22172"
       }
@@ -27,6 +32,11 @@
         "ASPIRE_CONTAINER_RUNTIME": "docker",
         "DOTNET_ASPIRE_CONTAINER_RUNTIME": "docker",
         "DOCKER_HOST": "npipe:////./pipe/dockerDesktopLinuxEngine",
+        "SigNoz__UiPort": "8080",
+        "SigNoz__AdminEmail": "dev@local.test",
+        "SigNoz__AdminPassword": "DevPassword123!",
+        "SigNoz__AdminName": "Dev Admin",
+        "SigNoz__OrgName": "DevOrg",
         "DOTNET_DASHBOARD_OTLP_ENDPOINT_URL": "http://localhost:19029",
         "DOTNET_RESOURCE_SERVICE_ENDPOINT_URL": "http://localhost:20059"
       }

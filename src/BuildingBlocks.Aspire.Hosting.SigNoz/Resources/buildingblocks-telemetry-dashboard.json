@@ -1,0 +1,1600 @@
+{
+  "schemaVersion": "v6",
+  "image": "",
+  "generateName": true,
+  "tags": [
+    { "key": "tag", "value": "buildingblocks" },
+    { "key": "tag", "value": "telemetry" },
+    { "key": "tag", "value": "dotnet" }
+  ],
+  "spec": {
+    "display": {
+      "name": "BuildingBlocks Telemetry",
+      "description": "Request health, per-component spans, .NET runtime, and log volume for services instrumented with BuildingBlocks.Telemetry. Component panels use the telemetry.component span attribute; runtime panels query both the .NET 9+ and .NET 8 metric names."
+    },
+    "variables": [
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "display": {
+            "name": "deployment.environment",
+            "description": "Deployment environment"
+          },
+          "allowAllValue": false,
+          "allowMultiple": false,
+          "customAllValue": "",
+          "capturingRegexp": "",
+          "sort": "alphabetical-asc",
+          "plugin": {
+            "kind": "signoz/DynamicVariable",
+            "spec": {
+              "name": "deployment.environment",
+              "signal": "metrics"
+            }
+          },
+          "name": "deployment.environment"
+        }
+      },
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "display": {
+            "name": "service.name",
+            "description": "Service name"
+          },
+          "allowAllValue": false,
+          "allowMultiple": false,
+          "customAllValue": "",
+          "capturingRegexp": "",
+          "sort": "alphabetical-asc",
+          "plugin": {
+            "kind": "signoz/DynamicVariable",
+            "spec": {
+              "name": "service.name",
+              "signal": "metrics"
+            }
+          },
+          "name": "service.name"
+        }
+      },
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "display": {
+            "name": "telemetry.component",
+            "description": "Instrumentation component (aspnetcore, httpclient, npgsql, sqlclient, mediator, eventbus, ...). Defaults to all components."
+          },
+          "allowAllValue": true,
+          "allowMultiple": true,
+          "customAllValue": "",
+          "capturingRegexp": "",
+          "sort": "alphabetical-asc",
+          "plugin": {
+            "kind": "signoz/DynamicVariable",
+            "spec": {
+              "name": "telemetry.component",
+              "signal": "traces"
+            }
+          },
+          "name": "telemetry.component"
+        }
+      }
+    ],
+    "panels": {
+      "bb200001-0000-0000-0000-000000000001": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Request rate",
+            "description": "Inbound HTTP requests per second"
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": { "timePreference": "global_time" },
+              "formatting": { "unit": "reqps", "decimalPrecision": "2" },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "name": "A",
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "stepInterval": 60,
+                    "signal": "metrics",
+                    "source": "",
+                    "aggregations": [
+                      {
+                        "metricName": "http.server.request.duration.count",
+                        "temporality": "",
+                        "timeAggregation": "rate",
+                        "spaceAggregation": "sum",
+                        "reduceTo": "avg"
+                      }
+                    ],
+                    "disabled": false,
+                    "filter": {
+                      "expression": "(deployment.environment = $deployment.environment AND service.name = $service.name)"
+                    },
+                    "groupBy": [],
+                    "order": [],
+                    "limit": 10,
+                    "having": { "expression": "" },
+                    "functions": [],
+                    "legend": "Requests / sec"
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "bb200002-0000-0000-0000-000000000002": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "P95 latency",
+            "description": "P95 inbound HTTP request duration"
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": { "timePreference": "global_time" },
+              "formatting": { "unit": "s", "decimalPrecision": "2" },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "name": "A",
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "stepInterval": 60,
+                    "signal": "metrics",
+                    "source": "",
+                    "aggregations": [
+                      {
+                        "metricName": "http.server.request.duration.bucket",
+                        "temporality": "",
+                        "timeAggregation": "",
+                        "spaceAggregation": "p95",
+                        "reduceTo": "avg"
+                      }
+                    ],
+                    "disabled": false,
+                    "filter": {
+                      "expression": "(deployment.environment = $deployment.environment AND service.name = $service.name)"
+                    },
+                    "groupBy": [],
+                    "order": [],
+                    "limit": 10,
+                    "having": { "expression": "" },
+                    "functions": [],
+                    "legend": "P95"
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "bb200003-0000-0000-0000-000000000003": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Server error rate",
+            "description": "Rate of inbound HTTP requests answered with a 5xx status code"
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": { "timePreference": "global_time" },
+              "formatting": { "unit": "reqps", "decimalPrecision": "2" },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "name": "A",
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "stepInterval": 60,
+                    "signal": "metrics",
+                    "source": "",
+                    "aggregations": [
+                      {
+                        "metricName": "http.server.request.duration.count",
+                        "temporality": "",
+                        "timeAggregation": "rate",
+                        "spaceAggregation": "sum",
+                        "reduceTo": "avg"
+                      }
+                    ],
+                    "disabled": false,
+                    "filter": {
+                      "expression": "(deployment.environment = $deployment.environment AND service.name = $service.name AND http.response.status_code >= 500)"
+                    },
+                    "groupBy": [],
+                    "order": [],
+                    "limit": 10,
+                    "having": { "expression": "" },
+                    "functions": [],
+                    "legend": "5xx / sec"
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "bb200004-0000-0000-0000-000000000004": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Active requests",
+            "description": "HTTP requests currently being processed"
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": { "timePreference": "global_time" },
+              "formatting": { "unit": "short", "decimalPrecision": "2" },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "name": "A",
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "stepInterval": 60,
+                    "signal": "metrics",
+                    "source": "",
+                    "aggregations": [
+                      {
+                        "metricName": "http.server.active_requests",
+                        "temporality": "",
+                        "timeAggregation": "avg",
+                        "spaceAggregation": "sum",
+                        "reduceTo": "avg"
+                      }
+                    ],
+                    "disabled": false,
+                    "filter": {
+                      "expression": "(deployment.environment = $deployment.environment AND service.name = $service.name)"
+                    },
+                    "groupBy": [],
+                    "order": [],
+                    "limit": 10,
+                    "having": { "expression": "" },
+                    "functions": [],
+                    "legend": "Active requests"
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "bb200005-0000-0000-0000-000000000005": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Request duration (P50 / P95 / P99)",
+            "description": "Inbound HTTP request duration percentiles"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": { "timePreference": "global_time", "fillSpans": false },
+              "formatting": { "unit": "s", "decimalPrecision": "2" },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": { "fillOnlyBelow": false, "fillLessThan": "" }
+              },
+              "axes": { "softMin": 0, "softMax": 0, "isLogScale": false },
+              "legend": { "position": "bottom", "mode": "list", "customColors": null },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "A",
+                          "stepInterval": 60,
+                          "signal": "metrics",
+                          "source": "",
+                          "aggregations": [
+                            {
+                              "metricName": "http.server.request.duration.bucket",
+                              "temporality": "",
+                              "timeAggregation": "",
+                              "spaceAggregation": "p50",
+                              "reduceTo": "avg"
+                            }
+                          ],
+                          "disabled": false,
+                          "filter": {
+                            "expression": "(deployment.environment = $deployment.environment AND service.name = $service.name)"
+                          },
+                          "groupBy": [],
+                          "order": [],
+                          "limit": 10,
+                          "having": { "expression": "" },
+                          "functions": [],
+                          "legend": "P50"
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "B",
+                          "stepInterval": 60,
+                          "signal": "metrics",
+                          "source": "",
+                          "aggregations": [
+                            {
+                              "metricName": "http.server.request.duration.bucket",
+                              "temporality": "",
+                              "timeAggregation": "",
+                              "spaceAggregation": "p95",
+                              "reduceTo": "avg"
+                            }
+                          ],
+                          "disabled": false,
+                          "filter": {
+                            "expression": "(deployment.environment = $deployment.environment AND service.name = $service.name)"
+                          },
+                          "groupBy": [],
+                          "order": [],
+                          "limit": 10,
+                          "having": { "expression": "" },
+                          "functions": [],
+                          "legend": "P95"
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "C",
+                          "stepInterval": 60,
+                          "signal": "metrics",
+                          "source": "",
+                          "aggregations": [
+                            {
+                              "metricName": "http.server.request.duration.bucket",
+                              "temporality": "",
+                              "timeAggregation": "",
+                              "spaceAggregation": "p99",
+                              "reduceTo": "avg"
+                            }
+                          ],
+                          "disabled": false,
+                          "filter": {
+                            "expression": "(deployment.environment = $deployment.environment AND service.name = $service.name)"
+                          },
+                          "groupBy": [],
+                          "order": [],
+                          "limit": 10,
+                          "having": { "expression": "" },
+                          "functions": [],
+                          "legend": "P99"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "bb200006-0000-0000-0000-000000000006": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Request rate by status code",
+            "description": "Inbound HTTP request rate grouped by response status code"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": { "timePreference": "global_time", "fillSpans": false },
+              "formatting": { "unit": "reqps", "decimalPrecision": "2" },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": { "fillOnlyBelow": false, "fillLessThan": "" }
+              },
+              "axes": { "softMin": 0, "softMax": 0, "isLogScale": false },
+              "legend": { "position": "bottom", "mode": "list", "customColors": null },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "name": "A",
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "stepInterval": 60,
+                    "signal": "metrics",
+                    "source": "",
+                    "aggregations": [
+                      {
+                        "metricName": "http.server.request.duration.count",
+                        "temporality": "",
+                        "timeAggregation": "rate",
+                        "spaceAggregation": "sum",
+                        "reduceTo": "avg"
+                      }
+                    ],
+                    "disabled": false,
+                    "filter": {
+                      "expression": "(deployment.environment = $deployment.environment AND service.name = $service.name)"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "http.response.status_code",
+                        "signal": "",
+                        "fieldContext": "attribute",
+                        "fieldDataType": "int64"
+                      }
+                    ],
+                    "order": [],
+                    "limit": 20,
+                    "having": { "expression": "" },
+                    "functions": [],
+                    "legend": "{{http.response.status_code}}"
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "bb200007-0000-0000-0000-000000000007": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Request rate by route",
+            "description": "Inbound HTTP request rate grouped by matched route template"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": { "timePreference": "global_time", "fillSpans": false },
+              "formatting": { "unit": "reqps", "decimalPrecision": "2" },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": { "fillOnlyBelow": false, "fillLessThan": "" }
+              },
+              "axes": { "softMin": 0, "softMax": 0, "isLogScale": false },
+              "legend": { "position": "bottom", "mode": "list", "customColors": null },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "name": "A",
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "stepInterval": 60,
+                    "signal": "metrics",
+                    "source": "",
+                    "aggregations": [
+                      {
+                        "metricName": "http.server.request.duration.count",
+                        "temporality": "",
+                        "timeAggregation": "rate",
+                        "spaceAggregation": "sum",
+                        "reduceTo": "avg"
+                      }
+                    ],
+                    "disabled": false,
+                    "filter": {
+                      "expression": "(deployment.environment = $deployment.environment AND service.name = $service.name)"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "http.route",
+                        "signal": "",
+                        "fieldContext": "attribute",
+                        "fieldDataType": "string"
+                      }
+                    ],
+                    "order": [],
+                    "limit": 20,
+                    "having": { "expression": "" },
+                    "functions": [],
+                    "legend": "{{http.route}}"
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "bb200008-0000-0000-0000-000000000008": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Spans by component",
+            "description": "Span count grouped by the telemetry.component attribute"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": { "timePreference": "global_time", "fillSpans": false },
+              "formatting": { "unit": "short", "decimalPrecision": "0" },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": { "fillOnlyBelow": false, "fillLessThan": "" }
+              },
+              "axes": { "softMin": 0, "softMax": 0, "isLogScale": false },
+              "legend": { "position": "bottom", "mode": "list", "customColors": null },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "name": "A",
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "stepInterval": 60,
+                    "signal": "traces",
+                    "source": "",
+                    "aggregations": [
+                      { "expression": "count()", "alias": "spans" }
+                    ],
+                    "disabled": false,
+                    "filter": {
+                      "expression": "(service.name = $service.name AND telemetry.component IN $telemetry.component)"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "telemetry.component",
+                        "fieldContext": "attribute",
+                        "fieldDataType": "string"
+                      }
+                    ],
+                    "order": [
+                      { "key": { "name": "spans" }, "direction": "desc" }
+                    ],
+                    "limit": 20,
+                    "having": { "expression": "" },
+                    "functions": [],
+                    "legend": "{{telemetry.component}}"
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "bb200009-0000-0000-0000-000000000009": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "P95 span duration by component",
+            "description": "P95 span duration grouped by the telemetry.component attribute"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": { "timePreference": "global_time", "fillSpans": false },
+              "formatting": { "unit": "ns", "decimalPrecision": "2" },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": { "fillOnlyBelow": false, "fillLessThan": "" }
+              },
+              "axes": { "softMin": 0, "softMax": 0, "isLogScale": false },
+              "legend": { "position": "bottom", "mode": "list", "customColors": null },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "name": "A",
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "stepInterval": 60,
+                    "signal": "traces",
+                    "source": "",
+                    "aggregations": [
+                      { "expression": "p95(duration_nano)", "alias": "p95_duration" }
+                    ],
+                    "disabled": false,
+                    "filter": {
+                      "expression": "(service.name = $service.name AND telemetry.component IN $telemetry.component)"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "telemetry.component",
+                        "fieldContext": "attribute",
+                        "fieldDataType": "string"
+                      }
+                    ],
+                    "order": [
+                      { "key": { "name": "p95_duration" }, "direction": "desc" }
+                    ],
+                    "limit": 20,
+                    "having": { "expression": "" },
+                    "functions": [],
+                    "legend": "{{telemetry.component}}"
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "bb200010-0000-0000-0000-000000000010": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Error spans by component",
+            "description": "Spans with error status grouped by the telemetry.component attribute"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": { "timePreference": "global_time", "fillSpans": false },
+              "formatting": { "unit": "short", "decimalPrecision": "0" },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": { "fillOnlyBelow": false, "fillLessThan": "" }
+              },
+              "axes": { "softMin": 0, "softMax": 0, "isLogScale": false },
+              "legend": { "position": "bottom", "mode": "list", "customColors": null },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "name": "A",
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "stepInterval": 60,
+                    "signal": "traces",
+                    "source": "",
+                    "aggregations": [
+                      { "expression": "count()", "alias": "error_spans" }
+                    ],
+                    "disabled": false,
+                    "filter": {
+                      "expression": "(service.name = $service.name AND telemetry.component IN $telemetry.component AND has_error = true)"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "telemetry.component",
+                        "fieldContext": "attribute",
+                        "fieldDataType": "string"
+                      }
+                    ],
+                    "order": [
+                      { "key": { "name": "error_spans" }, "direction": "desc" }
+                    ],
+                    "limit": 20,
+                    "having": { "expression": "" },
+                    "functions": [],
+                    "legend": "{{telemetry.component}}"
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "bb200011-0000-0000-0000-000000000011": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Slowest operations (P95)",
+            "description": "P95 span duration grouped by span name"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": { "timePreference": "global_time", "fillSpans": false },
+              "formatting": { "unit": "ns", "decimalPrecision": "2" },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": { "fillOnlyBelow": false, "fillLessThan": "" }
+              },
+              "axes": { "softMin": 0, "softMax": 0, "isLogScale": false },
+              "legend": { "position": "bottom", "mode": "list", "customColors": null },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "name": "A",
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "stepInterval": 60,
+                    "signal": "traces",
+                    "source": "",
+                    "aggregations": [
+                      { "expression": "p95(duration_nano)", "alias": "p95_duration" }
+                    ],
+                    "disabled": false,
+                    "filter": {
+                      "expression": "(service.name = $service.name AND telemetry.component IN $telemetry.component)"
+                    },
+                    "groupBy": [
+                      { "name": "name" }
+                    ],
+                    "order": [
+                      { "key": { "name": "p95_duration" }, "direction": "desc" }
+                    ],
+                    "limit": 10,
+                    "having": { "expression": "" },
+                    "functions": [],
+                    "legend": "{{name}}"
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "bb200012-0000-0000-0000-000000000012": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "GC heap size",
+            "description": "Managed heap size. Query A: .NET 9+ metric names, query B: .NET 8 names."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": { "timePreference": "global_time", "fillSpans": false },
+              "formatting": { "unit": "bytes", "decimalPrecision": "2" },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": { "fillOnlyBelow": false, "fillLessThan": "" }
+              },
+              "axes": { "softMin": 0, "softMax": 0, "isLogScale": false },
+              "legend": { "position": "bottom", "mode": "list", "customColors": null },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "A",
+                          "stepInterval": 60,
+                          "signal": "metrics",
+                          "source": "",
+                          "aggregations": [
+                            {
+                              "metricName": "dotnet.gc.last_collection.heap.size",
+                              "temporality": "",
+                              "timeAggregation": "avg",
+                              "spaceAggregation": "sum",
+                              "reduceTo": "avg"
+                            }
+                          ],
+                          "disabled": false,
+                          "filter": {
+                            "expression": "(deployment.environment = $deployment.environment AND service.name = $service.name)"
+                          },
+                          "groupBy": [],
+                          "order": [],
+                          "limit": 10,
+                          "having": { "expression": "" },
+                          "functions": [],
+                          "legend": "Heap size"
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "B",
+                          "stepInterval": 60,
+                          "signal": "metrics",
+                          "source": "",
+                          "aggregations": [
+                            {
+                              "metricName": "process.runtime.dotnet.gc.heap.size",
+                              "temporality": "",
+                              "timeAggregation": "avg",
+                              "spaceAggregation": "sum",
+                              "reduceTo": "avg"
+                            }
+                          ],
+                          "disabled": false,
+                          "filter": {
+                            "expression": "(deployment.environment = $deployment.environment AND service.name = $service.name)"
+                          },
+                          "groupBy": [],
+                          "order": [],
+                          "limit": 10,
+                          "having": { "expression": "" },
+                          "functions": [],
+                          "legend": "Heap size (.NET 8)"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "bb200013-0000-0000-0000-000000000013": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "GC collection rate",
+            "description": "Garbage collections per second. Query A: .NET 9+ metric names, query B: .NET 8 names."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": { "timePreference": "global_time", "fillSpans": false },
+              "formatting": { "unit": "short", "decimalPrecision": "2" },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": { "fillOnlyBelow": false, "fillLessThan": "" }
+              },
+              "axes": { "softMin": 0, "softMax": 0, "isLogScale": false },
+              "legend": { "position": "bottom", "mode": "list", "customColors": null },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "A",
+                          "stepInterval": 60,
+                          "signal": "metrics",
+                          "source": "",
+                          "aggregations": [
+                            {
+                              "metricName": "dotnet.gc.collections",
+                              "temporality": "",
+                              "timeAggregation": "rate",
+                              "spaceAggregation": "sum",
+                              "reduceTo": "avg"
+                            }
+                          ],
+                          "disabled": false,
+                          "filter": {
+                            "expression": "(deployment.environment = $deployment.environment AND service.name = $service.name)"
+                          },
+                          "groupBy": [],
+                          "order": [],
+                          "limit": 10,
+                          "having": { "expression": "" },
+                          "functions": [],
+                          "legend": "Collections / sec"
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "B",
+                          "stepInterval": 60,
+                          "signal": "metrics",
+                          "source": "",
+                          "aggregations": [
+                            {
+                              "metricName": "process.runtime.dotnet.gc.collections.count",
+                              "temporality": "",
+                              "timeAggregation": "rate",
+                              "spaceAggregation": "sum",
+                              "reduceTo": "avg"
+                            }
+                          ],
+                          "disabled": false,
+                          "filter": {
+                            "expression": "(deployment.environment = $deployment.environment AND service.name = $service.name)"
+                          },
+                          "groupBy": [],
+                          "order": [],
+                          "limit": 10,
+                          "having": { "expression": "" },
+                          "functions": [],
+                          "legend": "Collections / sec (.NET 8)"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "bb200014-0000-0000-0000-000000000014": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Allocation rate",
+            "description": "Bytes allocated on the managed heap per second. Query A: .NET 9+ metric names, query B: .NET 8 names."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": { "timePreference": "global_time", "fillSpans": false },
+              "formatting": { "unit": "Bps", "decimalPrecision": "2" },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": { "fillOnlyBelow": false, "fillLessThan": "" }
+              },
+              "axes": { "softMin": 0, "softMax": 0, "isLogScale": false },
+              "legend": { "position": "bottom", "mode": "list", "customColors": null },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "A",
+                          "stepInterval": 60,
+                          "signal": "metrics",
+                          "source": "",
+                          "aggregations": [
+                            {
+                              "metricName": "dotnet.gc.heap.total_allocated",
+                              "temporality": "",
+                              "timeAggregation": "rate",
+                              "spaceAggregation": "sum",
+                              "reduceTo": "avg"
+                            }
+                          ],
+                          "disabled": false,
+                          "filter": {
+                            "expression": "(deployment.environment = $deployment.environment AND service.name = $service.name)"
+                          },
+                          "groupBy": [],
+                          "order": [],
+                          "limit": 10,
+                          "having": { "expression": "" },
+                          "functions": [],
+                          "legend": "Allocated / sec"
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "B",
+                          "stepInterval": 60,
+                          "signal": "metrics",
+                          "source": "",
+                          "aggregations": [
+                            {
+                              "metricName": "process.runtime.dotnet.gc.allocations.size",
+                              "temporality": "",
+                              "timeAggregation": "rate",
+                              "spaceAggregation": "sum",
+                              "reduceTo": "avg"
+                            }
+                          ],
+                          "disabled": false,
+                          "filter": {
+                            "expression": "(deployment.environment = $deployment.environment AND service.name = $service.name)"
+                          },
+                          "groupBy": [],
+                          "order": [],
+                          "limit": 10,
+                          "having": { "expression": "" },
+                          "functions": [],
+                          "legend": "Allocated / sec (.NET 8)"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "bb200015-0000-0000-0000-000000000015": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Thread pool queue length",
+            "description": "Work items queued in the thread pool. Query A: .NET 9+ metric names, query B: .NET 8 names."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": { "timePreference": "global_time", "fillSpans": false },
+              "formatting": { "unit": "short", "decimalPrecision": "2" },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": { "fillOnlyBelow": false, "fillLessThan": "" }
+              },
+              "axes": { "softMin": 0, "softMax": 0, "isLogScale": false },
+              "legend": { "position": "bottom", "mode": "list", "customColors": null },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "A",
+                          "stepInterval": 60,
+                          "signal": "metrics",
+                          "source": "",
+                          "aggregations": [
+                            {
+                              "metricName": "dotnet.thread_pool.queue.length",
+                              "temporality": "",
+                              "timeAggregation": "avg",
+                              "spaceAggregation": "sum",
+                              "reduceTo": "avg"
+                            }
+                          ],
+                          "disabled": false,
+                          "filter": {
+                            "expression": "(deployment.environment = $deployment.environment AND service.name = $service.name)"
+                          },
+                          "groupBy": [],
+                          "order": [],
+                          "limit": 10,
+                          "having": { "expression": "" },
+                          "functions": [],
+                          "legend": "Queue length"
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "B",
+                          "stepInterval": 60,
+                          "signal": "metrics",
+                          "source": "",
+                          "aggregations": [
+                            {
+                              "metricName": "process.runtime.dotnet.thread_pool.queue.length",
+                              "temporality": "",
+                              "timeAggregation": "avg",
+                              "spaceAggregation": "sum",
+                              "reduceTo": "avg"
+                            }
+                          ],
+                          "disabled": false,
+                          "filter": {
+                            "expression": "(deployment.environment = $deployment.environment AND service.name = $service.name)"
+                          },
+                          "groupBy": [],
+                          "order": [],
+                          "limit": 10,
+                          "having": { "expression": "" },
+                          "functions": [],
+                          "legend": "Queue length (.NET 8)"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "bb200016-0000-0000-0000-000000000016": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Thread pool threads",
+            "description": "Active thread pool threads. Query A: .NET 9+ metric names, query B: .NET 8 names."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": { "timePreference": "global_time", "fillSpans": false },
+              "formatting": { "unit": "short", "decimalPrecision": "2" },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": { "fillOnlyBelow": false, "fillLessThan": "" }
+              },
+              "axes": { "softMin": 0, "softMax": 0, "isLogScale": false },
+              "legend": { "position": "bottom", "mode": "list", "customColors": null },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "A",
+                          "stepInterval": 60,
+                          "signal": "metrics",
+                          "source": "",
+                          "aggregations": [
+                            {
+                              "metricName": "dotnet.thread_pool.thread.count",
+                              "temporality": "",
+                              "timeAggregation": "avg",
+                              "spaceAggregation": "sum",
+                              "reduceTo": "avg"
+                            }
+                          ],
+                          "disabled": false,
+                          "filter": {
+                            "expression": "(deployment.environment = $deployment.environment AND service.name = $service.name)"
+                          },
+                          "groupBy": [],
+                          "order": [],
+                          "limit": 10,
+                          "having": { "expression": "" },
+                          "functions": [],
+                          "legend": "Threads"
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "B",
+                          "stepInterval": 60,
+                          "signal": "metrics",
+                          "source": "",
+                          "aggregations": [
+                            {
+                              "metricName": "process.runtime.dotnet.thread_pool.threads.count",
+                              "temporality": "",
+                              "timeAggregation": "avg",
+                              "spaceAggregation": "sum",
+                              "reduceTo": "avg"
+                            }
+                          ],
+                          "disabled": false,
+                          "filter": {
+                            "expression": "(deployment.environment = $deployment.environment AND service.name = $service.name)"
+                          },
+                          "groupBy": [],
+                          "order": [],
+                          "limit": 10,
+                          "having": { "expression": "" },
+                          "functions": [],
+                          "legend": "Threads (.NET 8)"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "bb200017-0000-0000-0000-000000000017": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Exception rate",
+            "description": "Managed exceptions thrown per second. Query A: .NET 9+ metric names, query B: .NET 8 names."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": { "timePreference": "global_time", "fillSpans": false },
+              "formatting": { "unit": "short", "decimalPrecision": "2" },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": { "fillOnlyBelow": false, "fillLessThan": "" }
+              },
+              "axes": { "softMin": 0, "softMax": 0, "isLogScale": false },
+              "legend": { "position": "bottom", "mode": "list", "customColors": null },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "A",
+                          "stepInterval": 60,
+                          "signal": "metrics",
+                          "source": "",
+                          "aggregations": [
+                            {
+                              "metricName": "dotnet.exceptions",
+                              "temporality": "",
+                              "timeAggregation": "rate",
+                              "spaceAggregation": "sum",
+                              "reduceTo": "avg"
+                            }
+                          ],
+                          "disabled": false,
+                          "filter": {
+                            "expression": "(deployment.environment = $deployment.environment AND service.name = $service.name)"
+                          },
+                          "groupBy": [
+                            {
+                              "name": "error.type",
+                              "signal": "",
+                              "fieldContext": "attribute",
+                              "fieldDataType": "string"
+                            }
+                          ],
+                          "order": [],
+                          "limit": 20,
+                          "having": { "expression": "" },
+                          "functions": [],
+                          "legend": "{{error.type}}"
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "B",
+                          "stepInterval": 60,
+                          "signal": "metrics",
+                          "source": "",
+                          "aggregations": [
+                            {
+                              "metricName": "process.runtime.dotnet.exceptions.count",
+                              "temporality": "",
+                              "timeAggregation": "rate",
+                              "spaceAggregation": "sum",
+                              "reduceTo": "avg"
+                            }
+                          ],
+                          "disabled": false,
+                          "filter": {
+                            "expression": "(deployment.environment = $deployment.environment AND service.name = $service.name)"
+                          },
+                          "groupBy": [],
+                          "order": [],
+                          "limit": 10,
+                          "having": { "expression": "" },
+                          "functions": [],
+                          "legend": "Exceptions / sec (.NET 8)"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "bb200018-0000-0000-0000-000000000018": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Log volume by severity",
+            "description": "Log record count grouped by severity"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": { "timePreference": "global_time", "fillSpans": false },
+              "formatting": { "unit": "short", "decimalPrecision": "0" },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": { "fillOnlyBelow": false, "fillLessThan": "" }
+              },
+              "axes": { "softMin": 0, "softMax": 0, "isLogScale": false },
+              "legend": { "position": "bottom", "mode": "list", "customColors": null },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "name": "A",
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "stepInterval": 60,
+                    "signal": "logs",
+                    "source": "",
+                    "aggregations": [
+                      { "expression": "count()", "alias": "records" }
+                    ],
+                    "disabled": false,
+                    "filter": {
+                      "expression": "(service.name = $service.name)"
+                    },
+                    "groupBy": [
+                      { "name": "severity_text" }
+                    ],
+                    "order": [
+                      { "key": { "name": "records" }, "direction": "desc" }
+                    ],
+                    "limit": 20,
+                    "having": { "expression": "" },
+                    "functions": [],
+                    "legend": "{{severity_text}}"
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "bb200019-0000-0000-0000-000000000019": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Error and fatal logs",
+            "description": "Log records with severity Error or higher"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": { "timePreference": "global_time", "fillSpans": false },
+              "formatting": { "unit": "short", "decimalPrecision": "0" },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": { "fillOnlyBelow": false, "fillLessThan": "" }
+              },
+              "axes": { "softMin": 0, "softMax": 0, "isLogScale": false },
+              "legend": { "position": "bottom", "mode": "list", "customColors": null },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "name": "A",
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "stepInterval": 60,
+                    "signal": "logs",
+                    "source": "",
+                    "aggregations": [
+                      { "expression": "count()", "alias": "records" }
+                    ],
+                    "disabled": false,
+                    "filter": {
+                      "expression": "(service.name = $service.name AND severity_number >= 17)"
+                    },
+                    "groupBy": [],
+                    "order": [
+                      { "key": { "name": "records" }, "direction": "desc" }
+                    ],
+                    "limit": 10,
+                    "having": { "expression": "" },
+                    "functions": [],
+                    "legend": "Error and fatal"
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Service RED",
+            "collapse": { "open": true }
+          },
+          "items": [
+            { "x": 0, "y": 0, "width": 3, "height": 3, "content": { "$ref": "#/spec/panels/bb200001-0000-0000-0000-000000000001" } },
+            { "x": 3, "y": 0, "width": 3, "height": 3, "content": { "$ref": "#/spec/panels/bb200002-0000-0000-0000-000000000002" } },
+            { "x": 6, "y": 0, "width": 3, "height": 3, "content": { "$ref": "#/spec/panels/bb200003-0000-0000-0000-000000000003" } },
+            { "x": 9, "y": 0, "width": 3, "height": 3, "content": { "$ref": "#/spec/panels/bb200004-0000-0000-0000-000000000004" } },
+            { "x": 0, "y": 3, "width": 6, "height": 6, "content": { "$ref": "#/spec/panels/bb200005-0000-0000-0000-000000000005" } },
+            { "x": 6, "y": 3, "width": 6, "height": 6, "content": { "$ref": "#/spec/panels/bb200006-0000-0000-0000-000000000006" } },
+            { "x": 0, "y": 9, "width": 12, "height": 6, "content": { "$ref": "#/spec/panels/bb200007-0000-0000-0000-000000000007" } }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Components",
+            "collapse": { "open": true }
+          },
+          "items": [
+            { "x": 0, "y": 0, "width": 6, "height": 6, "content": { "$ref": "#/spec/panels/bb200008-0000-0000-0000-000000000008" } },
+            { "x": 6, "y": 0, "width": 6, "height": 6, "content": { "$ref": "#/spec/panels/bb200009-0000-0000-0000-000000000009" } },
+            { "x": 0, "y": 6, "width": 6, "height": 6, "content": { "$ref": "#/spec/panels/bb200010-0000-0000-0000-000000000010" } },
+            { "x": 6, "y": 6, "width": 6, "height": 6, "content": { "$ref": "#/spec/panels/bb200011-0000-0000-0000-000000000011" } }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Runtime",
+            "collapse": { "open": true }
+          },
+          "items": [
+            { "x": 0, "y": 0, "width": 6, "height": 6, "content": { "$ref": "#/spec/panels/bb200012-0000-0000-0000-000000000012" } },
+            { "x": 6, "y": 0, "width": 6, "height": 6, "content": { "$ref": "#/spec/panels/bb200013-0000-0000-0000-000000000013" } },
+            { "x": 0, "y": 6, "width": 6, "height": 6, "content": { "$ref": "#/spec/panels/bb200014-0000-0000-0000-000000000014" } },
+            { "x": 6, "y": 6, "width": 6, "height": 6, "content": { "$ref": "#/spec/panels/bb200015-0000-0000-0000-000000000015" } },
+            { "x": 0, "y": 12, "width": 6, "height": 6, "content": { "$ref": "#/spec/panels/bb200016-0000-0000-0000-000000000016" } },
+            { "x": 6, "y": 12, "width": 6, "height": 6, "content": { "$ref": "#/spec/panels/bb200017-0000-0000-0000-000000000017" } }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Logs",
+            "collapse": { "open": true }
+          },
+          "items": [
+            { "x": 0, "y": 0, "width": 6, "height": 6, "content": { "$ref": "#/spec/panels/bb200018-0000-0000-0000-000000000018" } },
+            { "x": 6, "y": 0, "width": 6, "height": 6, "content": { "$ref": "#/spec/panels/bb200019-0000-0000-0000-000000000019" } }
+          ]
+        }
+      }
+    ],
+    "duration": "",
+    "refreshInterval": "",
+    "links": []
+  }
+}

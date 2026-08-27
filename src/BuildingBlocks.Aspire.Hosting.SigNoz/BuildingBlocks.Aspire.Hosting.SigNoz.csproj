@@ -1,0 +1,60 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <WarningsAsErrors>CS1591;CS8618;CS8603;CS8604</WarningsAsErrors>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <RootNamespace>Aspire.Hosting</RootNamespace>
+
+    <IsPackable>true</IsPackable>
+    <PackageId>BuildingBlocks.Aspire.Hosting.SigNoz</PackageId>
+    <Title>BuildingBlocks.Aspire.Hosting.SigNoz</Title>
+    <Version>1.0.0</Version>
+    <Authors>Mohammad Hasan Hosseini</Authors>
+    <Company>Mohammad Hasan Hosseini</Company>
+    <Copyright>Copyright (c) 2026 Mohammad Hasan Hosseini</Copyright>
+    <Description>Aspire AppHost (local-dev) integration for SigNoz. AddSigNoz() provisions ClickHouse, ZooKeeper, telemetrystore migrator, OTLP collector, and UI; WithDashboards() seeds ASP.NET / BuildingBlocks dashboards; WithSigNozOtlpExporter() wires projects to the collector.</Description>
+    <PackageTags>aspire;hosting;signoz;opentelemetry;observability;otlp</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/Maxofpower/FeatureManagement</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Maxofpower/FeatureManagement</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>PACKAGE_README.md</PackageReadmeFile>
+    <PackageIcon>signoz-icon.png</PackageIcon>
+    <PackageReleaseNotes>See CHANGELOG.md in the repository for release notes.</PackageReleaseNotes>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="PACKAGE_README.md" Pack="true" PackagePath="\" />
+    <None Include="signoz-icon.png" Pack="true" PackagePath="\" />
+    <None Include="PublicAPI.Shipped.txt" Pack="false" />
+    <None Include="PublicAPI.Unshipped.txt" Pack="false" />
+    <EmbeddedResource Include="Resources\otel-collector-config.yaml" LogicalName="BuildingBlocks.Aspire.Hosting.SigNoz.otel-collector-config.yaml" />
+    <EmbeddedResource Include="Resources\clickhouse-cluster.xml" LogicalName="BuildingBlocks.Aspire.Hosting.SigNoz.clickhouse-cluster.xml" />
+    <EmbeddedResource Include="Resources\clickhouse-histogram-function.xml" LogicalName="BuildingBlocks.Aspire.Hosting.SigNoz.clickhouse-histogram-function.xml" />
+    <EmbeddedResource Include="Resources\clickhouse-histogram-udf.xml" LogicalName="BuildingBlocks.Aspire.Hosting.SigNoz.clickhouse-histogram-udf.xml" />
+    <EmbeddedResource Include="Resources\aspnetcore-otlp-v1.json" LogicalName="BuildingBlocks.Aspire.Hosting.SigNoz.aspnetcore-otlp-v1.json" />
+    <EmbeddedResource Include="Resources\buildingblocks-telemetry-dashboard.json" LogicalName="BuildingBlocks.Aspire.Hosting.SigNoz.buildingblocks-telemetry-dashboard.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting" Version="13.4.6" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.400" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="BuildingBlocks.Aspire.Hosting.SigNoz.Tests" />
+  </ItemGroup>
+
+</Project>

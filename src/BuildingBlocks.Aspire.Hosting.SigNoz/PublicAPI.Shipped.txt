@@ -1,0 +1,70 @@
+#nullable enable
+
+namespace Aspire.Hosting
+{
+    public static class SigNozBuilderExtensions
+    {
+        public static Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.SigNozResource> AddSigNoz(this Aspire.Hosting.IDistributedApplicationBuilder builder, string name, System.Action<Aspire.Hosting.SigNozOptions> configure) { throw null!; }
+        public static Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.SigNozResource> AddSigNoz(this Aspire.Hosting.IDistributedApplicationBuilder builder, string name, int? port = null, int? otlpGrpcPort = null, int? otlpHttpPort = null, Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ParameterResource>? jwtSecret = null, System.Action<Aspire.Hosting.SigNozOptions>? configure = null) { throw null!; }
+        public static Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.SigNozResource> WithUi(this Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.SigNozResource> builder, int? port = null, string? adminEmail = null, string? adminPassword = null, string? adminName = null, string? orgName = null) { throw null!; }
+        public static Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.SigNozResource> WithDataVolume(this Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.SigNozResource> builder, string? name = null, bool isReadOnly = false) { throw null!; }
+        public static Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.SigNozResource> WithDataBindMount(this Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.SigNozResource> builder, string source, bool isReadOnly = false) { throw null!; }
+        public static Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.SigNozResource> WithDashboards(this Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.SigNozResource> builder) { throw null!; }
+        public static Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ProjectResource> WithSigNozOtlpExporter(this Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ProjectResource> project, Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.SigNozResource> signoz, Aspire.Hosting.SigNozOtlpProtocol protocol = Aspire.Hosting.SigNozOtlpProtocol.Grpc) { throw null!; }
+    }
+    public sealed class SigNozOptions
+    {
+        public string ClickHouseImage { get { throw null!; } set { } }
+        public string ClickHouseTag { get { throw null!; } set { } }
+        public string ZooKeeperImage { get { throw null!; } set { } }
+        public string ZooKeeperTag { get { throw null!; } set { } }
+        public string CollectorImage { get { throw null!; } set { } }
+        public string CollectorTag { get { throw null!; } set { } }
+        public string SchemaMigratorImage { get { throw null!; } set { } }
+        public string SchemaMigratorTag { get { throw null!; } set { } }
+        public string SigNozImage { get { throw null!; } set { } }
+        public string SigNozTag { get { throw null!; } set { } }
+        public Aspire.Hosting.ApplicationModel.ContainerLifetime Lifetime { get { throw null!; } set { } }
+        public int? UiPort { get { throw null!; } set { } }
+        public int? OtlpGrpcPort { get { throw null!; } set { } }
+        public int? OtlpHttpPort { get { throw null!; } set { } }
+        public string? CollectorConfigPath { get { throw null!; } set { } }
+        public Aspire.Hosting.SigNozUiCredentials UiCredentials { get { throw null!; } set { } }
+    }
+    public sealed class SigNozUiCredentials
+    {
+        public const string DefaultEmail = "admin@localhost.local";
+        public const string DefaultPassword = "Admin@Signoz1";
+        public const string DefaultAdminName = "Local Admin";
+        public const string DefaultOrgName = "default";
+        public string AdminEmail { get { throw null!; } set { } }
+        public string AdminPassword { get { throw null!; } set { } }
+        public string AdminName { get { throw null!; } set { } }
+        public string OrgName { get { throw null!; } set { } }
+    }
+    public enum SigNozOtlpProtocol
+    {
+        Grpc = 0,
+        HttpProtobuf = 1,
+    }
+}
+namespace Aspire.Hosting.ApplicationModel
+{
+    public sealed class SigNozResource : Aspire.Hosting.ApplicationModel.ContainerResource, Aspire.Hosting.ApplicationModel.IResourceWithConnectionString
+    {
+        public const string PrimaryEndpointName = "http";
+        public const string UiEndpointName = "http";
+        public const string OtlpGrpcEndpointName = "otlp-grpc";
+        public const string OtlpHttpEndpointName = "otlp-http";
+        public SigNozResource(string name) { }
+        public Aspire.Hosting.ApplicationModel.EndpointReference PrimaryEndpoint { get { throw null!; } }
+        public Aspire.Hosting.ApplicationModel.EndpointReference UiEndpoint { get { throw null!; } }
+        public Aspire.Hosting.ApplicationModel.EndpointReferenceExpression Host { get { throw null!; } }
+        public Aspire.Hosting.ApplicationModel.EndpointReferenceExpression Port { get { throw null!; } }
+        public Aspire.Hosting.ApplicationModel.EndpointReference OtlpGrpcEndpoint { get { throw null!; } }
+        public Aspire.Hosting.ApplicationModel.EndpointReference OtlpHttpEndpoint { get { throw null!; } }
+        public Aspire.Hosting.ApplicationModel.ReferenceExpression ConnectionStringExpression { get { throw null!; } }
+        public Aspire.Hosting.ApplicationModel.ReferenceExpression UriExpression { get { throw null!; } }
+        public bool IsCollectorBound { get { throw null!; } }
+    }
+}
