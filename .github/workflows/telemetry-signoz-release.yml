@@ -41,8 +41,12 @@ jobs:
           set -euo pipefail
           PROJECT_VERSION=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' src/BuildingBlocks.Aspire.Hosting.SigNoz/BuildingBlocks.Aspire.Hosting.SigNoz.csproj | head -1)
           echo "project=$PROJECT_VERSION" >> "$GITHUB_OUTPUT"
+          REF="${GITHUB_REF_NAME}"
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            STRIPPED="${GITHUB_REF_NAME#signoz-v}"
+            TAG="$REF"
+            STRIPPED="$(printf '%s' "$TAG" | sed 's/^signoz-v//')"
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+            echo "from_tag=$STRIPPED" >> "$GITHUB_OUTPUT"
             if [[ "$STRIPPED" != "$PROJECT_VERSION" ]]; then
               echo "::error::Tag version ($STRIPPED) does not match project <Version> ($PROJECT_VERSION)"
               exit 1
