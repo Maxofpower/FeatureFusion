@@ -1,6 +1,6 @@
 # SigNoz alert rules (repo-owned)
 
-These artifacts live in **FeatureManagement**, not in `BuildingBlocks.Telemetry` or `BuildingBlocks.Aspire.Hosting.SigNoz`.
+These artifacts live in **FeatureFusion**, not in `BuildingBlocks.Telemetry` or `BuildingBlocks.Aspire.Hosting.SigNoz`.
 
 Import or recreate them in the SigNoz UI (`http://localhost:<ui-port>`) after `aspire run` with `AddSigNoz()`.
 
