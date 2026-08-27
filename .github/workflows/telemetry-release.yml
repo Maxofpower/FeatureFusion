@@ -42,7 +42,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          PROJECT_VERSION=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' src/BuildingBlocks.Telemetry/BuildingBlocks.Telemetry.csproj | head -1)
+          PROJECT_VERSION=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' src/BuildingBlocks/Telemetry/BuildingBlocks.Telemetry.csproj | head -1)
           echo "project=$PROJECT_VERSION" >> "$GITHUB_OUTPUT"
           REF="${GITHUB_REF_NAME}"
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
@@ -56,10 +56,10 @@ jobs:
           fi
 
       - name: Test library (net8 / net9 / net10)
-        run: dotnet test tests/BuildingBlocks.Telemetry.Tests/BuildingBlocks.Telemetry.Tests.csproj -c Release --verbosity minimal
+        run: dotnet test tests/BuildingBlocks/Telemetry.Tests/BuildingBlocks.Telemetry.Tests.csproj -c Release --verbosity minimal
 
       - name: Pack
-        run: dotnet pack src/BuildingBlocks.Telemetry/BuildingBlocks.Telemetry.csproj -c Release -o artifacts/nuget -p:ContinuousIntegrationBuild=true
+        run: dotnet pack src/BuildingBlocks/Telemetry/BuildingBlocks.Telemetry.csproj -c Release -o artifacts/nuget -p:ContinuousIntegrationBuild=true
 
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4

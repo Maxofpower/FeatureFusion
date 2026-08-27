@@ -3,13 +3,13 @@ name: Telemetry CI
 on:
   push:
     paths:
-      - "src/BuildingBlocks.Telemetry/**"
-      - "tests/BuildingBlocks.Telemetry.Tests/**"
+      - "src/BuildingBlocks/Telemetry/**"
+      - "tests/BuildingBlocks/Telemetry.Tests/**"
       - ".github/workflows/telemetry.yml"
   pull_request:
     paths:
-      - "src/BuildingBlocks.Telemetry/**"
-      - "tests/BuildingBlocks.Telemetry.Tests/**"
+      - "src/BuildingBlocks/Telemetry/**"
+      - "tests/BuildingBlocks/Telemetry.Tests/**"
       - ".github/workflows/telemetry.yml"
   workflow_dispatch:
 
@@ -34,10 +34,10 @@ jobs:
             10.0.x
 
       - name: Test library (net8 / net9 / net10)
-        run: dotnet test tests/BuildingBlocks.Telemetry.Tests/BuildingBlocks.Telemetry.Tests.csproj -c Release --verbosity minimal
+        run: dotnet test tests/BuildingBlocks/Telemetry.Tests/BuildingBlocks.Telemetry.Tests.csproj -c Release --verbosity minimal
 
       - name: Pack
-        run: dotnet pack src/BuildingBlocks.Telemetry/BuildingBlocks.Telemetry.csproj -c Release -o artifacts/nuget -p:ContinuousIntegrationBuild=true
+        run: dotnet pack src/BuildingBlocks/Telemetry/BuildingBlocks.Telemetry.csproj -c Release -o artifacts/nuget -p:ContinuousIntegrationBuild=true
 
       - name: Upload nupkg
         uses: actions/upload-artifact@v4

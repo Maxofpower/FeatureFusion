@@ -6,19 +6,19 @@ name: Mediator CI
 on:
   push:
     paths:
-      - "src/BuildingBlocks.Mediator/**"
-      - "src/BuildingBlocks.Mediator.Analyzers/**"
-      - "tests/BuildingBlocks.Mediator.Tests/**"
-      - "tests/BuildingBlocks.Mediator.Analyzers.Tests/**"
-      - "benchmarks/BuildingBlocks.Mediator.Benchmarks/**"
+      - "src/BuildingBlocks/Mediator/**"
+      - "src/BuildingBlocks/Mediator.Analyzers/**"
+      - "tests/BuildingBlocks/Mediator.Tests/**"
+      - "tests/BuildingBlocks/Mediator.Analyzers.Tests/**"
+      - "benchmarks/BuildingBlocks/Mediator.Benchmarks/**"
       - ".github/workflows/mediator.yml"
   pull_request:
     paths:
-      - "src/BuildingBlocks.Mediator/**"
-      - "src/BuildingBlocks.Mediator.Analyzers/**"
-      - "tests/BuildingBlocks.Mediator.Tests/**"
-      - "tests/BuildingBlocks.Mediator.Analyzers.Tests/**"
-      - "benchmarks/BuildingBlocks.Mediator.Benchmarks/**"
+      - "src/BuildingBlocks/Mediator/**"
+      - "src/BuildingBlocks/Mediator.Analyzers/**"
+      - "tests/BuildingBlocks/Mediator.Tests/**"
+      - "tests/BuildingBlocks/Mediator.Analyzers.Tests/**"
+      - "benchmarks/BuildingBlocks/Mediator.Benchmarks/**"
       - ".github/workflows/mediator.yml"
   workflow_dispatch:
 
@@ -43,16 +43,16 @@ jobs:
             10.0.x
 
       - name: Build analyzers
-        run: dotnet build src/BuildingBlocks.Mediator.Analyzers/BuildingBlocks.Mediator.Analyzers.csproj -c Release
+        run: dotnet build src/BuildingBlocks/Mediator.Analyzers/BuildingBlocks.Mediator.Analyzers.csproj -c Release
 
       - name: Test library (net8 / net9 / net10)
-        run: dotnet test tests/BuildingBlocks.Mediator.Tests/BuildingBlocks.Mediator.Tests.csproj -c Release --verbosity minimal
+        run: dotnet test tests/BuildingBlocks/Mediator.Tests/BuildingBlocks.Mediator.Tests.csproj -c Release --verbosity minimal
 
       - name: Test analyzers
-        run: dotnet test tests/BuildingBlocks.Mediator.Analyzers.Tests/BuildingBlocks.Mediator.Analyzers.Tests.csproj -c Release --verbosity minimal
+        run: dotnet test tests/BuildingBlocks/Mediator.Analyzers.Tests/BuildingBlocks.Mediator.Analyzers.Tests.csproj -c Release --verbosity minimal
 
       - name: Pack
-        run: dotnet pack src/BuildingBlocks.Mediator/BuildingBlocks.Mediator.csproj -c Release -o artifacts/nuget -p:ContinuousIntegrationBuild=true
+        run: dotnet pack src/BuildingBlocks/Mediator/BuildingBlocks.Mediator.csproj -c Release -o artifacts/nuget -p:ContinuousIntegrationBuild=true
 
       - name: Upload nupkg
         uses: actions/upload-artifact@v4

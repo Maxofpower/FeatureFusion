@@ -3,13 +3,13 @@ name: SigNoz hosting CI
 on:
   push:
     paths:
-      - "src/BuildingBlocks.Aspire.Hosting.SigNoz/**"
-      - "tests/BuildingBlocks.Aspire.Hosting.SigNoz.Tests/**"
+      - "src/BuildingBlocks/Aspire.Hosting.SigNoz/**"
+      - "tests/BuildingBlocks/Aspire.Hosting.SigNoz.Tests/**"
       - ".github/workflows/telemetry-signoz.yml"
   pull_request:
     paths:
-      - "src/BuildingBlocks.Aspire.Hosting.SigNoz/**"
-      - "tests/BuildingBlocks.Aspire.Hosting.SigNoz.Tests/**"
+      - "src/BuildingBlocks/Aspire.Hosting.SigNoz/**"
+      - "tests/BuildingBlocks/Aspire.Hosting.SigNoz.Tests/**"
       - ".github/workflows/telemetry-signoz.yml"
   workflow_dispatch:
 
@@ -32,10 +32,10 @@ jobs:
             10.0.x
 
       - name: Test
-        run: dotnet test tests/BuildingBlocks.Aspire.Hosting.SigNoz.Tests/BuildingBlocks.Aspire.Hosting.SigNoz.Tests.csproj -c Release --verbosity minimal
+        run: dotnet test tests/BuildingBlocks/Aspire.Hosting.SigNoz.Tests/BuildingBlocks.Aspire.Hosting.SigNoz.Tests.csproj -c Release --verbosity minimal
 
       - name: Pack
-        run: dotnet pack src/BuildingBlocks.Aspire.Hosting.SigNoz/BuildingBlocks.Aspire.Hosting.SigNoz.csproj -c Release -o artifacts/nuget -p:ContinuousIntegrationBuild=true
+        run: dotnet pack src/BuildingBlocks/Aspire.Hosting.SigNoz/BuildingBlocks.Aspire.Hosting.SigNoz.csproj -c Release -o artifacts/nuget -p:ContinuousIntegrationBuild=true
 
       - name: Upload nupkg
         uses: actions/upload-artifact@v4

@@ -106,7 +106,7 @@ publish/
 
 # Launch settings (user-specific URLs) — keep AppHost profile tracked so Docker runtime env ships with the lab
 **/Properties/launchSettings.json
-!**/FeatureFusion.AppHost.AppHost/Properties/launchSettings.json
+!**/FeatureFusion.AppHost/Properties/launchSettings.json
 
 # NuGet Packages Directory
 ## TODO: If you have NuGet Package Restore enabled, uncomment the next line
@@ -201,4 +201,8 @@ artifacts/
 
 # Temp SigNoz collector configs written by AddSigNoz during aspire run
 **/signoz-otel-*.yaml
+
+# Reserved Next.js project root (sibling of src/; not created yet)
+web/node_modules/
+web/.next/
 

@@ -1,0 +1,5 @@
+@FeatureFusion_HostAddress = https://localhost:7226
+
+GET {{FeatureFusion_HostAddress}}/api/v1/Greeting/custom-greeting
+
+###

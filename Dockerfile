@@ -1,17 +1,21 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /build
 
-COPY src/FeatureFusion/*.csproj ./src/FeatureFusion/
-COPY src/EventBusRabbitMQ/*.csproj ./src/EventBusRabbitMQ/
-COPY src/FeatureFusion.AppHost.ServiceDefaults/*.csproj ./src/FeatureFusion.AppHost.ServiceDefaults/
+COPY src/BuildingBlocks/Mediator/*.csproj ./src/BuildingBlocks/Mediator/
+COPY src/BuildingBlocks/Mediator.Analyzers/*.csproj ./src/BuildingBlocks/Mediator.Analyzers/
+COPY src/BuildingBlocks/Telemetry/*.csproj ./src/BuildingBlocks/Telemetry/
+COPY src/Lab/EventBus/*.csproj ./src/Lab/EventBus/
+COPY src/Lab/FeatureFusion.ServiceDefaults/*.csproj ./src/Lab/FeatureFusion.ServiceDefaults/
+COPY src/Lab/FeatureFusion/*.csproj ./src/Lab/FeatureFusion/
 
-RUN dotnet restore src/FeatureFusion/FeatureFusion.csproj
+RUN dotnet restore src/Lab/FeatureFusion/FeatureFusion.csproj
 
-COPY src/FeatureFusion/ ./src/FeatureFusion/
-COPY src/EventBusRabbitMQ/ ./src/EventBusRabbitMQ/
-COPY src/FeatureFusion.AppHost.ServiceDefaults/ ./src/FeatureFusion.AppHost.ServiceDefaults/
+COPY src/BuildingBlocks/ ./src/BuildingBlocks/
+COPY src/Lab/EventBus/ ./src/Lab/EventBus/
+COPY src/Lab/FeatureFusion.ServiceDefaults/ ./src/Lab/FeatureFusion.ServiceDefaults/
+COPY src/Lab/FeatureFusion/ ./src/Lab/FeatureFusion/
 
-WORKDIR /build/src/FeatureFusion
+WORKDIR /build/src/Lab/FeatureFusion
 RUN dotnet publish FeatureFusion.csproj -c Release -o /out --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final

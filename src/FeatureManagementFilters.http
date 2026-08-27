@@ -1,5 +1,0 @@
-﻿@FeatureManagementFilters_HostAddress = https://localhost:7226
-
-GET {{FeatureManagementFilters_HostAddress}}/api/v1/Greeting/custom-greeting
-
-###
