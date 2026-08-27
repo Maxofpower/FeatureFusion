@@ -7,8 +7,8 @@
 [![.NET](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![Aspire](https://img.shields.io/badge/Aspire-13.4-C3002F?logo=dotnet&logoColor=white)](https://learn.microsoft.com/dotnet/aspire/)
 [![NuGet · BuildingBlocks.Mediator](https://img.shields.io/nuget/v/BuildingBlocks.Mediator.svg?label=NuGet%20·%20BuildingBlocks.Mediator&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Mediator)
-[![NuGet · BuildingBlocks.Telemetry](https://img.shields.io/nuget/v/BuildingBlocks.Telemetry.svg?label=NuGet%20·%20BuildingBlocks.Telemetry&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Telemetry)
-[![NuGet · BuildingBlocks.Aspire.Hosting.SigNoz](https://img.shields.io/nuget/v/BuildingBlocks.Aspire.Hosting.SigNoz.svg?label=NuGet%20·%20SigNoz&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz)
+[![NuGet · BuildingBlocks.Telemetry](https://img.shields.io/nuget/v/BuildingBlocks.Telemetry.svg?label=NuGet%20·%20Telemetry&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Telemetry/1.0.0)
+[![NuGet · BuildingBlocks.Aspire.Hosting.SigNoz](https://img.shields.io/nuget/v/BuildingBlocks.Aspire.Hosting.SigNoz.svg?label=NuGet%20·%20SigNoz%20hosting&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz/1.0.0)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
 [![Stars](https://img.shields.io/github/stars/Maxofpower/FeatureManagement?style=social)](https://github.com/Maxofpower/FeatureManagement/stargazers)
 [![Last commit](https://img.shields.io/github/last-commit/Maxofpower/FeatureManagement)](https://github.com/Maxofpower/FeatureManagement/commits)
@@ -286,18 +286,31 @@ public sealed class OrdersController(ISender sender) : ControllerBase
 - ADR: [`docs/adr/0001-mediator-building-blocks-in-monorepo.md`](docs/adr/0001-mediator-building-blocks-in-monorepo.md)
 - [Mediator Pattern + Pipeline Behavior](https://www.linkedin.com/feed/update/urn:li:activity:7311311587372367873/) (prior post; building-blocks revision planned)
 
-### BuildingBlocks.Telemetry + SigNoz hosting
+### BuildingBlocks.Telemetry
 
-[![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Telemetry.svg?logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Telemetry)
+[![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Telemetry.svg?logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Telemetry/1.0.0)
+[![GitHub Release](https://img.shields.io/github/v/release/Maxofpower/FeatureManagement?filter=telemetry-v*&logo=github&label=GitHub%20Release)](https://github.com/Maxofpower/FeatureManagement/releases?q=telemetry-v)
 
-Config-driven OpenTelemetry (`AddTelemetry`) with stable instrumentations and Mediator ActivitySource integration. Pair with **`BuildingBlocks.Aspire.Hosting.SigNoz`** (`AddSigNoz` / `WithSigNozOtlpExporter`) so Aspire AppHost runs a full SigNoz stack and FeatureFusion exports OTLP to it.
+Config-driven OpenTelemetry (`AddTelemetry`) for traces, metrics, and logs. Production apps export OTLP to any backend.
 
 ```bash
-dotnet add package BuildingBlocks.Telemetry
-dotnet add package BuildingBlocks.Aspire.Hosting.SigNoz
+dotnet add package BuildingBlocks.Telemetry --version 1.0.0
 ```
 
-Docs: [telemetry](docs/building-blocks/telemetry.md) · alerts: [deploy/signoz/alerts](deploy/signoz/alerts/README.md)
+Docs: [telemetry](docs/building-blocks/telemetry.md) · package: [nuget.org](https://www.nuget.org/packages/BuildingBlocks.Telemetry/1.0.0)
+
+### BuildingBlocks.Aspire.Hosting.SigNoz
+
+[![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Aspire.Hosting.SigNoz.svg?logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz/1.0.0)
+[![GitHub Release](https://img.shields.io/github/v/release/Maxofpower/FeatureManagement?filter=signoz-v*&logo=github&label=GitHub%20Release)](https://github.com/Maxofpower/FeatureManagement/releases/tag/signoz-v1.0.0)
+
+Local-dev Aspire hosting (`AddSigNoz` / `WithSigNozOtlpExporter`). Not a production SigNoz install.
+
+```bash
+dotnet add package BuildingBlocks.Aspire.Hosting.SigNoz --version 1.0.0
+```
+
+GitHub Release: [signoz-v1.0.0](https://github.com/Maxofpower/FeatureManagement/releases/tag/signoz-v1.0.0) · package: [nuget.org](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz/1.0.0)
 
 ### API versioning & validation
 
