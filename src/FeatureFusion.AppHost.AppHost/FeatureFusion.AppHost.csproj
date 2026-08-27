@@ -17,10 +17,10 @@
     <PackageReference Include="Aspire.Hosting.RabbitMQ" Version="13.4.6" />
     <PackageReference Include="Aspire.Hosting.Redis" Version="13.4.6" />
     <PackageReference Include="Aspire.StackExchange.Redis" Version="13.4.6" />
-    <PackageReference Include="Npgsql.OpenTelemetry" Version="10.0.3" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\BuildingBlocks.Aspire.Hosting.SigNoz\BuildingBlocks.Aspire.Hosting.SigNoz.csproj" IsAspireProjectResource="false" />
     <ProjectReference Include="..\FeatureFusion\FeatureFusion.csproj" />
   </ItemGroup>
 

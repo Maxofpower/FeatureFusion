@@ -7,6 +7,8 @@
 [![.NET](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![Aspire](https://img.shields.io/badge/Aspire-13.4-C3002F?logo=dotnet&logoColor=white)](https://learn.microsoft.com/dotnet/aspire/)
 [![NuGet · BuildingBlocks.Mediator](https://img.shields.io/nuget/v/BuildingBlocks.Mediator.svg?label=NuGet%20·%20BuildingBlocks.Mediator&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Mediator)
+[![NuGet · BuildingBlocks.Telemetry](https://img.shields.io/nuget/v/BuildingBlocks.Telemetry.svg?label=NuGet%20·%20BuildingBlocks.Telemetry&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Telemetry)
+[![NuGet · BuildingBlocks.Aspire.Hosting.SigNoz](https://img.shields.io/nuget/v/BuildingBlocks.Aspire.Hosting.SigNoz.svg?label=NuGet%20·%20SigNoz&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
 [![Stars](https://img.shields.io/github/stars/Maxofpower/FeatureManagement?style=social)](https://github.com/Maxofpower/FeatureManagement/stargazers)
 [![Last commit](https://img.shields.io/github/last-commit/Maxofpower/FeatureManagement)](https://github.com/Maxofpower/FeatureManagement/commits)
@@ -45,6 +47,7 @@
 | Aspire | AppHost orchestration for Postgres, Redis, RabbitMQ, Memcached |
 | IdempotentFusion | ULID `Idempotency-Key` + Redis status tracking + optional lock |
 | Mediator (CQRS) | **`BuildingBlocks.Mediator`** NuGet — CQRS Send + ordered pipeline, telemetry, startup validation |
+| Telemetry | **`BuildingBlocks.Telemetry`** — config-driven OTel metrics/logs/traces; **`BuildingBlocks.Aspire.Hosting.SigNoz`** — `AddSigNoz()` |
 | API surface | Versioned controllers + Minimal APIs, FluentValidation patterns |
 | Gateway | YARP reverse proxy + Memcached distributed rate limiting |
 | Caching | Redis / Memcached / memory managers + middleware demos |
@@ -99,19 +102,25 @@ flowchart LR
 
 ```text
 src/
-  BuildingBlocks.Mediator/          # CQRS Send + pipeline NuGet building block (ISender, ICommand/IQuery, Unit; no Scrutor)
+  BuildingBlocks.Mediator/          # CQRS Send + pipeline NuGet building block
+  BuildingBlocks.Telemetry/         # Config-driven OpenTelemetry NuGet
+  BuildingBlocks.Aspire.Hosting.SigNoz/  # AddSigNoz() Aspire hosting NuGet
   FeatureFusion/                    # Web API (Features/, Infrastructure/, Controllers, Minimal APIs)
   EventBusRabbitMQ/                 # Reusable RabbitMQ event bus library
   FeatureFusion.ApiGateway/         # YARP + Memcached rate limiter
-  FeatureFusion.AppHost.AppHost/    # Aspire AppHost
+  FeatureFusion.AppHost.AppHost/    # Aspire AppHost (+ SigNoz stack)
   FeatureFusion.AppHost.ServiceDefaults/
 tests/
+  BuildingBlocks.Telemetry.Tests/
+  BuildingBlocks.Aspire.Hosting.SigNoz.Tests/
   IntegrationTests/                 # Aspire fixture · EventBus + HTTP API smoke
   FeatureFusion.Test/               # Unit / filter / mediator
   FeatureFusion.ApiGateway.Test/
   FeatureFusion.Common/
+deploy/signoz/alerts/               # Repo-owned SigNoz alert samples (not packaged)
 docs/
   linkedin-posts.md                 # Post ↔ code map
+  building-blocks/telemetry.md
 ```
 
 <details>
@@ -276,6 +285,19 @@ public sealed class OrdersController(ISender sender) : ControllerBase
 - Freeze: [`docs/building-blocks/mediator.md`](docs/building-blocks/mediator.md)
 - ADR: [`docs/adr/0001-mediator-building-blocks-in-monorepo.md`](docs/adr/0001-mediator-building-blocks-in-monorepo.md)
 - [Mediator Pattern + Pipeline Behavior](https://www.linkedin.com/feed/update/urn:li:activity:7311311587372367873/) (prior post; building-blocks revision planned)
+
+### BuildingBlocks.Telemetry + SigNoz hosting
+
+[![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Telemetry.svg?logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Telemetry)
+
+Config-driven OpenTelemetry (`AddTelemetry`) with stable instrumentations and Mediator ActivitySource integration. Pair with **`BuildingBlocks.Aspire.Hosting.SigNoz`** (`AddSigNoz` / `WithSigNozOtlpExporter`) so Aspire AppHost runs a full SigNoz stack and FeatureFusion exports OTLP to it.
+
+```bash
+dotnet add package BuildingBlocks.Telemetry
+dotnet add package BuildingBlocks.Aspire.Hosting.SigNoz
+```
+
+Docs: [telemetry](docs/building-blocks/telemetry.md) · alerts: [deploy/signoz/alerts](deploy/signoz/alerts/README.md)
 
 ### API versioning & validation
 

@@ -1,0 +1,49 @@
+name: Telemetry CI
+
+on:
+  push:
+    paths:
+      - "src/BuildingBlocks.Telemetry/**"
+      - "tests/BuildingBlocks.Telemetry.Tests/**"
+      - ".github/workflows/telemetry.yml"
+  pull_request:
+    paths:
+      - "src/BuildingBlocks.Telemetry/**"
+      - "tests/BuildingBlocks.Telemetry.Tests/**"
+      - ".github/workflows/telemetry.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: telemetry-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-pack:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+
+      - name: Test library (net8 / net9 / net10)
+        run: dotnet test tests/BuildingBlocks.Telemetry.Tests/BuildingBlocks.Telemetry.Tests.csproj -c Release --verbosity minimal
+
+      - name: Pack
+        run: dotnet pack src/BuildingBlocks.Telemetry/BuildingBlocks.Telemetry.csproj -c Release -o artifacts/nuget -p:ContinuousIntegrationBuild=true
+
+      - name: Upload nupkg
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages-telemetry
+          path: |
+            artifacts/nuget/*.nupkg
+            artifacts/nuget/*.snupkg
+          if-no-files-found: error

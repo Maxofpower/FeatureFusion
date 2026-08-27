@@ -1,0 +1,71 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <WarningsAsErrors>CS1591;CS8618;CS8603;CS8604</WarningsAsErrors>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <RootNamespace>BuildingBlocks.Telemetry</RootNamespace>
+
+    <!-- Packaging -->
+    <IsPackable>true</IsPackable>
+    <PackageId>BuildingBlocks.Telemetry</PackageId>
+    <Title>BuildingBlocks.Telemetry</Title>
+    <Version>1.0.0</Version>
+    <Authors>Mohammad Hasan Hosseini</Authors>
+    <Company>Mohammad Hasan Hosseini</Company>
+    <Copyright>Copyright (c) 2026 Mohammad Hasan Hosseini</Copyright>
+    <Description>Config-driven OpenTelemetry metrics, logging, and tracing for .NET. Stable instrumentations (ASP.NET Core, HttpClient, Runtime, Npgsql, SqlClient) plus source-only MassTransit/EventBus/Mediator; OTLP, Console, and Azure Monitor exporters.</Description>
+    <PackageTags>opentelemetry;telemetry;tracing;metrics;logging;otlp;applicationinsights;aspire;sqlclient;net8;net9;net10</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/Maxofpower/FeatureManagement</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Maxofpower/FeatureManagement</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>PACKAGE_README.md</PackageReadmeFile>
+    <PackageIcon>telemetry-icon.png</PackageIcon>
+    <PackageReleaseNotes>See CHANGELOG.md in the repository for release notes.</PackageReleaseNotes>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="PACKAGE_README.md" Pack="true" PackagePath="\" />
+    <None Include="telemetry-icon.png" Pack="true" PackagePath="\" />
+    <None Include="PublicAPI.Shipped.txt" Pack="false" />
+    <None Include="PublicAPI.Unshipped.txt" Pack="false" />
+  </ItemGroup>
+
+  <!-- Shared framework supplies Microsoft.Extensions.* (avoids NU1510 pruning warnings). -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.400" PrivateAssets="All" />
+    <!-- Align with major Npgsql used by consumers; mismatched majors cause MissingMethodException on AddNpgsql. -->
+    <PackageReference Include="Npgsql.OpenTelemetry" Version="8.0.9" Condition="'$(TargetFramework)' == 'net8.0'" />
+    <PackageReference Include="Npgsql.OpenTelemetry" Version="9.0.5" Condition="'$(TargetFramework)' == 'net9.0'" />
+    <PackageReference Include="Npgsql.OpenTelemetry" Version="10.0.3" Condition="'$(TargetFramework)' == 'net10.0'" />
+    <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.8.3" />
+    <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.18.0" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.18.0" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.18.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.18.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.18.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.18.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.SqlClient" Version="1.18.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="BuildingBlocks.Telemetry.Tests" />
+  </ItemGroup>
+
+</Project>

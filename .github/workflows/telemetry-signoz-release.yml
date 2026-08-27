@@ -1,0 +1,108 @@
+name: SigNoz hosting release
+
+# Tag format: signoz-vX.Y.Z must match <Version> in BuildingBlocks.Aspire.Hosting.SigNoz.csproj.
+
+on:
+  release:
+    types: [published]
+  push:
+    tags:
+      - "signoz-v*"
+  workflow_dispatch:
+    inputs:
+      publish_nuget:
+        description: "Push to nuget.org (requires Trusted Publishing + NUGET_USER)"
+        type: boolean
+        default: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: nuget
+    permissions:
+      id-token: write
+      contents: write
+    env:
+      NUGET_USER: ${{ secrets.NUGET_USER }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            10.0.x
+
+      - name: Resolve version
+        id: ver
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROJECT_VERSION=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' src/BuildingBlocks.Aspire.Hosting.SigNoz/BuildingBlocks.Aspire.Hosting.SigNoz.csproj | head -1)
+          echo "project=$PROJECT_VERSION" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            STRIPPED="${GITHUB_REF_NAME#signoz-v}"
+            if [[ "$STRIPPED" != "$PROJECT_VERSION" ]]; then
+              echo "::error::Tag version ($STRIPPED) does not match project <Version> ($PROJECT_VERSION)"
+              exit 1
+            fi
+          fi
+
+      - name: Test
+        run: dotnet test tests/BuildingBlocks.Aspire.Hosting.SigNoz.Tests/BuildingBlocks.Aspire.Hosting.SigNoz.Tests.csproj -c Release --verbosity minimal
+
+      - name: Pack
+        run: dotnet pack src/BuildingBlocks.Aspire.Hosting.SigNoz/BuildingBlocks.Aspire.Hosting.SigNoz.csproj -c Release -o artifacts/nuget -p:ContinuousIntegrationBuild=true
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages-signoz-release
+          path: |
+            artifacts/nuget/*.nupkg
+            artifacts/nuget/*.snupkg
+          if-no-files-found: error
+
+      - name: Attach packages to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b
+        with:
+          files: |
+            artifacts/nuget/*.nupkg
+            artifacts/nuget/*.snupkg
+
+      - name: Create GitHub Release for tag
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: BuildingBlocks.Aspire.Hosting.SigNoz ${{ steps.ver.outputs.project }}
+          generate_release_notes: true
+          files: |
+            artifacts/nuget/*.nupkg
+            artifacts/nuget/*.snupkg
+
+      - name: NuGet login (Trusted Publishing OIDC)
+        if: ${{ env.NUGET_USER != '' && (github.event_name != 'workflow_dispatch' || inputs.publish_nuget) }}
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ env.NUGET_USER }}
+
+      - name: Push to nuget.org
+        if: ${{ env.NUGET_USER != '' && (github.event_name != 'workflow_dispatch' || inputs.publish_nuget) && steps.login.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for pkg in artifacts/nuget/*.nupkg; do
+            dotnet nuget push "$pkg" \
+              --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
+              --source https://api.nuget.org/v3/index.json \
+              --skip-duplicate
+          done
+
+      - name: Dry-run notice
+        if: ${{ env.NUGET_USER == '' || (github.event_name == 'workflow_dispatch' && !inputs.publish_nuget) }}
+        run: echo "Skipped nuget.org push."

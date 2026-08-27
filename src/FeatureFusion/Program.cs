@@ -1,22 +1,17 @@
 using Asp.Versioning.ApiExplorer;
-using BenchmarkDotNet.Running;
 using BuildingBlocks.Mediator.DependencyInjection;
 using Enyim.Caching;
 using Enyim.Caching.Configuration;
 using EventBusRabbitMQ;
 using FeatureFusion.Features.MediatorDemo.Endpoints;
-using FeatureFusion.Features.Order.IntegrationEvents.EventHandling;
-using FeatureFusion.Features.Order.IntegrationEvents.Events;
 using FeatureFusion.Infrastructure.Behaviors;
 using FeatureFusion.Infrastructure.Exceptions;
 using FeatureFusion.Infrastructure.Extensions;
 using FeatureManagementFilters.API.V2;
 using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.FeatureManagement;
-using System.ComponentModel.DataAnnotations;
+using OpenTelemetry.Trace;
 using System.Reflection;
 using static RedisSettings;
 
@@ -28,7 +23,20 @@ builder.Configuration
 	.AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: false, reloadOnChange: true)
 	.AddEnvironmentVariables(); 
 
-builder.AddServiceDefaults();
+builder.AddServiceDefaults(
+	configureOptions: o =>
+	{
+		o.IntegrateMediator = true;
+		o.Instrumentation.Npgsql = true;
+		o.Instrumentation.EventBus = true;
+	},
+	configureTelemetry: telemetry =>
+	{
+		telemetry.AddSource("DbMigrations");
+		telemetry.ConfigureTracing(t => t
+			.AddEntityFrameworkCoreInstrumentation()
+			.AddRedisInstrumentation());
+	});
 
 // Use the generic method for JWT Authentication
 builder.Services.AddJwtAuthentication(builder.Configuration);
@@ -122,7 +130,7 @@ void ConfigureSwaggerUI(WebApplication app)
 	app.UseSwaggerUI(options =>
 	{
 		var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
-		foreach (var description in provider.ApiVersionDescriptions)
+		foreach (var description in provider.ApiVersionDescriptions.OrderByDescending(d => d.ApiVersion))
 		{
 			options.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", description.GroupName);
 		}

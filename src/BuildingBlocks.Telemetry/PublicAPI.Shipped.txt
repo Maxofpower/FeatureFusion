@@ -1,0 +1,113 @@
+#nullable enable
+
+namespace BuildingBlocks.Telemetry
+{
+    public static class TelemetryHostBuilderExtensions
+    {
+        public static BuildingBlocks.Telemetry.TelemetryBuilder AddTelemetry(this Microsoft.Extensions.Hosting.IHostApplicationBuilder builder, System.Action<BuildingBlocks.Telemetry.TelemetryOptions>? configure = null) { throw null!; }
+        public static BuildingBlocks.Telemetry.TelemetryBuilder AddTelemetry(this Microsoft.Extensions.Hosting.IHostApplicationBuilder builder, System.Action<BuildingBlocks.Telemetry.TelemetryOptions> configureOptions, System.Action<BuildingBlocks.Telemetry.TelemetryBuilder>? configureBuilder) { throw null!; }
+    }
+    public sealed class TelemetryBuilder
+    {
+        public Microsoft.Extensions.DependencyInjection.IServiceCollection Services { get { throw null!; } }
+        public BuildingBlocks.Telemetry.TelemetryBuilder ConfigureResource(System.Action<OpenTelemetry.Resources.ResourceBuilder> configure) { throw null!; }
+        public BuildingBlocks.Telemetry.TelemetryBuilder ConfigureTracing(System.Action<OpenTelemetry.Trace.TracerProviderBuilder> configure) { throw null!; }
+        public BuildingBlocks.Telemetry.TelemetryBuilder ConfigureMetrics(System.Action<OpenTelemetry.Metrics.MeterProviderBuilder> configure) { throw null!; }
+        public BuildingBlocks.Telemetry.TelemetryBuilder ConfigureLogging(System.Action<OpenTelemetry.Logs.OpenTelemetryLoggerOptions> configure) { throw null!; }
+        public BuildingBlocks.Telemetry.TelemetryBuilder AddSource(string name) { throw null!; }
+        public BuildingBlocks.Telemetry.TelemetryBuilder AddMeter(string name) { throw null!; }
+    }
+    public sealed class TelemetryOptions
+    {
+        public const string SectionName = "Telemetry";
+        public string? ServiceName { get { throw null!; } set { } }
+        public string? ServiceNamespace { get { throw null!; } set { } }
+        public string? ServiceVersion { get { throw null!; } set { } }
+        public System.Collections.Generic.Dictionary<string, string> ResourceAttributes { get { throw null!; } set { } }
+        public bool EnableTracing { get { throw null!; } set { } }
+        public bool EnableMetrics { get { throw null!; } set { } }
+        public bool EnableLogging { get { throw null!; } set { } }
+        public BuildingBlocks.Telemetry.TelemetryInstrumentationOptions Instrumentation { get { throw null!; } set { } }
+        public BuildingBlocks.Telemetry.TelemetryExporterOptions Exporters { get { throw null!; } set { } }
+        public System.Collections.Generic.List<string> Sources { get { throw null!; } set { } }
+        public System.Collections.Generic.List<string> Meters { get { throw null!; } set { } }
+        public bool IntegrateMediator { get { throw null!; } set { } }
+        public double? TracesSamplerRatio { get { throw null!; } set { } }
+        public bool AlwaysOnSamplerInDevelopment { get { throw null!; } set { } }
+        public bool SetErrorStatusOnException { get { throw null!; } set { } }
+        public bool EnableTraceBasedExemplars { get { throw null!; } set { } }
+    }
+    public sealed class TelemetryInstrumentationOptions
+    {
+        public static System.Collections.Generic.IReadOnlyList<string> DefaultExcludedPathPrefixes { get { throw null!; } }
+        public static System.Collections.Generic.List<string> CreateDefaultExcludedPathPrefixes() { throw null!; }
+        public bool AspNetCore { get { throw null!; } set { } }
+        public bool FilterHealthCheckRequests { get { throw null!; } set { } }
+        public System.Collections.Generic.List<string> ExcludedPathPrefixes { get { throw null!; } set { } }
+        public bool RecordException { get { throw null!; } set { } }
+        public System.Action<OpenTelemetry.Instrumentation.AspNetCore.AspNetCoreTraceInstrumentationOptions>? ConfigureAspNetCore { get { throw null!; } set { } }
+        public bool HttpClient { get { throw null!; } set { } }
+        public System.Action<OpenTelemetry.Instrumentation.Http.HttpClientTraceInstrumentationOptions>? ConfigureHttpClient { get { throw null!; } set { } }
+        public bool Runtime { get { throw null!; } set { } }
+        public bool Npgsql { get { throw null!; } set { } }
+        public bool IncludeFrameworkMeters { get { throw null!; } set { } }
+        public bool SqlClient { get { throw null!; } set { } }
+        public System.Action<OpenTelemetry.Instrumentation.SqlClient.SqlClientTraceInstrumentationOptions>? ConfigureSqlClient { get { throw null!; } set { } }
+        public bool MassTransit { get { throw null!; } set { } }
+        public bool EventBus { get { throw null!; } set { } }
+    }
+    public sealed class TelemetryExporterOptions
+    {
+        public BuildingBlocks.Telemetry.TelemetryOtlpExporterOptions Otlp { get { throw null!; } set { } }
+        public BuildingBlocks.Telemetry.TelemetryConsoleExporterOptions Console { get { throw null!; } set { } }
+        public BuildingBlocks.Telemetry.TelemetryAzureMonitorExporterOptions AzureMonitor { get { throw null!; } set { } }
+    }
+    public sealed class TelemetryOtlpExporterOptions
+    {
+        public bool Enabled { get { throw null!; } set { } }
+        public string? Endpoint { get { throw null!; } set { } }
+        public BuildingBlocks.Telemetry.TelemetryOtlpProtocol Protocol { get { throw null!; } set { } }
+        public string? ProtocolName { get { throw null!; } set { } }
+        public string? Headers { get { throw null!; } set { } }
+    }
+    public sealed class TelemetryConsoleExporterOptions
+    {
+        public bool Enabled { get { throw null!; } set { } }
+    }
+    public sealed class TelemetryAzureMonitorExporterOptions
+    {
+        public bool Enabled { get { throw null!; } set { } }
+        public string? ConnectionString { get { throw null!; } set { } }
+    }
+    public enum TelemetryOtlpProtocol
+    {
+        Grpc = 0,
+        HttpProtobuf = 1,
+    }
+    public static class TelemetryDefaults
+    {
+        public const string MediatorActivitySource = "BuildingBlocks.Mediator";
+        public const string MassTransitActivitySource = "MassTransit";
+        public const string EventBusActivitySource = "EventBus";
+    }
+    public static class TelemetryComponentTags
+    {
+        public const string TagName = "telemetry.component";
+        public const string AspNetCore = "aspnetcore";
+        public const string HttpClient = "httpclient";
+        public const string EntityFrameworkCore = "efcore";
+        public const string Npgsql = "npgsql";
+        public const string Redis = "redis";
+        public const string GrpcClient = "grpcclient";
+        public const string SqlClient = "sqlclient";
+        public const string EventBus = "eventbus";
+        public const string Mediator = "mediator";
+        public const string MassTransit = "masstransit";
+    }
+    public static class TelemetryActivity
+    {
+        public static System.Diagnostics.Activity? Start(string sourceName, string operationName, System.Diagnostics.ActivityKind kind = System.Diagnostics.ActivityKind.Internal) { throw null!; }
+        public static System.Diagnostics.Activity? AddEvent(this System.Diagnostics.Activity? activity, string name, params System.Collections.Generic.KeyValuePair<string, object?>[] tags) { throw null!; }
+        public static System.Diagnostics.Activity? RecordException(this System.Diagnostics.Activity? activity, System.Exception exception) { throw null!; }
+    }
+}

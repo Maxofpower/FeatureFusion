@@ -18,9 +18,7 @@ internal static class MigrateDbContextExtensions
 	public static IServiceCollection AddMigration<TContext>(this IServiceCollection services, Func<TContext, IServiceProvider, Task> seeder)
 		where TContext : DbContext
 	{
-		// Enable migration tracing
-		services.AddOpenTelemetry().WithTracing(tracing => tracing.AddSource(ActivitySourceName));
-
+		// ActivitySource "DbMigrations" is registered by the host via AddTelemetry / AddSource.
 		return services.AddHostedService(sp => new MigrationHostedService<TContext>(sp, seeder));
 	}
 

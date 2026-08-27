@@ -199,3 +199,6 @@ artifacts/
 *.nupkg
 *.snupkg
 
+# Temp SigNoz collector configs written by AddSigNoz during aspire run
+**/signoz-otel-*.yaml
+

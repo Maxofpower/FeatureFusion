@@ -1,0 +1,20 @@
+{
+  "alert": "HighP95Latency",
+  "alertType": "METRIC_BASED_ALERT",
+  "condition": {
+    "op": "1",
+    "target": 2000,
+    "matchType": "1"
+  },
+  "description": "HTTP server p95 latency exceeds 2s over 5 minutes for FeatureFusion.",
+  "evalWindow": "5m0s",
+  "frequency": "1m0s",
+  "labels": {
+    "severity": "warning",
+    "service": "featurefusion",
+    "team": "platform"
+  },
+  "ruleType": "threshold_rule",
+  "severity": "warning",
+  "version": "v4"
+}

@@ -1,0 +1,4 @@
+<clickhouse>
+    <user_scripts_path>/var/lib/clickhouse/user_scripts/</user_scripts_path>
+    <user_defined_executable_functions_config>/etc/clickhouse-server/histogram_function.xml</user_defined_executable_functions_config>
+</clickhouse>
