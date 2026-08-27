@@ -7,8 +7,8 @@
 [![.NET](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![Aspire](https://img.shields.io/badge/Aspire-13.4-C3002F?logo=dotnet&logoColor=white)](https://learn.microsoft.com/dotnet/aspire/)
 [![NuGet · BuildingBlocks.Mediator](https://img.shields.io/nuget/v/BuildingBlocks.Mediator.svg?label=NuGet%20·%20BuildingBlocks.Mediator&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Mediator)
-[![NuGet · BuildingBlocks.Telemetry](https://img.shields.io/nuget/v/BuildingBlocks.Telemetry.svg?label=NuGet%20·%20Telemetry&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Telemetry/1.0.0)
-[![NuGet · BuildingBlocks.Aspire.Hosting.SigNoz](https://img.shields.io/nuget/v/BuildingBlocks.Aspire.Hosting.SigNoz.svg?label=NuGet%20·%20SigNoz%20hosting&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz/1.0.0)
+[![NuGet · BuildingBlocks.Telemetry](https://img.shields.io/nuget/v/BuildingBlocks.Telemetry.svg?label=NuGet%20·%20Telemetry&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Telemetry)
+[![NuGet · BuildingBlocks.Aspire.Hosting.SigNoz](https://img.shields.io/nuget/v/BuildingBlocks.Aspire.Hosting.SigNoz.svg?label=NuGet%20·%20SigNoz%20hosting&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
 [![Stars](https://img.shields.io/github/stars/Maxofpower/FeatureManagement?style=social)](https://github.com/Maxofpower/FeatureManagement/stargazers)
 [![Last commit](https://img.shields.io/github/last-commit/Maxofpower/FeatureManagement)](https://github.com/Maxofpower/FeatureManagement/commits)
@@ -288,29 +288,86 @@ public sealed class OrdersController(ISender sender) : ControllerBase
 
 ### BuildingBlocks.Telemetry
 
-[![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Telemetry.svg?logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Telemetry/1.0.0)
-[![GitHub Release](https://img.shields.io/github/v/release/Maxofpower/FeatureManagement?filter=telemetry-v*&logo=github&label=GitHub%20Release)](https://github.com/Maxofpower/FeatureManagement/releases?q=telemetry-v)
+[![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Telemetry.svg?logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Telemetry)
+[![GitHub Release](https://img.shields.io/github/v/release/Maxofpower/FeatureManagement?filter=telemetry-v*&logo=github&label=GitHub%20Release)](https://github.com/Maxofpower/FeatureManagement/releases/tag/telemetry-v1.0.0)
 
-Config-driven OpenTelemetry (`AddTelemetry`) for traces, metrics, and logs. Production apps export OTLP to any backend.
+Config-driven OpenTelemetry for ASP.NET Core: traces, metrics, and logs from one `AddTelemetry` call. Production apps export **OTLP to any backend** (SigNoz, collector, cloud). Stable instrumentations (ASP.NET Core, HttpClient, Runtime, Npgsql; SqlClient opt-in), `telemetry.component` span tags, and a startup summary that never logs endpoints or secrets.
+
+Requires **.NET 8 / 9 / 10**.
+
+#### How to use
+
+**1. Install**
 
 ```bash
-dotnet add package BuildingBlocks.Telemetry --version 1.0.0
+dotnet add package BuildingBlocks.Telemetry
 ```
 
-Docs: [telemetry](docs/building-blocks/telemetry.md) · package: [nuget.org](https://www.nuget.org/packages/BuildingBlocks.Telemetry/1.0.0)
+**2. Register** — FeatureFusion uses this from ServiceDefaults; a host can call it directly:
+
+```csharp
+builder.AddTelemetry(o =>
+{
+    o.IntegrateMediator = true;
+    o.Instrumentation.Npgsql = true;
+    o.Instrumentation.EventBus = true;
+});
+```
+
+**3. Export** — set `OTEL_EXPORTER_OTLP_ENDPOINT` (Aspire `WithSigNozOtlpExporter` does this locally). Prefer env over hard-coded URLs. On that fast-path, `OTEL_EXPORTER_OTLP_PROTOCOL` wins over `Exporters.Otlp.Protocol`.
+
+| Capability | What it does |
+|------------|--------------|
+| `AddTelemetry` | Traces + metrics + logs, resource `deployment.environment` |
+| ASP.NET / HttpClient / Runtime / Npgsql | On by default |
+| `IntegrateMediator` | ActivitySource for `BuildingBlocks.Mediator` |
+| `TelemetryBuilder` | `ConfigureTracing` / `AddSource` / `AddMeter` for EF, Redis, extra meters |
+| Startup summary | One Information log of signals, exporters, and instrumentation |
+
+- Package: [NuGet · BuildingBlocks.Telemetry](https://www.nuget.org/packages/BuildingBlocks.Telemetry)
+- Release: [telemetry-v1.0.0](https://github.com/Maxofpower/FeatureManagement/releases/tag/telemetry-v1.0.0)
+- Code: [`src/BuildingBlocks.Telemetry`](src/BuildingBlocks.Telemetry)
+- Docs: [telemetry](docs/building-blocks/telemetry.md)
 
 ### BuildingBlocks.Aspire.Hosting.SigNoz
 
-[![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Aspire.Hosting.SigNoz.svg?logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz/1.0.0)
+[![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Aspire.Hosting.SigNoz.svg?logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz)
 [![GitHub Release](https://img.shields.io/github/v/release/Maxofpower/FeatureManagement?filter=signoz-v*&logo=github&label=GitHub%20Release)](https://github.com/Maxofpower/FeatureManagement/releases/tag/signoz-v1.0.0)
 
-Local-dev Aspire hosting (`AddSigNoz` / `WithSigNozOtlpExporter`). Not a production SigNoz install.
+Local-dev **Aspire AppHost** integration: ClickHouse, ZooKeeper, schema migrator, OTLP collector, and SigNoz UI. **Not for production** — production still uses `BuildingBlocks.Telemetry` against any OTLP endpoint. Docker required. TFM **net10.0** (Aspire 13.4.6).
+
+#### How to use
+
+**1. Install** (AppHost project)
 
 ```bash
-dotnet add package BuildingBlocks.Aspire.Hosting.SigNoz --version 1.0.0
+dotnet add package BuildingBlocks.Aspire.Hosting.SigNoz
 ```
 
-GitHub Release: [signoz-v1.0.0](https://github.com/Maxofpower/FeatureManagement/releases/tag/signoz-v1.0.0) · package: [nuget.org](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz/1.0.0)
+**2. Compose the stack and wire the API**
+
+```csharp
+var signoz = builder.AddSigNoz("signoz")
+    .WithUi()
+    .WithDashboards();
+
+builder.AddProject<Projects.Api>("api")
+    .WithSigNozOtlpExporter(signoz);
+```
+
+**3. Run** the AppHost **https** profile. UI waits until the migrator exits 0. P95/P99 histogram tiles need the `histogramQuantile` UDF init job (also Session; Exited 0 is success).
+
+| API | Role |
+|-----|------|
+| `AddSigNoz` | ZooKeeper, ClickHouse, migrator, collector, UI |
+| `WithUi` | Host port + local admin credentials (password policy applies) |
+| `WithDashboards` | Seeds ASP.NET Core + BuildingBlocks dashboards |
+| `WithSigNozOtlpExporter` | `OTEL_EXPORTER_OTLP_*` on a **`ProjectResource` only** |
+
+- Package: [NuGet · BuildingBlocks.Aspire.Hosting.SigNoz](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz)
+- Release: [signoz-v1.0.0](https://github.com/Maxofpower/FeatureManagement/releases/tag/signoz-v1.0.0)
+- Code: [`src/BuildingBlocks.Aspire.Hosting.SigNoz`](src/BuildingBlocks.Aspire.Hosting.SigNoz)
+- Docs: [telemetry](docs/building-blocks/telemetry.md) · [alerts](deploy/signoz/alerts/README.md)
 
 ### API versioning & validation
 
