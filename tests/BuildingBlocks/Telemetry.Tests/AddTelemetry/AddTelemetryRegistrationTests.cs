@@ -18,6 +18,7 @@ public sealed class AddTelemetryRegistrationTests
         var options = app.Services.GetRequiredService<TelemetryOptions>();
 
         Assert.True(options.IntegrateMediator);
+        Assert.False(options.IntegrateMcp);
         Assert.True(options.EnableTracing);
         Assert.True(options.EnableMetrics);
         Assert.True(options.EnableLogging);
@@ -64,6 +65,8 @@ public sealed class AddTelemetryRegistrationTests
         Assert.Equal(TelemetryDefaults.MediatorActivitySource, TelemetryDefaults.MediatorMeter);
         Assert.Equal("MassTransit", TelemetryDefaults.MassTransitActivitySource);
         Assert.Equal("EventBus", TelemetryDefaults.EventBusActivitySource);
+        Assert.Equal("BuildingBlocks.Mcp", TelemetryDefaults.McpActivitySource);
+        Assert.Equal("mcp", TelemetryComponentTags.Mcp);
     }
 
     [Fact]

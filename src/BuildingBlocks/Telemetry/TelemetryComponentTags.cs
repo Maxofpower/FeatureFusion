@@ -40,6 +40,9 @@ public static class TelemetryComponentTags
     /// <summary>BuildingBlocks.Mediator (<see cref="TelemetryDefaults.MediatorActivitySource"/>).</summary>
     public const string Mediator = "mediator";
 
+    /// <summary>BuildingBlocks.Mcp (<see cref="TelemetryDefaults.McpActivitySource"/>).</summary>
+    public const string Mcp = "mcp";
+
     /// <summary>MassTransit (<see cref="TelemetryDefaults.MassTransitActivitySource"/>).</summary>
     public const string MassTransit = "masstransit";
 }

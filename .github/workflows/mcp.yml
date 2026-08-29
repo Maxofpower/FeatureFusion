@@ -1,0 +1,59 @@
+name: MCP CI
+
+on:
+  push:
+    paths:
+      - "src/BuildingBlocks/Mcp/**"
+      - "src/BuildingBlocks/Mcp.Analyzers/**"
+      - "tests/BuildingBlocks/Mcp.Tests/**"
+      - "tests/BuildingBlocks/Mcp.Analyzers.Tests/**"
+      - ".github/workflows/mcp.yml"
+  pull_request:
+    paths:
+      - "src/BuildingBlocks/Mcp/**"
+      - "src/BuildingBlocks/Mcp.Analyzers/**"
+      - "tests/BuildingBlocks/Mcp.Tests/**"
+      - "tests/BuildingBlocks/Mcp.Analyzers.Tests/**"
+      - ".github/workflows/mcp.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: mcp-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-pack:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+
+      - name: Build analyzers
+        run: dotnet build src/BuildingBlocks/Mcp.Analyzers/BuildingBlocks.Mcp.Analyzers.csproj -c Release
+
+      - name: Test library (net8 / net9 / net10)
+        run: dotnet test tests/BuildingBlocks/Mcp.Tests/BuildingBlocks.Mcp.Tests.csproj -c Release --verbosity minimal
+
+      - name: Test analyzers
+        run: dotnet test tests/BuildingBlocks/Mcp.Analyzers.Tests/BuildingBlocks.Mcp.Analyzers.Tests.csproj -c Release --verbosity minimal
+
+      - name: Pack
+        run: dotnet pack src/BuildingBlocks/Mcp/BuildingBlocks.Mcp.csproj -c Release -o artifacts/nuget -p:ContinuousIntegrationBuild=true
+
+      - name: Upload nupkg
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages
+          path: |
+            artifacts/nuget/*.nupkg
+            artifacts/nuget/*.snupkg
+          if-no-files-found: error

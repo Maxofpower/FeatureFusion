@@ -6,6 +6,7 @@ namespace BuildingBlocks.Telemetry;
 /// <remarks>
 /// Libraries emit spans on these sources; this package only registers the names when the
 /// matching option is enabled (<see cref="TelemetryOptions.IntegrateMediator"/>,
+/// <see cref="TelemetryOptions.IntegrateMcp"/>,
 /// <see cref="TelemetryInstrumentationOptions.MassTransit"/>,
 /// <see cref="TelemetryInstrumentationOptions.EventBus"/>).
 /// </remarks>
@@ -33,4 +34,9 @@ public static class TelemetryDefaults
     /// <see cref="TelemetryInstrumentationOptions.EventBus"/> is enabled.
     /// </summary>
     public const string EventBusActivitySource = "EventBus";
+
+    /// <summary>
+    /// ActivitySource name used by <c>BuildingBlocks.Mcp</c> when <c>UseTelemetry()</c> is enabled.
+    /// </summary>
+    public const string McpActivitySource = "BuildingBlocks.Mcp";
 }

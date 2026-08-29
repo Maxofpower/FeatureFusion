@@ -1,29 +1,20 @@
 # BuildingBlocks.Aspire.Hosting.SigNoz — agent notes
 
-Local-dev Aspire AppHost integration for SigNoz. Install: `dotnet add package BuildingBlocks.Aspire.Hosting.SigNoz`. TFM: net10.0 (Aspire 13.4). Docker required.
-
-Production telemetry belongs in `BuildingBlocks.Telemetry` against an OTLP backend — this package only provisions a local SigNoz stack.
-
-## When to choose this
-
-AppHost needs a local SigNoz UI + OTLP collector (ClickHouse, ZooKeeper, schema migrator). Not for production exporters.
-
-## Register
+Local-dev Aspire AppHost SigNoz stack. Install: `dotnet add package BuildingBlocks.Aspire.Hosting.SigNoz`. TFM net10.0 (Aspire 13.4). Docker required. Production OTLP: `BuildingBlocks.Telemetry`, not this package.
 
 ```csharp
-var signoz = builder.AddSigNoz("signoz")
-    .WithUi()
-    .WithDashboards();
+var signoz = builder.AddSigNoz("signoz", port: 8080, otlpGrpcPort: 4317, otlpHttpPort: 4318, jwtSecret: null, configure: o =>
+{
+    o.Lifetime = ContainerLifetime.Persistent;
+    o.CollectorConfigPath = null;
+    o.SigNozTag = "v0.136.1";
+})
+    .WithUi(port: 8080, adminEmail: "dev@local.test", adminPassword: "DevPassword123!", adminName: "Local Admin", orgName: "default")
+    .WithDashboards()
+    .WithDataVolume();
 
 builder.AddProject<Projects.Api>("api")
-    .WithSigNozOtlpExporter(signoz);
+    .WithSigNozOtlpExporter(signoz, SigNozOtlpProtocol.Grpc);
 ```
 
-- `WithSigNozOtlpExporter` is for `ProjectResource` only (`OTEL_EXPORTER_OTLP_*`, not `WithReference`).
-- `WithDashboards()` seeds ASP.NET Core + BuildingBlocks dashboards (match on `spec.display.name`).
-- Persist ClickHouse/ZooKeeper with `WithDataVolume()` / `WithDataBindMount()` when you need history across restarts.
-- Default `Lifetime = Persistent` plus sqlite is not a wipe each run.
-
-## Do not use for
-
-Production OTLP, non-Aspire hosts, or treating this as a substitute for `BuildingBlocks.Telemetry`.
+`WithSigNozOtlpExporter` is `ProjectResource` only (not `WithReference`). Persist ClickHouse **and** ZooKeeper together. Password ≥12 with upper/lower/digit/symbol. Not for production exporters.

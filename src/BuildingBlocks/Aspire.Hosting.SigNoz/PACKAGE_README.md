@@ -21,6 +21,72 @@ Local Aspire AppHost integration for SigNoz. Production telemetry belongs in `Bu
 dotnet add package BuildingBlocks.Aspire.Hosting.SigNoz
 ```
 
+## Quick start
+
+```csharp
+var signoz = builder.AddSigNoz("signoz")
+    .WithUi()
+    .WithDashboards();
+
+builder.AddProject<Projects.Api>("api")
+    .WithSigNozOtlpExporter(signoz);
+```
+
+Run the AppHost **https** profile. Add `.WithDataVolume()` if you need ClickHouse/ZooKeeper history across restarts. Do not use `WithReference` for OTLP.
+
+## Quick start — all options
+
+Local-dev AppHost only. Production still uses `BuildingBlocks.Telemetry` + a real OTLP endpoint. Run the AppHost **https** profile. Do not use `WithReference` for OTLP.
+
+```csharp
+var jwt = builder.AddParameter("signoz-jwt", secret: true); // optional
+
+var signoz = builder.AddSigNoz(
+    name: "signoz",
+    port: 8080,              // UI host port (container 8080); null = allocated
+    otlpGrpcPort: 4317,      // collector gRPC (container 4317)
+    otlpHttpPort: 4318,      // collector HTTP (container 4318)
+    jwtSecret: jwt,          // null → local-dev default SIGNOZ_JWT_SECRET (not for production)
+    configure: o =>
+    {
+        o.Lifetime = ContainerLifetime.Persistent; // default; Session wipes more aggressively
+        o.CollectorConfigPath = null;              // null → embedded collector config
+
+        o.SigNozImage = "signoz/signoz";
+        o.SigNozTag = "v0.136.1";
+        o.CollectorImage = "signoz/signoz-otel-collector";
+        o.CollectorTag = "v0.144.6";
+        o.SchemaMigratorImage = "signoz/signoz-otel-collector";
+        o.SchemaMigratorTag = o.CollectorTag;
+        o.ClickHouseImage = "clickhouse/clickhouse-server";
+        o.ClickHouseTag = "25.12.5";
+        o.ZooKeeperImage = "signoz/zookeeper";
+        o.ZooKeeperTag = "3.7.1";
+
+        o.UiCredentials.AdminEmail = "admin@localhost.local";
+        o.UiCredentials.AdminPassword = "Admin@Signoz1"; // ≥12, upper, lower, digit, symbol
+        o.UiCredentials.AdminName = "Local Admin";
+        o.UiCredentials.OrgName = "default";
+    })
+    .WithUi(
+        port: 8080,
+        adminEmail: "dev@local.test",
+        adminPassword: "DevPassword123!",
+        adminName: "Local Admin",
+        orgName: "default")
+    .WithDashboards()                 // ASP.NET Core + BuildingBlocks dashboards after UI healthy
+    .WithDataVolume(name: null, isReadOnly: false);
+    // .WithDataBindMount(@"D:\signoz-data", isReadOnly: false); // ClickHouse + {source}/zookeeper
+
+builder.AddProject<Projects.Api>("api")
+    .WithSigNozOtlpExporter(signoz, SigNozOtlpProtocol.Grpc);
+    // SigNozOtlpProtocol.HttpProtobuf → OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+```
+
+`AddSigNoz(name, configure)` is the callback-only overload. Method `port` / `otlp*` arguments win over `SigNozOptions`. `WithUi` credentials override `o.UiCredentials`. Lab FeatureFusion binds UI from config via `WithUiFromConfiguration` (not in this package): `SigNoz__UiPort`, `SigNoz__AdminEmail`, …
+
+Span tag `telemetry.component` is applied by **BuildingBlocks.Telemetry**, not this package.
+
 ## Image tags
 
 Pinned in `SigNozContainerImageTags` (not `:latest`). Override with `configure: o => o.SigNozTag = "..."` or `.WithImageTag(...)` on the UI resource.
@@ -47,25 +113,6 @@ Default `Lifetime = Persistent` plus a sqlite volume means omitting `WithDataVol
 ## Password
 
 Admin password must be ≥12 characters, with upper, lower, digit, and a symbol from the SigNoz whitelist (`~!@#$%^&*` and similar). Defaults: `admin@localhost.local` / `Admin@Signoz1`.
-
-## Quick start
-
-```csharp
-var signoz = builder.AddSigNoz("signoz")
-    .WithUi()
-    .WithDashboards();
-
-builder.AddProject<Projects.Api>("api")
-    .WithSigNozOtlpExporter(signoz);
-```
-
-Durable store: add `.WithDataVolume()` when you need ClickHouse/ZooKeeper history across restarts.
-
-- **UI**: connection string is the SigNoz UI URL.
-- **OTLP**: `WithSigNozOtlpExporter` on a `ProjectResource` only.
-- Run AppHost with the **https** launch profile.
-
-Span filter `telemetry.component` is applied by **BuildingBlocks.Telemetry**, not this package.
 
 ## Seeded dashboards
 

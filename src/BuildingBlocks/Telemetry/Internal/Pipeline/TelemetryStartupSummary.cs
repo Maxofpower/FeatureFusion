@@ -167,6 +167,7 @@ internal sealed class TelemetryStartupSummary
         Add(enabled, instrumentation.SqlClient, TelemetryComponentTags.SqlClient);
         Add(enabled, instrumentation.IncludeFrameworkMeters, "framework-meters");
         Add(enabled, options.IntegrateMediator, TelemetryComponentTags.Mediator);
+        Add(enabled, options.IntegrateMcp, TelemetryComponentTags.Mcp);
         Add(enabled, instrumentation.EventBus, TelemetryComponentTags.EventBus);
         Add(enabled, instrumentation.MassTransit, TelemetryComponentTags.MassTransit);
 

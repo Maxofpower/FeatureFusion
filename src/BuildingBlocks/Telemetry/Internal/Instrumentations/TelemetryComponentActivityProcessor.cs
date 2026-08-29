@@ -31,6 +31,7 @@ internal sealed class TelemetryComponentActivityProcessor : BaseProcessor<Activi
                 TelemetryComponentTags.SqlClient,
             [TelemetryDefaults.EventBusActivitySource] = TelemetryComponentTags.EventBus,
             [TelemetryDefaults.MediatorActivitySource] = TelemetryComponentTags.Mediator,
+            [TelemetryDefaults.McpActivitySource] = TelemetryComponentTags.Mcp,
             [TelemetryDefaults.MassTransitActivitySource] = TelemetryComponentTags.MassTransit,
         };
 
