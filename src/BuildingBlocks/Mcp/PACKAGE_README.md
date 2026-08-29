@@ -29,6 +29,27 @@ Requires **.NET 8**, **.NET 9**, or **.NET 10**. Host OpenTelemetry: `BuildingBl
 
 After you add or rename tools, **restart the API and reload the MCP server in Cursor**. Aspire restart alone does not refresh Cursor’s cached `tools/list`.
 
+## Quick start
+
+```csharp
+[McpTool("orders.create", Description = "Create an order")]
+public sealed record CreateOrder(int ProductId, int Quantity);
+
+builder.Services.AddBuildingBlocksMcp(o =>
+{
+    o.ScanAssemblyContaining<CreateOrder>();
+    o.UseMemoryIdempotency(TimeSpan.FromHours(1));
+}).UseDispatcher(async (sp, msg, ct) =>
+{
+    await using var scope = sp.CreateAsyncScope();
+    return await scope.ServiceProvider.GetRequiredService<ISender>().Send(msg, ct);
+});
+
+app.MapBuildingBlocksMcp(); // Cursor: { "url": "http://localhost:5141/mcp" }
+```
+
+API must be running. Reload the MCP server in Cursor after tool changes. Minimal API / `MapTool` / stdio: sections below.
+
 ## Quick start — Mediator / `ISender`
 
 ```csharp

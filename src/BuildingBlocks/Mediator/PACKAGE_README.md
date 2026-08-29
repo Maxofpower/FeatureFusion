@@ -15,20 +15,6 @@ CQRS-first **Send** + ordered **pipeline** for .NET 8+. Commands and queries, ho
 - Opt-in Send metrics on `UseTelemetry()` (histogram `mediator.send.duration`, counter `mediator.send`)
 - Drop-in from 1.0.1 (`CommandPipelineBehavior` / `QueryPipelineBehavior` unchanged)
 
-## Features
-
-- **CQRS markers:** `ICommand` / `ICommand<T>` / `IQuery<T>` (no non-generic `IQuery`)
-- **Void commands:** `ICommand : ICommand<Unit>` — pipeline binds to the real command type
-- **Ordered pipeline:** open/closed behaviors with optional `order` (lower = outermost)
-- **Typed command/query behaviors:** `ICommandPipelineBehavior` / `IQueryPipelineBehavior` — MS.DI does not construct them for the opposite kind
-- **1.0 filter bases still work:** `CommandPipelineBehavior` / `QueryPipelineBehavior` skip the other kind at runtime
-- **`UseTelemetry()`:** optional ActivitySource + Meter around Send (not a pipeline behavior)
-- **`ValidateOnStartup`:** missing/duplicate handlers at registration
-- **Exact-one handler** at Send, with clear errors
-- **Open-generic handlers** closed on demand
-- **Built-in scanner** — no Scrutor
-- **Roslyn analyzers** BBM001 / BBM002 packed in the NuGet
-
 ## Install
 
 ```bash
@@ -39,81 +25,97 @@ Requires **.NET 8**, **.NET 9**, or **.NET 10**.
 
 ## Quick start
 
-**1. Define a command and handler**
-
 ```csharp
-public sealed record CreateOrder(string Product, int Qty) : ICommand<OrderId>;
+public sealed record CreateOrder(string Product, int Qty) : ICommand<Guid>;
 
-public sealed class CreateOrderHandler : ICommandHandler<CreateOrder, OrderId>
+public sealed class CreateOrderHandler : ICommandHandler<CreateOrder, Guid>
 {
-    public Task<OrderId> Handle(CreateOrder command, CancellationToken ct)
-        => Task.FromResult(new OrderId(Guid.NewGuid()));
+    public Task<Guid> Handle(CreateOrder command, CancellationToken ct)
+        => Task.FromResult(Guid.NewGuid());
 }
-```
 
-**2. Register**
-
-```csharp
 services.AddMediator(cfg =>
 {
     cfg.RegisterServicesFromAssemblyContaining<CreateOrderHandler>();
-    cfg.AddOpenBehavior(typeof(ValidationBehavior<,>), order: 0); // host-owned
-    cfg.UseTelemetry();          // traces + metrics (omit for zero overhead)
+    cfg.AddOpenBehavior(typeof(ValidationBehavior<,>), order: 0);
+    cfg.UseTelemetry();
     cfg.ValidateOnStartup = true;
 });
-```
 
-**3. Send** — prefer `ISender` at call sites
-
-```csharp
 await sender.Send(new CreateOrder("SKU-1", 2), ct);
-var dto = await sender.Send(new GetOrder(id), ct);
-await sender.Send(new CancelOrder(id), ct); // ICommand (void)
 ```
 
-## Command-only vs query-only behaviors
+Prefer `ISender` at call sites. Host OpenTelemetry: `AddSource` / `AddMeter` `"BuildingBlocks.Mediator"` or Telemetry `IntegrateMediator`.
 
-Use constrained interfaces so a caching behavior is never constructed for a write, and an audit/transaction behavior is never constructed for a read:
+## Quick start — all options
+
+Markers: `ICommand` / `ICommand<T>` / `IQuery<T>` (no public `IRequest`, no non-generic `IQuery`). Void writes: `ICommand : ICommand<Unit>`. Prefer `ISender` at call sites (`IMediator` is the same Send surface).
 
 ```csharp
+public sealed record CreateOrder(string Product, int Qty) : ICommand<Guid>;
+public sealed record CancelOrder(Guid Id) : ICommand;
+public sealed record GetOrder(Guid Id) : IQuery<OrderDto>;
+
+public sealed class CreateOrderHandler : ICommandHandler<CreateOrder, Guid>
+{
+    public Task<Guid> Handle(CreateOrder command, CancellationToken ct)
+        => Task.FromResult(Guid.NewGuid());
+}
+
+public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+{
+    public Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken ct)
+        => next(ct);
+}
+
 public sealed class AuditCommands<TCommand, TResponse> : ICommandPipelineBehavior<TCommand, TResponse>
     where TCommand : ICommand<TResponse>
 {
-    public async Task<TResponse> Handle(
-        TCommand command, RequestHandlerDelegate<TResponse> next, CancellationToken ct)
-        => await next(ct);
+    public Task<TResponse> Handle(TCommand command, RequestHandlerDelegate<TResponse> next, CancellationToken ct)
+        => next(ct);
 }
 
 public sealed class CacheQueries<TQuery, TResponse> : IQueryPipelineBehavior<TQuery, TResponse>
     where TQuery : IQuery<TResponse>
 {
-    public async Task<TResponse> Handle(
-        TQuery query, RequestHandlerDelegate<TResponse> next, CancellationToken ct)
-        => await next(ct);
+    public Task<TResponse> Handle(TQuery query, RequestHandlerDelegate<TResponse> next, CancellationToken ct)
+        => next(ct);
 }
 
-cfg.AddOpenCommandBehavior(typeof(AuditCommands<,>), order: 10);
-cfg.AddOpenQueryBehavior(typeof(CacheQueries<,>), order: 20);
-// AddOpenBehavior(typeof(AuditCommands<,>)) also works — the constraint is on the type
-```
+// 1.0.1 bases still work (runtime skip of the other kind): CommandPipelineBehavior / QueryPipelineBehavior
 
-`CommandPipelineBehavior` / `QueryPipelineBehavior` from 1.0.1 remain supported (runtime skip). Prefer the interfaces for new code.
-
-## Telemetry
-
-`UseTelemetry()` wraps **pipeline + handler** (not a behavior):
-
-- **Traces:** ActivitySource `BuildingBlocks.Mediator`
-- **Metrics:** Meter `BuildingBlocks.Mediator` — histogram `mediator.send.duration` (ms), counter `mediator.send` (`mediator.success`, `mediator.message_kind`, `mediator.request_name`)
-
-```csharp
-cfg.UseTelemetry(o =>
+services.AddMediator(cfg =>
 {
-    o.ActivitySourceName = "BuildingBlocks.Mediator"; // MeterName copies this when unset
-    o.EnableMetrics = true;   // default
-    o.EnableLogging = true;
-    o.RecordException = true;
+    cfg.RegisterServicesFromAssembly(typeof(CreateOrderHandler).Assembly);
+    cfg.RegisterServicesFromAssemblyContaining<CreateOrderHandler>(); // same assembly is deduped
+
+    cfg.Lifetime = ServiceLifetime.Scoped;           // ISender / IMediator — default Scoped
+    cfg.HandlerLifetime = ServiceLifetime.Transient; // discovered handlers — default Transient
+    // Open-generic handlers always resolve Transient (ignore HandlerLifetime)
+
+    cfg.AddOpenBehavior(typeof(ValidationBehavior<,>), order: 0); // lower = outermost; omit order → registration order
+    cfg.AddOpenCommandBehavior(typeof(AuditCommands<,>), order: 10);
+    cfg.AddOpenQueryBehavior(typeof(CacheQueries<,>), order: 20);
+    // cfg.AddOpenBehavior(typeof(AuditCommands<,>)); // also OK — constraint is on the type
+    // cfg.AddBehavior<ClosedLoggingBehavior>(order: 5); // closed (non-open) behavior
+
+    cfg.UseTelemetry(o =>
+    {
+        o.ActivitySourceName = "BuildingBlocks.Mediator"; // default; host must AddSource this name
+        o.MeterName = "";               // empty → copies ActivitySourceName
+        o.EnableMetrics = true;         // histogram mediator.send.duration (ms), counter mediator.send
+        o.EnableLogging = true;         // ILogger start/end/errors
+        o.RecordException = true;       // Activity error status
+    });
+    // Omit UseTelemetry() for zero library telemetry overhead. EnableMetrics = false keeps traces without meters.
+
+    cfg.ValidateOnStartup = true; // exact-one handler per message at registration
 });
+
+await sender.Send(new CreateOrder("SKU-1", 2), ct);           // ICommand<T>
+await sender.Send(new GetOrder(id), ct);                      // IQuery<T>
+await sender.Send(new CancelOrder(id), ct);                   // ICommand (void)
+await sender.Send((object)new CreateOrder("SKU-1", 2), ct);   // runtime type (MCP / dynamic)
 ```
 
 Host OpenTelemetry (or `BuildingBlocks.Telemetry` with `IntegrateMediator = true`):
@@ -123,9 +125,7 @@ Host OpenTelemetry (or `BuildingBlocks.Telemetry` with `IntegrateMediator = true
 .WithMetrics(m => m.AddMeter("BuildingBlocks.Mediator"));
 ```
 
-Omit `UseTelemetry()` for zero library telemetry overhead. Set `EnableMetrics = false` to keep traces without meters.
-
-Validation stays host-owned (FluentValidation + `AddOpenBehavior`). See the cookbook.
+Scanner is built-in (no Scrutor). Analyzers **BBM001 / BBM002** ship in the NuGet. Validation stays host-owned (FluentValidation + `AddOpenBehavior`). Open-generic handlers (`Handler<T> : ICommandHandler<Cmd<T>, T>`) close on demand at Send.
 
 ## What it is not (v1)
 
@@ -135,7 +135,6 @@ Validation stays host-owned (FluentValidation + `AddOpenBehavior`). See the cook
 - No exception *handlers* that replace results (faults rethrow)
 - No built-in FluentValidation
 - Not fully Native AOT (runtime `MakeGenericType` wrappers)
-- Open-generic handlers always resolve as Transient (ignore `HandlerLifetime`)
 
 ## Docs
 

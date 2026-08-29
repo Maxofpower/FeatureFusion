@@ -28,83 +28,98 @@ This package is **not** a SigNoz SDK. Local Aspire SigNoz: `BuildingBlocks.Aspir
 dotnet add package BuildingBlocks.Telemetry
 ```
 
-## 1. Quick start — `AddTelemetry`
+## Quick start
+
+Defaults are enough for most hosts. Set `OTEL_EXPORTER_OTLP_ENDPOINT` for export. Do not call `AddTelemetry` twice.
 
 ```csharp
 builder.AddTelemetry(o =>
 {
-    o.IntegrateMediator = true;        // default true — source + meter
-    o.IntegrateMcp = true;             // default false
-    o.Instrumentation.Npgsql = true;
-    o.Instrumentation.EventBus = true; // default false
+    o.IntegrateMediator = true;
+    o.IntegrateMcp = true;               // default false
+    o.Instrumentation.EventBus = true;   // default false
 });
 ```
 
-Options plus fluent hooks:
+## Quick start — all options
+
+One `AddTelemetry` call. Values below are the **defaults** unless marked opt-in. Prefer `OTEL_EXPORTER_OTLP_*` over `Exporters.Otlp.Endpoint`. Do not call `AddTelemetry` twice (if your ServiceDefaults host already calls it, pass this callback there — `AddServiceDefaults` is not in this package).
 
 ```csharp
-builder.AddTelemetry(
-    configureOptions: o => o.EnableMetrics = true,
-    configureBuilder: t => t
-        .AddSource("DbMigrations")
-        .ConfigureTracing(tr => tr.AddEntityFrameworkCoreInstrumentation()));
-```
-
-Do not call `AddTelemetry` twice. Aspire hosts that already use FeatureFusion-style `AddServiceDefaults` should pass `configureOptions` / `configureTelemetry` there instead.
-
-## 2. Aspire `AddServiceDefaults`
-
-```csharp
-builder.AddServiceDefaults(
-    configureOptions: o =>
-    {
-        o.IntegrateMediator = true;
-        o.IntegrateMcp = true;
-        o.Instrumentation.Npgsql = true;
-        o.Instrumentation.EventBus = true;
-    },
-    configureTelemetry: telemetry =>
-    {
-        telemetry.AddSource("DbMigrations");
-        telemetry.ConfigureTracing(t => t
-            .AddEntityFrameworkCoreInstrumentation()
-            .AddRedisInstrumentation());
-    });
-```
-
-EF Core, Redis, gRPC client, and Prometheus scrape are **not** shipped here. Add the contrib package and `ConfigureTracing` / `ConfigureMetrics` **while `IServiceCollection` is still open** (not after `Build()`).
-
-## 3. Configuration section
-
-The `Telemetry` JSON / `Telemetry__*` env keys bind to `TelemetryOptions`. `ConfigureAspNetCore` / `ConfigureHttpClient` / `ConfigureSqlClient` are **code-only**.
-
-```json
+builder.AddTelemetry(o =>
 {
-  "Telemetry": {
-    "EnableTracing": true,
-    "EnableMetrics": true,
-    "EnableLogging": true,
-    "IntegrateMediator": true,
-    "IntegrateMcp": false,
-    "Instrumentation": {
-      "AspNetCore": true,
-      "HttpClient": true,
-      "Runtime": true,
-      "Npgsql": true,
-      "SqlClient": false,
-      "EventBus": false
-    },
-    "Exporters": {
-      "Otlp": { "Enabled": false },
-      "Console": { "Enabled": false }
-    }
-  }
-}
+    // Resource (empty ServiceName → IHostEnvironment.ApplicationName)
+    o.ServiceName = null;
+    o.ServiceNamespace = null;
+    o.ServiceVersion = null;
+    o.ResourceAttributes["team"] = "platform"; // extra; deployment.environment / service.environment always set
+
+    // Signals (all default true)
+    o.EnableTracing = true;
+    o.EnableMetrics = true;
+    o.EnableLogging = true;
+
+    // Library sources: emit with UseTelemetry() on Mediator/MCP; these flags export them
+    o.IntegrateMediator = true;  // default true — AddSource + AddMeter BuildingBlocks.Mediator
+    o.IntegrateMcp = true;       // default false — AddSource BuildingBlocks.Mcp
+
+    o.Sources.Add("MyApp");      // extra ActivitySources
+    o.Meters.Add("MyApp");       // extra meters
+
+    o.TracesSamplerRatio = null;           // null: AlwaysOn in Development, SDK default otherwise
+    o.AlwaysOnSamplerInDevelopment = true; // ignored when TracesSamplerRatio is set
+    o.SetErrorStatusOnException = true;
+    o.EnableTraceBasedExemplars = true;
+
+    var i = o.Instrumentation;
+    i.AspNetCore = true;
+    i.HttpClient = true;
+    i.Runtime = true;
+    i.Npgsql = true;                    // default true
+    i.IncludeFrameworkMeters = true;    // Hosting, Kestrel, Routing, Diagnostics, Auth, MemoryPool, Http, DNS
+    i.FilterHealthCheckRequests = true; // /health, /alive, /ready, /metrics
+    // i.ExcludedPathPrefixes.Add("/swagger");
+    i.RecordException = true;           // before Configure* callbacks
+
+    i.SqlClient = false;                // opt-in
+    i.EventBus = true;                  // opt-in — ActivitySource "EventBus"
+    i.MassTransit = false;              // opt-in — ActivitySource "MassTransit"
+
+    // Code-only (not JSON). Order: Filter / RecordException → this callback → telemetry.component
+    i.ConfigureAspNetCore = opts =>
+        opts.EnrichWithHttpRequest = (activity, request) => activity.SetTag("http.route", request.Path);
+    i.ConfigureHttpClient = opts => { };
+    i.ConfigureSqlClient = opts =>
+        opts.EnrichWithSqlCommand = (activity, command) =>
+            activity.SetTag("db.command_type", command.CommandType.ToString());
+
+    // Exporters — leave Otlp.Enabled false and set OTEL_EXPORTER_OTLP_ENDPOINT for the env fast-path
+    o.Exporters.Otlp.Enabled = false;
+    o.Exporters.Otlp.Endpoint = null;           // if set, per-signal AddOtlpExporter (no fast-path)
+    o.Exporters.Otlp.Headers = null;            // same — forces per-signal path
+    o.Exporters.Otlp.Protocol = TelemetryOtlpProtocol.Grpc; // ignored on env fast-path; use OTEL_EXPORTER_OTLP_PROTOCOL
+    o.Exporters.Otlp.ProtocolName = null;       // appsettings "grpc" | "http/protobuf" wins over Protocol
+    o.Exporters.Console.Enabled = false;        // local debug; also disables OTLP fast-path
+    o.Exporters.AzureMonitor.Enabled = false;
+    o.Exporters.AzureMonitor.ConnectionString = null; // or APPLICATIONINSIGHTS_CONNECTION_STRING
+},
+configureBuilder: t =>
+{
+    t.AddSource("DbMigrations");
+    t.AddMeter("DbMigrations");
+    t.ConfigureResource(r => { });
+    t.ConfigureTracing(tr => tr
+        .AddEntityFrameworkCoreInstrumentation()  // contrib — not shipped
+        .AddRedisInstrumentation());
+    t.ConfigureMetrics(m => { });
+    t.ConfigureLogging(l => { });
+});
+
+using var activity = TelemetryActivity.Start("MyApp", "Checkout");
+activity?.SetTag("order.id", id);
+activity?.AddEvent("payment.started");
+activity?.RecordException(ex);
 ```
-
-## OTLP — prefer env over hard-coded URLs
-
-OTLP turns on when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (Aspire `WithSigNozOtlpExporter` sets this on the project). Same binary for local collector, CI, and production.
 
 ```text
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
@@ -112,63 +127,60 @@ OTEL_EXPORTER_OTLP_PROTOCOL=grpc
 # OTEL_EXPORTER_OTLP_HEADERS=signoz-ingestion-key=...
 ```
 
-Env-only OTLP uses `UseOtlpExporter()` for traces, metrics, and logs. On that fast-path, `Exporters.Otlp.Protocol` in options is **ignored** — use `OTEL_EXPORTER_OTLP_PROTOCOL`. Setting `Exporters.Otlp.Endpoint` / `Headers` or enabling Console forces per-signal `AddOtlpExporter` (do not mix with the fast-path).
+Env-only OTLP uses `UseOtlpExporter()` for traces, metrics, and logs. Do not mix that with explicit `Endpoint` / `Headers` / Console.
 
-Azure Monitor: `APPLICATIONINSIGHTS_CONNECTION_STRING` or `Exporters.AzureMonitor` (can coexist with OTLP).
+`ConfigureTracing` / `ConfigureMetrics` must run while `IServiceCollection` is still open. EF Core, Redis, gRPC client, and Prometheus scrape are **not** first-class.
 
-## Mediator / MCP
+Mediator: `cfg.UseTelemetry()` then `IntegrateMediator`. MCP: builder `UseTelemetry()` then `IntegrateMcp`. Without `Integrate*`, spans stay in-process.
 
-| Library | Emit | Export from this package |
-|---------|------|--------------------------|
-| `BuildingBlocks.Mediator` | `cfg.UseTelemetry()` | `IntegrateMediator` → `AddSource` + `AddMeter` |
-| `BuildingBlocks.Mcp` | MCP builder `UseTelemetry()` | `IntegrateMcp` → `AddSource` |
+## Configuration section (bindable)
 
-Without `Integrate*`, spans and meters exist in-process but do not leave the host.
+`Telemetry` JSON / `Telemetry__*`. `ConfigureAspNetCore` / `ConfigureHttpClient` / `ConfigureSqlClient` are **code-only**.
 
-## Enrich / Filter
-
-```csharp
-builder.AddTelemetry(o =>
+```json
 {
-    o.Instrumentation.ConfigureAspNetCore = opts =>
-    {
-        opts.EnrichWithHttpRequest = (activity, request) =>
-            activity.SetTag("http.route", request.Path);
-    };
-    o.Instrumentation.SqlClient = true;
-    o.Instrumentation.ConfigureSqlClient = opts =>
-    {
-        opts.EnrichWithSqlCommand = (activity, command) =>
-            activity.SetTag("db.command_type", command.CommandType.ToString());
-    };
-});
+  "Telemetry": {
+    "ServiceName": null,
+    "ServiceNamespace": null,
+    "ServiceVersion": null,
+    "EnableTracing": true,
+    "EnableMetrics": true,
+    "EnableLogging": true,
+    "IntegrateMediator": true,
+    "IntegrateMcp": false,
+    "Sources": [ "MyApp" ],
+    "Meters": [ "MyApp" ],
+    "TracesSamplerRatio": null,
+    "AlwaysOnSamplerInDevelopment": true,
+    "SetErrorStatusOnException": true,
+    "EnableTraceBasedExemplars": true,
+    "Instrumentation": {
+      "AspNetCore": true,
+      "HttpClient": true,
+      "Runtime": true,
+      "Npgsql": true,
+      "IncludeFrameworkMeters": true,
+      "FilterHealthCheckRequests": true,
+      "ExcludedPathPrefixes": [ "/health", "/alive", "/ready", "/metrics" ],
+      "RecordException": true,
+      "SqlClient": false,
+      "EventBus": false,
+      "MassTransit": false
+    },
+    "Exporters": {
+      "Otlp": {
+        "Enabled": false,
+        "Endpoint": null,
+        "Protocol": "Grpc",
+        "ProtocolName": null,
+        "Headers": null
+      },
+      "Console": { "Enabled": false },
+      "AzureMonitor": { "Enabled": false, "ConnectionString": null }
+    }
+  }
+}
 ```
-
-Order: Filter / `RecordException` → user callback → `telemetry.component`.
-
-Manual spans (register the source first):
-
-```csharp
-telemetry.AddSource("MyApp");
-using var activity = TelemetryActivity.Start("MyApp", "Checkout");
-activity?.SetTag("order.id", id);
-```
-
-## Features
-
-- Tracing, metrics, and logs from one `AddTelemetry` call
-- Stable instrumentations: ASP.NET Core, HttpClient, Runtime, Npgsql (on by default); SqlClient opt-in
-- Framework meters: Hosting, Kestrel, Routing, Diagnostics, Auth, MemoryPool, Http, DNS
-- Health/metrics path filter (`/health`, `/alive`, `/ready`, `/metrics`)
-- `RecordException` and `SetErrorStatusOnException`
-- `telemetry.component` span tag for filtering
-- Startup summary log: service name, environment, signals, exporter modes, instrumentation — plus a warning when no exporter is configured
-- Source-only: Mediator (`IntegrateMediator`), MCP (`IntegrateMcp`), EventBus, MassTransit
-- Exporters: OTLP, Console, optional Azure Monitor
-- ParentBased sampling; AlwaysOn in Development unless `TracesSamplerRatio` is set
-- Trace-based exemplars; `deployment.environment` / `service.environment` resource attributes
-- `TelemetryActivity` for manual spans
-- `TelemetryBuilder` hooks: `ConfigureTracing` / `ConfigureMetrics` / `ConfigureLogging` / `AddSource` / `AddMeter`
 
 ## Startup summary
 
@@ -176,7 +188,7 @@ One `Information` log after host start, e.g.:
 
 ```text
 BuildingBlocks.Telemetry ready for catalog-api in Development. Signals: traces, metrics, logs.
-Exporters: OTLP (environment). Instrumentation: aspnetcore, httpclient, runtime, npgsql, framework-meters, mediator.
+Exporters: OTLP (environment). Instrumentation: aspnetcore, httpclient, runtime, npgsql, framework-meters, mediator, mcp.
 ```
 
 Endpoints, OTLP headers, and connection strings are never logged. Silence it with a log filter on

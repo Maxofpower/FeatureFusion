@@ -20,8 +20,8 @@
     <Authors>Mohammad Hasan Hosseini</Authors>
     <Company>Mohammad Hasan Hosseini</Company>
     <Copyright>Copyright (c) 2026 Mohammad Hasan Hosseini</Copyright>
-    <Description>Config-driven OpenTelemetry metrics, logging, and tracing for .NET. Stable instrumentations (ASP.NET Core, HttpClient, Runtime, Npgsql, SqlClient) plus source-only MassTransit/EventBus/Mediator; OTLP, Console, and Azure Monitor exporters.</Description>
-    <PackageTags>opentelemetry;telemetry;tracing;metrics;logging;otlp;applicationinsights;aspire;sqlclient;net8;net9;net10</PackageTags>
+    <Description>Config-driven OpenTelemetry metrics, logging, and tracing for .NET. Stable instrumentations (ASP.NET Core, HttpClient, Runtime, Npgsql, SqlClient) plus source-only Mediator, MCP, EventBus, and MassTransit; OTLP, Console, and Azure Monitor exporters.</Description>
+    <PackageTags>opentelemetry;telemetry;tracing;metrics;logging;otlp;applicationinsights;aspire;sqlclient;mcp;mediator;net8;net9;net10</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/Maxofpower/FeatureFusion</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Maxofpower/FeatureFusion</RepositoryUrl>
