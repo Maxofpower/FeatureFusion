@@ -16,7 +16,7 @@
     <IsPackable>true</IsPackable>
     <PackageId>BuildingBlocks.Telemetry</PackageId>
     <Title>BuildingBlocks.Telemetry</Title>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <Authors>Mohammad Hasan Hosseini</Authors>
     <Company>Mohammad Hasan Hosseini</Company>
     <Copyright>Copyright (c) 2026 Mohammad Hasan Hosseini</Copyright>
@@ -28,7 +28,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>PACKAGE_README.md</PackageReadmeFile>
     <PackageIcon>telemetry-icon.png</PackageIcon>
-    <PackageReleaseNotes>1.0.1: IntegrateMediator also AddMeter(BuildingBlocks.Mediator) so Send metrics export with traces; TelemetryDefaults.MediatorMeter. https://github.com/Maxofpower/FeatureFusion/blob/main/CHANGELOG.md</PackageReleaseNotes>
+    <PackageReleaseNotes>1.0.2: IntegrateMcp (opt-in ActivitySource BuildingBlocks.Mcp). https://github.com/Maxofpower/FeatureFusion/blob/main/CHANGELOG.md</PackageReleaseNotes>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <IncludeSymbols>true</IncludeSymbols>

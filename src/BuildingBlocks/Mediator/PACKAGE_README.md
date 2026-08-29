@@ -144,6 +144,7 @@ Validation stays host-owned (FluentValidation + `AddOpenBehavior`). See the cook
 - [Cookbook](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/cookbook.md)
 - [Test matrix](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/TEST_MATRIX.md)
 - [CHANGELOG](https://github.com/Maxofpower/FeatureFusion/blob/main/CHANGELOG.md)
+- LinkedIn: [BuildingBlocks.Mediator v1.0.1](https://lnkd.in/p/eU5TsuR4) · [Mediator Pattern + Pipeline Behavior](https://www.linkedin.com/feed/update/urn:li:activity:7311311587372367873/) (prior)
 
 Demo host: **FeatureFusion** in the same repository.
 

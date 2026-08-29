@@ -5,6 +5,28 @@ All notable changes to **BuildingBlocks** packages in this repository are docume
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## BuildingBlocks.Mcp [1.0.0] - 2026-08-28
+
+### Added
+
+- Message types as MCP tools on the official C# SDK (`ModelContextProtocol` 2.2.0): `[McpTool]` on types or public static endpoint methods, deny-by-default scanner, `McpResult` / `McpError`, HTTP (`MapBuildingBlocksMcp`) + opt-in stdio
+- `MapTool` for dedicated MCP DTOs; overload with scoped `IServiceProvider`
+- `UseMemoryIdempotency` on `McpBuilder`; write idempotency for Command/POST/PUT only (queries never use the store)
+- Idempotent tool schema: `idempotencyKey` is `string` + `format: uuid` (hint for agents; invoke accepts any non-empty string)
+- `WithMcp()` on Minimal API `RouteHandlerBuilder` (MVC controllers unsupported for now)
+- Idempotency: keys namespaced by tool, per-key lock, optional TTL on `MemoryIdempotencyStore`, cached JSON replayed as `JsonElement`; `IMcpIdempotencyStore` for Redis in farms
+- Tool `inputSchema`: CLR defaults / nullable = optional, JSON Schema `enum` (string names or integer values), `[Description]` / Swagger parameter text
+- Successful `CallTool` results include JSON text **and** `structuredContent` (errors stay text + `isError`)
+- Safe-tool conventions: `idempotencyKey` on writes, `IMcpToolFilter`, duck-typed Result mapping, `McpPage<T>`, dry-run / confirm / timeout, `IMcpRateLimiter`, `catalog://tools`
+- Analyzers BBMCP001–005 packed in the NuGet
+- Opt-in ActivitySource `BuildingBlocks.Mcp`
+
+## BuildingBlocks.Telemetry [1.0.2] - 2026-08-28
+
+### Added
+
+- `IntegrateMcp` (default **false**), `TelemetryDefaults.McpActivitySource`, `TelemetryComponentTags.Mcp`
+
 ## BuildingBlocks.Mediator [1.1.0] - 2026-08-27
 
 ### Added

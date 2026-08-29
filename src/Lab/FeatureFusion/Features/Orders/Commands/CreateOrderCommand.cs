@@ -1,4 +1,5 @@
 using FeatureFusion.Dtos;
+using BuildingBlocks.Mcp;
 using BuildingBlocks.Mediator;
 using FeatureFusion.Models.Validator;
 using FluentValidation;
@@ -8,6 +9,7 @@ using static FeatureFusion.Features.Orders.Commands.CreateOrderCommandHandler;
 
 namespace FeatureFusion.Features.Orders.Commands
 {
+	[McpTool("orders.create", Description = "Create an order", Idempotent = true, RequireConfirmation = true)]
 	public class CreateOrderCommand : ICommand<Result<OrderResponse>>
 	{
 		public int ProductId { get; set; }

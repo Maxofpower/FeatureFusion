@@ -1,0 +1,269 @@
+#nullable enable
+namespace BuildingBlocks.Mcp
+{
+    public interface IMcpToolFilter
+    {
+        System.Threading.Tasks.ValueTask<bool> IsVisibleAsync(BuildingBlocks.Mcp.McpToolDescriptor tool, BuildingBlocks.Mcp.McpInvokeContext context, System.Threading.CancellationToken cancellationToken);
+    }
+    public interface IMcpRateLimiter
+    {
+        System.Threading.Tasks.ValueTask<BuildingBlocks.Mcp.McpRateLimitDecision> TryAcquireAsync(string toolName, BuildingBlocks.Mcp.McpInvokeContext context, System.Threading.CancellationToken cancellationToken);
+    }
+    public readonly partial struct McpRateLimitDecision
+    {
+        public McpRateLimitDecision(bool Allowed, int? RetryAfterSeconds) { }
+        public bool Allowed { get { throw null!; } }
+        public int? RetryAfterSeconds { get { throw null!; } }
+        public static BuildingBlocks.Mcp.McpRateLimitDecision Allow { get { throw null!; } }
+        public static BuildingBlocks.Mcp.McpRateLimitDecision Deny(int? retryAfterSeconds = null) { throw null!; }
+    }
+    public interface IMcpIdempotencyStore
+    {
+        System.Threading.Tasks.Task<string?> GetAsync(string key, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task SetAsync(string key, string payloadJson, System.Threading.CancellationToken cancellationToken);
+    }
+    public interface IMcpResultMapper
+    {
+        BuildingBlocks.Mcp.McpResult<object?> Map(object? handlerResult);
+    }
+    public interface IMcpResiliencePolicy
+    {
+        System.Threading.Tasks.Task<BuildingBlocks.Mcp.McpResult<object?>> ExecuteAsync(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<BuildingBlocks.Mcp.McpResult<object?>>> action, BuildingBlocks.Mcp.McpToolKind kind, System.Threading.CancellationToken cancellationToken);
+    }
+    public interface IMcpMessageDispatcher
+    {
+        System.Threading.Tasks.Task<object?> SendAsync(object message, System.Threading.CancellationToken cancellationToken);
+    }
+    public interface IMcpInvoker
+    {
+        System.Collections.Generic.IReadOnlyList<BuildingBlocks.Mcp.McpToolDescriptor> Catalog { get { throw null!; } }
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<BuildingBlocks.Mcp.McpToolDescriptor>> ListVisibleAsync(BuildingBlocks.Mcp.McpInvokeContext context, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<BuildingBlocks.Mcp.McpResult<object?>> InvokeAsync(string toolName, System.Text.Json.JsonElement arguments, BuildingBlocks.Mcp.McpInvokeContext context, System.Threading.CancellationToken cancellationToken);
+    }
+    public interface IMcpInvokeContextAccessor
+    {
+        BuildingBlocks.Mcp.McpInvokeContext? Current { get { throw null!; } }
+    }
+    public sealed class McpInvokeContextAccessor : BuildingBlocks.Mcp.IMcpInvokeContextAccessor
+    {
+        public McpInvokeContextAccessor() { }
+        public BuildingBlocks.Mcp.McpInvokeContext? Current { get { throw null!; } }
+        public System.IDisposable Push(BuildingBlocks.Mcp.McpInvokeContext context) { throw null!; }
+    }
+    public sealed class McpToolAttribute : System.Attribute
+    {
+        public McpToolAttribute(string name) { }
+        public string Name { get { throw null!; } }
+        public string Description { get { throw null!; } set { } }
+        public BuildingBlocks.Mcp.McpToolKind Kind { get { throw null!; } set { } }
+        public bool Idempotent { get { throw null!; } set { } }
+        public bool AllowDryRun { get { throw null!; } set { } }
+        public bool RequireConfirmation { get { throw null!; } set { } }
+        public int TimeoutMilliseconds { get { throw null!; } set { } }
+        public string? FeatureFlag { get { throw null!; } set { } }
+        public string[] Roles { get { throw null!; } set { } }
+    }
+    public enum McpToolKind
+    {
+        Unspecified = 0,
+        Query = 1,
+        Command = 2,
+    }
+    public sealed class McpInvokeContext
+    {
+        public McpInvokeContext(System.Security.Claims.ClaimsPrincipal? User, string? IdempotencyKey, bool DryRun, bool Confirmed) { }
+        public System.Security.Claims.ClaimsPrincipal? User { get { throw null!; } }
+        public string? IdempotencyKey { get { throw null!; } }
+        public bool DryRun { get { throw null!; } }
+        public bool Confirmed { get { throw null!; } }
+        public static BuildingBlocks.Mcp.McpInvokeContext None { get { throw null!; } }
+    }
+    public sealed class McpToolDescriptor
+    {
+        public McpToolDescriptor() { }
+        public required string Name { get { throw null!; } init { } }
+        public required string Description { get { throw null!; } init { } }
+        public required System.Type MessageType { get { throw null!; } init { } }
+        public BuildingBlocks.Mcp.McpToolKind Kind { get { throw null!; } init { } }
+        public bool Idempotent { get { throw null!; } init { } }
+        public bool AllowDryRun { get { throw null!; } init { } }
+        public bool RequireConfirmation { get { throw null!; } init { } }
+        public System.TimeSpan? Timeout { get { throw null!; } init { } }
+        public string? FeatureFlag { get { throw null!; } init { } }
+        public System.Collections.Generic.IReadOnlyList<string> Roles { get { throw null!; } init { } }
+        public System.Collections.Generic.IReadOnlyList<BuildingBlocks.Mcp.McpJsonProperty> Properties { get { throw null!; } init { } }
+    }
+    public sealed class McpJsonProperty
+    {
+        public McpJsonProperty(string Name, string JsonType, bool Required, string? Description) { }
+        public string Name { get { throw null!; } }
+        public string JsonType { get { throw null!; } }
+        public bool Required { get { throw null!; } }
+        public string? Description { get { throw null!; } }
+        public System.Collections.Generic.IReadOnlyList<string>? EnumNames { get { throw null!; } init { } }
+        public System.Collections.Generic.IReadOnlyList<long>? EnumValues { get { throw null!; } init { } }
+    }
+    public static class McpDefaults
+    {
+        public const string ActivitySourceName = "BuildingBlocks.Mcp";
+        public const string HttpPath = "/mcp";
+        public const string IdempotencyKeyArgument = "idempotencyKey";
+        public const string IdempotencyKeyJsonFormat = "uuid";
+        public const string IdempotencyKeyArgumentDescription = "UUID for this write. Generate a new one for a new operation; reuse the same value only when retrying the same request.";
+        public const string DryRunArgument = "dryRun";
+        public const string ConfirmedArgument = "confirmed";
+        public const string CatalogResourceUri = "catalog://tools";
+    }
+    public enum McpErrorCode
+    {
+        Validation = 0,
+        NotFound = 1,
+        Conflict = 2,
+        Forbidden = 3,
+        IdempotencyKeyRequired = 4,
+        Canceled = 5,
+        Timeout = 6,
+        RateLimited = 7,
+        Internal = 8,
+        ConfirmationRequired = 9,
+    }
+    public sealed class McpError
+    {
+        public McpError(BuildingBlocks.Mcp.McpErrorCode code, string message, System.Collections.Generic.IReadOnlyDictionary<string, string[]>? details = null, int? httpStatusHint = null, int? retryAfterSeconds = null) { }
+        public BuildingBlocks.Mcp.McpErrorCode Code { get { throw null!; } }
+        public string Message { get { throw null!; } }
+        public System.Collections.Generic.IReadOnlyDictionary<string, string[]>? Details { get { throw null!; } }
+        public int? HttpStatusHint { get { throw null!; } }
+        public int? RetryAfterSeconds { get { throw null!; } }
+    }
+    public readonly partial struct McpResult<T>
+    {
+        public bool IsSuccess { get { throw null!; } }
+        public T? Value { get { throw null!; } }
+        public BuildingBlocks.Mcp.McpError? Error { get { throw null!; } }
+        public static BuildingBlocks.Mcp.McpResult<T> Ok(T value) { throw null!; }
+        public static BuildingBlocks.Mcp.McpResult<T> Fail(BuildingBlocks.Mcp.McpError error) { throw null!; }
+        public static BuildingBlocks.Mcp.McpResult<T> Fail(BuildingBlocks.Mcp.McpErrorCode code, string message) { throw null!; }
+    }
+    public static class McpResult
+    {
+        public static BuildingBlocks.Mcp.McpResult<T> Ok<T>(T value) { throw null!; }
+        public static BuildingBlocks.Mcp.McpResult<T> Fail<T>(BuildingBlocks.Mcp.McpError error) { throw null!; }
+        public static BuildingBlocks.Mcp.McpResult<T> Fail<T>(BuildingBlocks.Mcp.McpErrorCode code, string message) { throw null!; }
+    }
+    public sealed class McpPage<T>
+    {
+        public McpPage(System.Collections.Generic.IReadOnlyList<T> Items, string? NextCursor) { }
+        public System.Collections.Generic.IReadOnlyList<T> Items { get { throw null!; } }
+        public string? NextCursor { get { throw null!; } }
+        public static BuildingBlocks.Mcp.McpPage<T> From(System.Collections.Generic.IEnumerable<T>? items, string? nextCursor) { throw null!; }
+    }
+    public abstract class McpException : System.Exception
+    {
+        protected McpException(string message) { }
+        protected McpException(string message, System.Exception innerException) { }
+    }
+    public sealed class McpCatalogException : BuildingBlocks.Mcp.McpException
+    {
+        public McpCatalogException(string message) { }
+    }
+    public sealed class McpInvocationException : BuildingBlocks.Mcp.McpException
+    {
+        public McpInvocationException(string message) { }
+    }
+    public sealed class McpTimeoutException : BuildingBlocks.Mcp.McpException
+    {
+        public McpTimeoutException(string toolName, System.TimeSpan timeout) { }
+        public string ToolName { get { throw null!; } }
+        public System.TimeSpan Timeout { get { throw null!; } }
+    }
+    public sealed class McpCanceledException : BuildingBlocks.Mcp.McpException
+    {
+        public McpCanceledException() { }
+        public McpCanceledException(System.Exception innerException) { }
+    }
+    public sealed class MemoryIdempotencyStore : BuildingBlocks.Mcp.IMcpIdempotencyStore
+    {
+        public MemoryIdempotencyStore() { }
+        public MemoryIdempotencyStore(System.TimeSpan? timeToLive) { }
+        public System.Threading.Tasks.Task<string?> GetAsync(string key, System.Threading.CancellationToken cancellationToken) { throw null!; }
+        public System.Threading.Tasks.Task SetAsync(string key, string payloadJson, System.Threading.CancellationToken cancellationToken) { throw null!; }
+    }
+    public sealed class NoOpRateLimiter : BuildingBlocks.Mcp.IMcpRateLimiter
+    {
+        public NoOpRateLimiter() { }
+        public System.Threading.Tasks.ValueTask<BuildingBlocks.Mcp.McpRateLimitDecision> TryAcquireAsync(string toolName, BuildingBlocks.Mcp.McpInvokeContext context, System.Threading.CancellationToken cancellationToken) { throw null!; }
+    }
+    public sealed class DefaultMcpResultMapper : BuildingBlocks.Mcp.IMcpResultMapper
+    {
+        public DefaultMcpResultMapper() { }
+        public BuildingBlocks.Mcp.McpResult<object?> Map(object? handlerResult) { throw null!; }
+    }
+    public sealed class McpTelemetryOptions
+    {
+        public McpTelemetryOptions() { }
+        public string ActivitySourceName { get { throw null!; } set { } }
+        public bool IncludeExceptionDetails { get { throw null!; } set { } }
+    }
+    public sealed class McpTelemetry
+    {
+        public McpTelemetry(BuildingBlocks.Mcp.McpTelemetryOptions options) { }
+        public bool Enabled { get { throw null!; } }
+        public System.Diagnostics.ActivitySource Source { get { throw null!; } }
+        public bool IncludeExceptionDetails { get { throw null!; } }
+    }
+    public sealed class McpBuilder
+    {
+        public Microsoft.Extensions.DependencyInjection.IServiceCollection Services { get { throw null!; } }
+        public BuildingBlocks.Mcp.McpBuilder ScanAssembly(System.Reflection.Assembly assembly) { throw null!; }
+        public BuildingBlocks.Mcp.McpBuilder ScanAssemblyContaining<T>() { throw null!; }
+        public BuildingBlocks.Mcp.McpBuilder UseTelemetry(System.Action<BuildingBlocks.Mcp.McpTelemetryOptions>? configure = null) { throw null!; }
+        public BuildingBlocks.Mcp.McpBuilder UseMemoryIdempotency(System.TimeSpan? timeToLive = null) { throw null!; }
+        public BuildingBlocks.Mcp.McpBuilder UseStdioTransport() { throw null!; }
+        public BuildingBlocks.Mcp.McpBuilder MapTool<TMessage, TResult>(string name, string description, System.Func<TMessage, BuildingBlocks.Mcp.McpInvokeContext, System.Threading.CancellationToken, System.Threading.Tasks.Task<BuildingBlocks.Mcp.McpResult<TResult>>> handler, System.Action<BuildingBlocks.Mcp.McpToolAttribute>? configure = null) where TMessage : class { throw null!; }
+        public BuildingBlocks.Mcp.McpBuilder MapTool<TMessage, TResult>(string name, string description, System.Func<System.IServiceProvider, TMessage, BuildingBlocks.Mcp.McpInvokeContext, System.Threading.CancellationToken, System.Threading.Tasks.Task<BuildingBlocks.Mcp.McpResult<TResult>>> handler, System.Action<BuildingBlocks.Mcp.McpToolAttribute>? configure = null) where TMessage : class { throw null!; }
+        public BuildingBlocks.Mcp.McpBuilder UseDispatcher(System.Func<System.IServiceProvider, object, System.Threading.CancellationToken, System.Threading.Tasks.Task<object?>> dispatcher) { throw null!; }
+    }
+    public static class McpServiceCollectionExtensions
+    {
+        public static BuildingBlocks.Mcp.McpBuilder AddBuildingBlocksMcp(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Action<BuildingBlocks.Mcp.McpBuilder>? configure = null) { throw null!; }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddMcpFeatureFlagEvaluator(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Func<string, BuildingBlocks.Mcp.McpInvokeContext, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<bool>> evaluator) { throw null!; }
+    }
+    public sealed class FeatureFlagCallbackOptions
+    {
+        public FeatureFlagCallbackOptions() { }
+        public System.Func<string, BuildingBlocks.Mcp.McpInvokeContext, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<bool>>? Evaluator { get { throw null!; } set { } }
+    }
+    public sealed class McpInvoker : BuildingBlocks.Mcp.IMcpInvoker
+    {
+        public McpInvoker(System.Collections.Generic.IReadOnlyList<BuildingBlocks.Mcp.McpToolDescriptor> catalog, System.IServiceProvider services, System.Collections.Generic.IEnumerable<BuildingBlocks.Mcp.IMcpToolFilter> filters, BuildingBlocks.Mcp.IMcpRateLimiter rateLimiter, BuildingBlocks.Mcp.IMcpResultMapper mapper, BuildingBlocks.Mcp.IMcpMessageDispatcher? dispatcher, BuildingBlocks.Mcp.IMcpIdempotencyStore? idempotency, BuildingBlocks.Mcp.IMcpResiliencePolicy? resilience, BuildingBlocks.Mcp.McpTelemetry? telemetry, bool includeExceptionDetails) { }
+        public System.Collections.Generic.IReadOnlyList<BuildingBlocks.Mcp.McpToolDescriptor> Catalog { get { throw null!; } }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<BuildingBlocks.Mcp.McpToolDescriptor>> ListVisibleAsync(BuildingBlocks.Mcp.McpInvokeContext context, System.Threading.CancellationToken cancellationToken) { throw null!; }
+        public System.Threading.Tasks.Task<BuildingBlocks.Mcp.McpResult<object?>> InvokeAsync(string toolName, System.Text.Json.JsonElement arguments, BuildingBlocks.Mcp.McpInvokeContext context, System.Threading.CancellationToken cancellationToken) { throw null!; }
+    }
+}
+namespace BuildingBlocks.Mcp.Catalog
+{
+    public static class McpToolScanner
+    {
+        public static System.Collections.Generic.IReadOnlyList<BuildingBlocks.Mcp.McpToolDescriptor> Scan(System.Reflection.Assembly assembly) { throw null!; }
+        public static BuildingBlocks.Mcp.McpToolDescriptor FromType(System.Type type, System.Func<System.IServiceProvider, object, BuildingBlocks.Mcp.McpInvokeContext, System.Threading.CancellationToken, System.Threading.Tasks.Task<BuildingBlocks.Mcp.McpResult<object?>>>? handler) { throw null!; }
+        public static BuildingBlocks.Mcp.McpToolDescriptor Create(string name, string description, System.Type messageType, BuildingBlocks.Mcp.McpToolKind kind, bool idempotent, bool allowDryRun, bool requireConfirmation, System.TimeSpan? timeout, string? featureFlag, System.Collections.Generic.IReadOnlyList<string> roles, System.Func<System.IServiceProvider, object, BuildingBlocks.Mcp.McpInvokeContext, System.Threading.CancellationToken, System.Threading.Tasks.Task<BuildingBlocks.Mcp.McpResult<object?>>>? handler) { throw null!; }
+        public static System.Collections.Generic.IReadOnlyList<BuildingBlocks.Mcp.McpToolDescriptor> EnsureUniqueNames(System.Collections.Generic.IEnumerable<BuildingBlocks.Mcp.McpToolDescriptor> descriptors) { throw null!; }
+        public static System.Collections.Generic.IReadOnlyList<BuildingBlocks.Mcp.McpToolDescriptor> MergePreferringFirst(System.Collections.Generic.IEnumerable<BuildingBlocks.Mcp.McpToolDescriptor> primary, System.Collections.Generic.IEnumerable<BuildingBlocks.Mcp.McpToolDescriptor> extra) { throw null!; }
+    }
+}
+namespace BuildingBlocks.Mcp.Hosting
+{
+    public static class McpEndpointRouteBuilderExtensions
+    {
+        public static Microsoft.AspNetCore.Builder.IEndpointConventionBuilder MapBuildingBlocksMcp(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoints, string? pattern = null) { throw null!; }
+        public static Microsoft.AspNetCore.Builder.RouteHandlerBuilder WithMcp(this Microsoft.AspNetCore.Builder.RouteHandlerBuilder builder, Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoints) { throw null!; }
+        public static Microsoft.AspNetCore.Builder.RouteHandlerBuilder WithMcp(this Microsoft.AspNetCore.Builder.RouteHandlerBuilder builder, Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoints, string name, string description, System.Action<BuildingBlocks.Mcp.McpToolAttribute>? configure = null) { throw null!; }
+    }
+    public static class McpHostBuilderExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddBuildingBlocksMcpStdio(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { throw null!; }
+        public static System.Threading.Tasks.Task RunBuildingBlocksMcpStdioAsync(this Microsoft.Extensions.Hosting.IHost host, System.Threading.CancellationToken cancellationToken = default) { throw null!; }
+    }
+}

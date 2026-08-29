@@ -1,0 +1,81 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <WarningsAsErrors>CS1591</WarningsAsErrors>
+    <RootNamespace>BuildingBlocks.Mcp</RootNamespace>
+
+    <IsPackable>true</IsPackable>
+    <PackageId>BuildingBlocks.Mcp</PackageId>
+    <Title>BuildingBlocks.Mcp</Title>
+    <Version>1.0.0</Version>
+    <Authors>Mohammad Hasan Hosseini</Authors>
+    <Company>Mohammad Hasan Hosseini</Company>
+    <Copyright>Copyright (c) 2026 Mohammad Hasan Hosseini</Copyright>
+    <Description>Map application message types and public static endpoint methods to MCP tools on the official C# SDK, or MapTool handlers. Deny-by-default catalog, typed McpResult, HTTP + opt-in stdio. Does not require BuildingBlocks.Mediator.</Description>
+    <PackageTags>mcp;model-context-protocol;cqrs;tools;cursor;claude;aspnetcore;net8;net9;net10</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/Maxofpower/FeatureFusion</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Maxofpower/FeatureFusion</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>PACKAGE_README.md</PackageReadmeFile>
+    <PackageIcon>mcp-icon.png</PackageIcon>
+    <PackageReleaseNotes>1.0.0: [McpTool] on types or static endpoint methods, or MapTool; inputSchema; structuredContent; namespaced idempotency (schema format uuid); analyzers BBMCP001–005. https://github.com/Maxofpower/FeatureFusion/blob/main/CHANGELOG.md</PackageReleaseNotes>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="PACKAGE_README.md" Pack="true" PackagePath="\" />
+    <None Include="AGENTS.md" Pack="true" PackagePath="\" />
+    <None Include="mcp-icon.png" Pack="true" PackagePath="\" />
+    <None Include="PublicAPI.Shipped.txt" Pack="false" />
+    <None Include="PublicAPI.Unshipped.txt" Pack="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol" Version="2.2.0" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Mcp.Analyzers\BuildingBlocks.Mcp.Analyzers.csproj"
+                      ReferenceOutputAssembly="false"
+                      PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="BuildingBlocks.Mcp.Tests" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackMcpAnalyzers</TargetsForTfmSpecificContentInPackage>
+  </PropertyGroup>
+
+  <Target Name="PackMcpAnalyzers" DependsOnTargets="ResolveProjectReferences"
+          Condition="'$(TargetFramework)' == 'net8.0'">
+    <PropertyGroup>
+      <_McpAnalyzerDll>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\Mcp.Analyzers\bin\$(Configuration)\netstandard2.0\BuildingBlocks.Mcp.Analyzers.dll'))</_McpAnalyzerDll>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(_McpAnalyzerDll)')"
+           Text="MCP analyzer DLL not found at '$(_McpAnalyzerDll)'. Build BuildingBlocks.Mcp.Analyzers first." />
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="$(_McpAnalyzerDll)">
+        <PackagePath>analyzers/dotnet/cs</PackagePath>
+      </TfmSpecificPackageFile>
+    </ItemGroup>
+  </Target>
+
+</Project>

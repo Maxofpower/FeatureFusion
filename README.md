@@ -9,6 +9,7 @@ Formerly [FeatureManagement](https://github.com/Maxofpower/FeatureManagement) (G
 [![.NET](https://img.shields.io/badge/.NET-8%20%7C%209%20%7C%2010-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![Aspire](https://img.shields.io/badge/Aspire-13.4-C3002F?logo=dotnet&logoColor=white)](https://learn.microsoft.com/dotnet/aspire/)
 [![NuGet · BuildingBlocks.Mediator](https://img.shields.io/nuget/v/BuildingBlocks.Mediator.svg?label=NuGet%20·%20Mediator&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Mediator)
+[![NuGet · BuildingBlocks.Mcp](https://img.shields.io/nuget/v/BuildingBlocks.Mcp.svg?label=NuGet%20·%20MCP&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Mcp)
 [![NuGet · BuildingBlocks.Telemetry](https://img.shields.io/nuget/v/BuildingBlocks.Telemetry.svg?label=NuGet%20·%20Telemetry&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Telemetry)
 [![NuGet · BuildingBlocks.Aspire.Hosting.SigNoz](https://img.shields.io/nuget/v/BuildingBlocks.Aspire.Hosting.SigNoz.svg?label=NuGet%20·%20SigNoz%20hosting&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
@@ -28,6 +29,7 @@ Formerly [FeatureManagement](https://github.com/Maxofpower/FeatureManagement) (G
 - [BuildingBlocks](#buildingblocks)
   - [How they work together](#how-they-work-together)
   - [BuildingBlocks.Mediator](#buildingblocksmediator)
+  - [BuildingBlocks.Mcp](#buildingblocksmcp)
   - [BuildingBlocks.Telemetry](#buildingblockstelemetry)
   - [BuildingBlocks.Aspire.Hosting.SigNoz](#buildingblocksaspirehostingsignoz)
 - [Lab](#lab)
@@ -47,12 +49,13 @@ Formerly [FeatureManagement](https://github.com/Maxofpower/FeatureManagement) (G
 
 ## BuildingBlocks
 
-Three NuGet packages you can install in **your** hosts. The FeatureFusion API is a showcase, not a required dependency.
+NuGet packages you can install in **your** hosts. The FeatureFusion API is a showcase, not a required dependency.
 
 | Package | Role | TFMs |
 |---------|------|------|
 | **[BuildingBlocks.Mediator](https://www.nuget.org/packages/BuildingBlocks.Mediator)** | CQRS **Send** + ordered pipeline (`ICommand` / `IQuery`, typed behaviors, opt-in traces + metrics) | net8 / net9 / net10 |
-| **[BuildingBlocks.Telemetry](https://www.nuget.org/packages/BuildingBlocks.Telemetry)** | Config-driven OpenTelemetry (traces, metrics, logs) + `IntegrateMediator` | net8 / net9 / net10 |
+| **[BuildingBlocks.Mcp](https://www.nuget.org/packages/BuildingBlocks.Mcp)** | Message types → MCP tools on the official SDK (deny-by-default, `McpResult`, HTTP + opt-in stdio) | net8 / net9 / net10 |
+| **[BuildingBlocks.Telemetry](https://www.nuget.org/packages/BuildingBlocks.Telemetry)** | Config-driven OpenTelemetry (traces, metrics, logs) + `IntegrateMediator` / opt-in `IntegrateMcp` | net8 / net9 / net10 |
 | **[BuildingBlocks.Aspire.Hosting.SigNoz](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz)** | Local-dev Aspire `AddSigNoz()` + `WithSigNozOtlpExporter` | net10 (AppHost) |
 
 Production apps use **Mediator + Telemetry** and export OTLP to any backend. SigNoz hosting is **local AppHost only**.
@@ -144,7 +147,114 @@ await sender.Send(new CreateOrder("SKU-1", 2), ct);
 - Package README: [`src/BuildingBlocks/Mediator/PACKAGE_README.md`](src/BuildingBlocks/Mediator/PACKAGE_README.md)
 - Docs: [getting-started](docs/building-blocks/getting-started.md) · [pipeline](docs/building-blocks/pipeline-behaviors.md) · [cookbook](docs/building-blocks/cookbook.md) · [test matrix](docs/building-blocks/TEST_MATRIX.md)
 - Freeze / ADR: [`docs/building-blocks/mediator.md`](docs/building-blocks/mediator.md) · [`docs/adr/0001-mediator-building-blocks-in-monorepo.md`](docs/adr/0001-mediator-building-blocks-in-monorepo.md)
-- [Mediator Pattern + Pipeline Behavior](https://www.linkedin.com/feed/update/urn:li:activity:7311311587372367873/) (prior post; building-blocks revision planned)
+- LinkedIn: [BuildingBlocks.Mediator v1.0.1](https://lnkd.in/p/eU5TsuR4) · [Mediator Pattern + Pipeline Behavior](https://www.linkedin.com/feed/update/urn:li:activity:7311311587372367873/) (prior)
+
+---
+
+### BuildingBlocks.Mcp
+
+[![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Mcp.svg?logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Mcp)
+
+Map **application message types** (commands, queries, DTOs) and **public static Minimal API methods** to MCP tools. The official C# SDK owns the protocol; this package owns the catalog, `McpResult`, filters, and safe defaults. **Not** OpenAPI, **not** MVC controllers (unsupported for now), **not** a SOLID linter.
+
+```bash
+dotnet add package BuildingBlocks.Mcp
+```
+
+Requires .NET 8 / 9 / 10. HTTP default: `MapBuildingBlocksMcp()` → `/mcp`. Cursor talks to a **running** API (`url`). Stdio (`UseStdioTransport()`, logs on **stderr**) is for console hosts only — do not enable it on a web API. Host OpenTelemetry: `IntegrateMcp = true` plus `o.UseTelemetry()` on the MCP builder.
+
+After you add or rename tools, **restart the API and reload the MCP server in Cursor** (Aspire restart alone does not refresh Cursor’s cached `tools/list`).
+
+#### 1. Mediator / `ISender` (scan a command or query)
+
+```csharp
+[McpTool("orders.create", Description = "Create an order", Kind = McpToolKind.Command, Idempotent = true)]
+public sealed record CreateOrder(int ProductId, int Quantity);
+
+builder.Services.AddBuildingBlocksMcp(o =>
+{
+    o.ScanAssemblyContaining<CreateOrder>();
+    o.UseTelemetry();
+    o.UseMemoryIdempotency(TimeSpan.FromHours(1));
+}).UseDispatcher(async (sp, msg, ct) =>
+{
+    await using var scope = sp.CreateAsyncScope();
+    return await scope.ServiceProvider.GetRequiredService<ISender>().Send(msg, ct);
+});
+
+app.MapBuildingBlocksMcp();
+```
+
+`UseDispatcher` is a singleton; create a **scope** per call (`ISender` is scoped). `Kind` can be omitted when the type implements Mediator `ICommand` / `IQuery`. Tool-level `Description` is required. Property `[Description]` is optional (JSON Schema text only).
+
+#### 2. Minimal API — same method as `MapGet` / `MapPost`
+
+JSON binds to **one** request parameter. `CancellationToken`, `McpInvokeContext`, interfaces, and `ILogger<T>` come from DI. `HttpContext` is not the MCP body (null outside HTTP). Do not use `[FromHeader]` types as the MCP input.
+
+**A — `[McpTool]` + scan** (attribute is enough; scan picks up public static methods):
+
+```csharp
+[McpTool("lab.ping", Description = "Minimal API ping", Kind = McpToolKind.Query)]
+public static string LabPing([AsParameters] LabPingRequest request)
+    => string.IsNullOrWhiteSpace(request.Name) ? "pong" : $"pong:{request.Name}";
+
+api.MapGet("/lab-ping", LabPing);
+builder.Services.AddBuildingBlocksMcp(o => o.ScanAssembly(Assembly.GetExecutingAssembly()));
+```
+
+**B — `[McpTool]` + `.WithMcp(app)`** (same tool; scan and `WithMcp` dedupe by name). Pass the `IEndpointRouteBuilder` used for `MapGet`:
+
+```csharp
+api.MapGet("/lab-ping", LabPing).WithMcp(app);
+```
+
+**C — `.WithMcp(app, "name", "description")` without an attribute.** GET → query (no idempotency key). POST/PUT → command (idempotent write). Other verbs need `Kind` in `configure`.
+
+```csharp
+api.MapPost("/items", CreateItem).WithMcp(app, "items.create", "Create an item");
+```
+
+**D — `MapTool`** when the HTTP signature cannot be the MCP input (`FromHeader`, multiple bodies). Dedicated DTO + handler (scoped `IServiceProvider` overload for validators / feature flags).
+
+```csharp
+o.MapTool<GreetingMcpRequest, string>(
+    "greetings.custom",
+    "Dedicated MCP DTO — not the HTTP FromHeader model",
+    async (sp, msg, ctx, ct) => McpResult.Ok("…"),
+    a => a.Kind = McpToolKind.Query);
+```
+
+MVC **controller** classes and actions are unsupported for now.
+
+#### Idempotency (writes only)
+
+MCP has no HTTP verb on Mediator messages. **Command ≈ POST/PUT**; **Query ≈ GET**.
+
+| | Command | Query |
+|--|---------|--------|
+| Default | `Idempotent = true` | never uses the store |
+| Client | must send `idempotencyKey` when a store is registered | do not require a key |
+| Schema | `string` + `format: uuid` (hint; host accepts any non-empty string, including ULID) | no key property |
+| Opt out | `Idempotent = false` (lab `demo.echo`) | — |
+
+Register a store with `o.UseMemoryIdempotency(ttl)` (single instance). Multi-instance: implement `IMcpIdempotencyStore` (Redis, etc.). Keys are namespaced per tool; in-flight calls share a lock; success is replayed as `JsonElement`. The library never retries writes. Cursor/Claude fill `idempotencyKey` from the tool schema (they do not inject a key unless it is required). Reuse the same UUID only when retrying the same write. `RequireConfirmation` adds required `confirmed: true`.
+
+Cursor HTTP:
+
+```json
+{
+  "mcpServers": {
+    "featurefusion": {
+      "url": "http://localhost:5141/mcp"
+    }
+  }
+}
+```
+
+- Package README: [`src/BuildingBlocks/Mcp/PACKAGE_README.md`](src/BuildingBlocks/Mcp/PACKAGE_README.md)
+- Docs: [`docs/building-blocks/mcp.md`](docs/building-blocks/mcp.md) · ADR [`0002`](docs/adr/0002-mcp-message-tools.md) · [test matrix](docs/building-blocks/MCP_TEST_MATRIX.md)
+- Lab (Development): `orders.create`, `products.list`, `demo.echo`, `lab.ping` at `http://localhost:5141/mcp`
+- Catalog: `docs/linkedin-posts.md` → `mcp-message-tools` (planned)
 
 ---
 
@@ -153,33 +263,118 @@ await sender.Send(new CreateOrder("SKU-1", 2), ct);
 [![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Telemetry.svg?logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Telemetry)
 [![GitHub Release](https://img.shields.io/github/v/release/Maxofpower/FeatureFusion?filter=telemetry-v*&logo=github&label=GitHub%20Release)](https://github.com/Maxofpower/FeatureFusion/releases/tag/telemetry-v1.0.0)
 
-Config-driven OpenTelemetry for ASP.NET Core: traces, metrics, and logs from one `AddTelemetry` call. Export **OTLP to any backend**. Requires `IHostApplicationBuilder`.
+Config-driven OpenTelemetry for ASP.NET Core: traces, metrics, and logs from one `AddTelemetry` call. Export **OTLP to any backend** (SigNoz, collectors, Tempo, Azure Monitor). Requires `IHostApplicationBuilder`. This package is **not** a SigNoz SDK — local Aspire SigNoz lives in `BuildingBlocks.Aspire.Hosting.SigNoz`.
 
-**What's new in 1.0.1:** `IntegrateMediator` also `AddMeter("BuildingBlocks.Mediator")` so Send metrics export with traces (`TelemetryDefaults.MediatorMeter`).
+**1.0.1:** `IntegrateMediator` also `AddMeter("BuildingBlocks.Mediator")` so Send metrics export with traces (`TelemetryDefaults.MediatorMeter`). **1.0.2:** `IntegrateMcp` (default off) adds ActivitySource `BuildingBlocks.Mcp`.
 
 ```bash
 dotnet add package BuildingBlocks.Telemetry
 ```
 
+Libraries still need their own `UseTelemetry()` (Mediator / MCP) so they **emit**. `Integrate*` only **registers** the source/meter so the host **exports**.
+
+#### 1. `AddTelemetry` (API / worker)
+
 ```csharp
 builder.AddTelemetry(o =>
 {
-    o.IntegrateMediator = true;
-    o.Instrumentation.Npgsql = true;
-    o.Instrumentation.EventBus = true;
+    o.IntegrateMediator = true;          // default true — ActivitySource + Meter
+    o.IntegrateMcp = true;               // default false — MCP tool spans
+    o.Instrumentation.Npgsql = true;     // default true
+    o.Instrumentation.EventBus = true;   // default false — source EventBus
 });
 ```
 
-OTLP turns on when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. Prefer env over hard-coded URLs.
+Options + builder hooks in one call:
+
+```csharp
+builder.AddTelemetry(
+    configureOptions: o => o.Instrumentation.EventBus = true,
+    configureBuilder: t => t
+        .AddSource("DbMigrations")
+        .ConfigureTracing(tr => tr
+            .AddEntityFrameworkCoreInstrumentation()
+            .AddRedisInstrumentation()));
+```
+
+EF Core, Redis, gRPC client, and Prometheus scrape are **not** first-class — add the contrib package and `ConfigureTracing` / `ConfigureMetrics` (must run while `IServiceCollection` is still open).
+
+#### 2. Aspire `AddServiceDefaults` (lab FeatureFusion)
+
+FeatureFusion ServiceDefaults already calls `AddTelemetry`. Pass the same options and hooks:
+
+```csharp
+builder.AddServiceDefaults(
+    configureOptions: o =>
+    {
+        o.IntegrateMediator = true;
+        o.IntegrateMcp = true;
+        o.Instrumentation.Npgsql = true;
+        o.Instrumentation.EventBus = true;
+    },
+    configureTelemetry: telemetry =>
+    {
+        telemetry.AddSource("DbMigrations");
+        telemetry.ConfigureTracing(t => t
+            .AddEntityFrameworkCoreInstrumentation()
+            .AddRedisInstrumentation());
+    });
+```
+
+Do not call `AddTelemetry` twice on the same host.
+
+#### 3. `appsettings` / env (`Telemetry` section)
+
+Bindable keys: `Telemetry__EnableTracing`, `Telemetry__IntegrateMediator`, `Telemetry__Instrumentation__SqlClient`, … `Configure*` callbacks are **code-only**.
+
+```json
+{
+  "Telemetry": {
+    "EnableTracing": true,
+    "EnableMetrics": true,
+    "EnableLogging": true,
+    "IntegrateMediator": true,
+    "IntegrateMcp": false,
+    "Instrumentation": { "Npgsql": true, "SqlClient": false, "EventBus": false },
+    "Exporters": { "Otlp": { "Enabled": false }, "Console": { "Enabled": false } }
+  }
+}
+```
+
+#### OTLP (prefer env)
+
+OTLP turns on when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (or `Telemetry:Exporters:Otlp:Enabled` / `Endpoint`). Prefer env so the same binary works in Aspire, CI, and production.
+
+| | |
+|--|--|
+| Endpoint | `OTEL_EXPORTER_OTLP_ENDPOINT` (e.g. `http://localhost:4317`) |
+| Protocol | `OTEL_EXPORTER_OTLP_PROTOCOL` (`grpc` or `http/protobuf`) |
+| Headers | `OTEL_EXPORTER_OTLP_HEADERS` |
+
+Env-only OTLP uses `UseOtlpExporter()` for traces, metrics, and logs. On that fast-path, `Exporters.Otlp.Protocol` in options is **ignored** — set `OTEL_EXPORTER_OTLP_PROTOCOL`. Setting `Exporters.Otlp.Endpoint` / `Headers` or Console exporter switches to per-signal `AddOtlpExporter` (do not mix the two styles).
+
+Azure Monitor: `APPLICATIONINSIGHTS_CONNECTION_STRING` or `Exporters.AzureMonitor` (can coexist with OTLP). Console is for local debug.
+
+Development sampling is AlwaysOn unless `TracesSamplerRatio` is set. Production: set a ratio (0.0–1.0, ParentBased). Health paths `/health`, `/alive`, `/ready`, `/metrics` are filtered by default.
+
+#### Mediator / MCP (two switches)
+
+| Library | Emits (library) | Host exports (`AddTelemetry`) |
+|---------|-----------------|-------------------------------|
+| Mediator | `cfg.UseTelemetry()` | `IntegrateMediator` → `AddSource` + `AddMeter` (`TelemetryDefaults.MediatorMeter`) |
+| MCP | `o.UseTelemetry()` on MCP builder | `IntegrateMcp` → `AddSource` (`BuildingBlocks.Mcp`) |
+
+Filter spans with `telemetry.component` (`mediator`, `mcp`, `npgsql`, …). Manual spans: `AddSource("MyApp")` then `TelemetryActivity.Start("MyApp", "Checkout")`.
+
+Startup: one Information log of signals and instrumentation — never endpoints or secrets. Empty backend with telemetry “on” usually means **no OTLP endpoint**.
 
 | Capability | What it does |
 |------------|--------------|
 | `AddTelemetry` | Traces + metrics + logs, resource `deployment.environment` |
-| ASP.NET / HttpClient / Runtime / Npgsql | On by default; SqlClient opt-in |
+| ASP.NET / HttpClient / Runtime / Npgsql | On by default; SqlClient / EventBus / MassTransit opt-in |
 | `IntegrateMediator` | ActivitySource **and** Meter for `BuildingBlocks.Mediator` |
-| `telemetry.component` | Span tag for filtering in the backend |
+| `IntegrateMcp` | Opt-in ActivitySource `BuildingBlocks.Mcp` (default off) |
 | `TelemetryBuilder` | `ConfigureTracing` / `AddSource` / `AddMeter` for EF, Redis, extra meters |
-| Startup summary | One Information log of signals and instrumentation (never logs endpoints or secrets) |
 
 - Package README: [`src/BuildingBlocks/Telemetry/PACKAGE_README.md`](src/BuildingBlocks/Telemetry/PACKAGE_README.md)
 - Docs: [telemetry](docs/building-blocks/telemetry.md)
@@ -223,11 +418,12 @@ Run the AppHost **https** profile. The UI waits until the migrator exits 0.
 
 ## Lab
 
-Install the packages above in your own hosts, **or** clone this repo and run **FeatureFusion** — a showcase API + AppHost that already wires Mediator, Telemetry, and SigNoz.
+Install the packages above in your own hosts, **or** clone this repo and run **FeatureFusion** — a showcase API + AppHost that already wires Mediator, MCP, Telemetry, and SigNoz.
 
 | Area | What you get |
 |------|----------------|
 | Mediator (CQRS) | **`BuildingBlocks.Mediator`** — used by FeatureFusion handlers |
+| MCP | **`BuildingBlocks.Mcp`** — opt-in tools (`[McpTool]` on types/methods or `MapTool`) at `/mcp` |
 | Telemetry | **`BuildingBlocks.Telemetry`** in ServiceDefaults; **`BuildingBlocks.Aspire.Hosting.SigNoz`** on AppHost |
 | Event bus | RabbitMQ + transactional outbox/inbox, DLQ, dedup hooks |
 | Aspire lab | AppHost orchestration for Postgres, Redis, RabbitMQ, Memcached, SigNoz |
@@ -293,6 +489,8 @@ src/                                # C# only
   BuildingBlocks/
     Mediator/                       # CQRS Send + pipeline NuGet
     Mediator.Analyzers/
+    Mcp/                            # [McpTool] / MapTool → MCP tools NuGet
+    Mcp.Analyzers/
     Telemetry/                      # Config-driven OpenTelemetry NuGet
     Aspire.Hosting.SigNoz/          # AddSigNoz() Aspire hosting NuGet
   Lab/
@@ -306,6 +504,8 @@ tests/
   BuildingBlocks/
     Mediator.Tests/
     Mediator.Analyzers.Tests/
+    Mcp.Tests/
+    Mcp.Analyzers.Tests/
     Telemetry.Tests/
     Aspire.Hosting.SigNoz.Tests/
   Lab/
@@ -479,6 +679,8 @@ Reusable, type-safe keyset pagination for EF Core: Base64 JSON cursors (last val
 
 Post ↔ code map: [`docs/linkedin-posts.md`](docs/linkedin-posts.md) · [Follow on LinkedIn](https://www.linkedin.com/in/mhhoseini/)
 
+BuildingBlocks.Mediator: [NuGet v1.0.1](https://lnkd.in/p/eU5TsuR4) · [manual pipeline (prior)](https://www.linkedin.com/feed/update/urn:li:activity:7311311587372367873/)
+
 ---
 
 ## What's next
@@ -486,8 +688,8 @@ Post ↔ code map: [`docs/linkedin-posts.md`](docs/linkedin-posts.md) · [Follow
 This remains a **public .NET lab**. Near-term direction:
 
 - More **BuildingBlocks.\*** packages extracted from the showcase
-- Frontend showcase (`web/`, Next.js project root) and MCP (`BuildingBlocks.Mcp`) when they land
-- Keep the LinkedIn catalog in sync when new posts ship
+- Frontend showcase (`web/`, Next.js project root)
+- Keep the LinkedIn catalog in sync when new posts ship (`mcp-message-tools` planned)
 - Pub/sub stays a **sibling** story (not Mediator notifications)
 
 ---
@@ -502,9 +704,11 @@ dotnet test FeatureFusion.sln -c Release
 |---------|--------|
 | `BuildingBlocks.Mediator.Tests` | Package suite on **net8 / net9 / net10** |
 | `BuildingBlocks.Mediator.Analyzers.Tests` | BBM001 / BBM002 |
-| `BuildingBlocks.Telemetry.Tests` | `AddTelemetry` / `IntegrateMediator` |
+| `BuildingBlocks.Mcp.Tests` | Catalog, invoker, endpoint methods, MapTool scoped SP, idempotency, filters |
+| `BuildingBlocks.Mcp.Analyzers.Tests` | BBMCP001–005 |
+| `BuildingBlocks.Telemetry.Tests` | `AddTelemetry` / `IntegrateMediator` / `IntegrateMcp` |
 | `BuildingBlocks.Aspire.Hosting.SigNoz.Tests` | AppHost integration |
-| `IntegrationTests` | Shared Aspire fixture — EventBus integration **and** HTTP API smoke (`Api/FeatureFusionApiTests`) |
+| `IntegrationTests` | Shared Aspire fixture — EventBus, HTTP API smoke, **MCP `/mcp`** (`Api/FeatureFusionMcpTests`) |
 | `FeatureFusion.Tests` | Unit / filter / mediator (single-dependency containers where useful) |
 | `FeatureFusion.ApiGateway.Tests` | Memcached-backed limiter tests |
 

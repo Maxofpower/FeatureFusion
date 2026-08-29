@@ -1,4 +1,5 @@
-﻿using FeatureFusion.Dtos;
+using FeatureFusion.Dtos;
+using BuildingBlocks.Mcp;
 using BuildingBlocks.Mediator;
 using FeatureFusion.Infrastructure.CursorPagination;
 using Swashbuckle.AspNetCore.Annotations;
@@ -7,6 +8,7 @@ using System.Text.Json.Serialization;
 
 namespace FeatureFusion.Features.Products.Queries
 {
+	[McpTool("products.list", Description = "List products with a cursor page")]
 	public sealed record GetProductsQuery : IQuery<Result<PagedResult<ProductDto>>>
 	{
 		[SwaggerParameter(Description = "Maximum number of items to return")]

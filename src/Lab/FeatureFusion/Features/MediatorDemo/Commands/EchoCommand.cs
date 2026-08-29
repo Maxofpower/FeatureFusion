@@ -1,3 +1,4 @@
+using BuildingBlocks.Mcp;
 using BuildingBlocks.Mediator;
 using FluentValidation;
 
@@ -7,6 +8,7 @@ namespace FeatureFusion.Features.MediatorDemo.Commands;
 /// Infra-free command for Swagger / Aspire Mediator smoke tests.
 /// Validated by <see cref="EchoCommandValidator"/> through host <c>ValidationBehavior</c>.
 /// </summary>
+[McpTool("demo.echo", Description = "Echo a message (lab smoke tool)", Idempotent = false)]
 public sealed class EchoCommand : ICommand<Result<EchoResponse>>
 {
 	/// <summary>
@@ -15,7 +17,8 @@ public sealed class EchoCommand : ICommand<Result<EchoResponse>>
 	/// </summary>
 	public const string FaultTrigger = "__throw__";
 
-	public string Message { get; set; } = string.Empty;
+	[System.ComponentModel.Description("Text to echo back")]
+	public string Message { get; set; } = default!;
 }
 
 public sealed record EchoResponse(string Echo, DateTimeOffset TimestampUtc);

@@ -121,3 +121,75 @@ await sender.Send(new EchoCommand<string>("hi"), ct); // "hi"
 ```
 
 **v1 note:** open-generic handlers always resolve as Transient via `ActivatorUtilities`, regardless of `HandlerLifetime`. An explicit closed registration for the same closed interface wins over an open-generic match. Multiple open matches throw at Send time.
+
+## MCP tools from message types and Minimal APIs
+
+Full guide: [mcp.md](mcp.md). Package README: `src/BuildingBlocks/Mcp/PACKAGE_README.md`.
+
+### Mediator
+
+```csharp
+[McpTool("orders.create", Description = "Create an order", Kind = McpToolKind.Command, Idempotent = true)]
+public sealed record CreateOrder(int ProductId, int Quantity);
+
+builder.Services.AddBuildingBlocksMcp(o =>
+{
+    o.ScanAssemblyContaining<CreateOrder>();
+    o.UseTelemetry();
+    o.UseMemoryIdempotency(TimeSpan.FromHours(1));
+}).UseDispatcher(async (sp, msg, ct) =>
+{
+    await using var scope = sp.CreateAsyncScope();
+    return await scope.ServiceProvider.GetRequiredService<ISender>().Send(msg, ct);
+});
+
+app.MapBuildingBlocksMcp(); // HTTP /mcp — Cursor url; API must be running
+```
+
+`UseDispatcher` is singleton; scope per call. Stdio (`UseStdioTransport`) is console-only.
+
+### Minimal API (public static method-group)
+
+JSON → one request param. GET: `[AsParameters]`. DI fills `CancellationToken`, `McpInvokeContext`, interfaces, `ILogger<T>`. Not `[FromHeader]`. **MVC controllers unsupported.**
+
+```csharp
+[McpTool("lab.ping", Description = "Ping", Kind = McpToolKind.Query)]
+public static string LabPing([AsParameters] LabPingRequest request)
+    => string.IsNullOrWhiteSpace(request.Name) ? "pong" : $"pong:{request.Name}";
+
+api.MapGet("/lab-ping", LabPing);                    // A: scan finds [McpTool]
+api.MapGet("/lab-ping", LabPing).WithMcp(app);       // B: same tool; dedupes with scan
+api.MapPost("/items", CreateItem)
+    .WithMcp(app, "items.create", "Create an item"); // C: no attribute; POST → Command
+```
+
+`MapTool` when HTTP cannot be the MCP DTO (scoped `IServiceProvider` overload for validators).
+
+### Idempotency
+
+Commands ≈ POST/PUT; queries ≈ GET. Store: `UseMemoryIdempotency(ttl)`. Schema `format: uuid`; runtime any non-empty string. `Idempotent = false` to opt a command out. Queries never use the store. Multi-instance: `IMcpIdempotencyStore`. Lab: `orders.create` (key + `confirmed`), `demo.echo` (opt-out), `lab.ping` (query).
+
+Reload Cursor MCP after tool changes.
+
+## OpenTelemetry (`AddTelemetry`)
+
+Full guide: [telemetry.md](telemetry.md).
+
+```csharp
+builder.AddTelemetry(o =>
+{
+    o.IntegrateMediator = true;  // export Mediator source + meter
+    o.IntegrateMcp = true;       // export MCP ActivitySource (default off)
+    o.Instrumentation.Npgsql = true;
+    o.Instrumentation.EventBus = true;
+});
+
+// Aspire / FeatureFusion ServiceDefaults (do not also call AddTelemetry):
+builder.AddServiceDefaults(
+    configureOptions: o => { o.IntegrateMediator = true; o.IntegrateMcp = true; },
+    configureTelemetry: t => t
+        .AddSource("DbMigrations")
+        .ConfigureTracing(tr => tr.AddEntityFrameworkCoreInstrumentation()));
+```
+
+OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set — prefer env. Fast-path ignores `Exporters.Otlp.Protocol`; use `OTEL_EXPORTER_OTLP_PROTOCOL`. Mediator still needs `cfg.UseTelemetry()`; MCP needs `o.UseTelemetry()` on the MCP builder. EF/Redis: contrib + `ConfigureTracing` before `Build()`. Empty backend with telemetry “on” usually means no OTLP endpoint.

@@ -1,4 +1,7 @@
 using Asp.Versioning.ApiExplorer;
+using BuildingBlocks.Mcp;
+using BuildingBlocks.Mcp.Hosting;
+using BuildingBlocks.Mediator;
 using BuildingBlocks.Mediator.DependencyInjection;
 using Enyim.Caching;
 using Enyim.Caching.Configuration;
@@ -27,6 +30,7 @@ builder.AddServiceDefaults(
 	configureOptions: o =>
 	{
 		o.IntegrateMediator = true;
+		o.IntegrateMcp = true;
 		o.Instrumentation.Npgsql = true;
 		o.Instrumentation.EventBus = true;
 	},
@@ -58,6 +62,20 @@ builder.Services.AddMediator(cfg =>
 	cfg.UseTelemetry();
 	cfg.ValidateOnStartup = true;
 });
+
+if (builder.Environment.IsDevelopment())
+{
+	builder.Services.AddBuildingBlocksMcp(o =>
+	{
+		o.ScanAssembly(Assembly.GetExecutingAssembly());
+		o.UseTelemetry();
+		o.UseMemoryIdempotency(TimeSpan.FromHours(1));
+	}).UseDispatcher(async (sp, msg, ct) =>
+	{
+		await using var scope = sp.CreateAsyncScope();
+		return await scope.ServiceProvider.GetRequiredService<ISender>().Send(msg, ct);
+	});
+}
 
 
 builder.Services.AddApiVersioningWithReader();
@@ -143,11 +161,17 @@ void ConfigureRequestPipeline(WebApplication app)
 	// after this — it turns handled ValidationExceptions into opaque 500s in Development/tests.
 	app.UseExceptionHandler();
 
-	app.UseHttpsRedirection();
+	// Cursor HTTP MCP uses http://localhost:5141/mcp. HTTPS redirection would 307 to
+	// https://localhost:7226/mcp and the MCP client hangs on the Kestrel dev cert.
+	app.UseWhen(
+		ctx => !ctx.Request.Path.StartsWithSegments("/mcp"),
+		branch => branch.UseHttpsRedirection());
 	app.UseAuthorization();
 
 	// Map API controllers and versioned routes
 	app.MapControllers();
+	if (app.Environment.IsDevelopment())
+		app.MapBuildingBlocksMcp();
 }
 #endregion
 

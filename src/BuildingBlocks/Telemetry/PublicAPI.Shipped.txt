@@ -32,6 +32,7 @@ namespace BuildingBlocks.Telemetry
         public System.Collections.Generic.List<string> Sources { get { throw null!; } set { } }
         public System.Collections.Generic.List<string> Meters { get { throw null!; } set { } }
         public bool IntegrateMediator { get { throw null!; } set { } }
+        public bool IntegrateMcp { get { throw null!; } set { } }
         public double? TracesSamplerRatio { get { throw null!; } set { } }
         public bool AlwaysOnSamplerInDevelopment { get { throw null!; } set { } }
         public bool SetErrorStatusOnException { get { throw null!; } set { } }
@@ -90,6 +91,7 @@ namespace BuildingBlocks.Telemetry
         public const string MediatorMeter = "BuildingBlocks.Mediator";
         public const string MassTransitActivitySource = "MassTransit";
         public const string EventBusActivitySource = "EventBus";
+        public const string McpActivitySource = "BuildingBlocks.Mcp";
     }
     public static class TelemetryComponentTags
     {
@@ -103,6 +105,7 @@ namespace BuildingBlocks.Telemetry
         public const string SqlClient = "sqlclient";
         public const string EventBus = "eventbus";
         public const string Mediator = "mediator";
+        public const string Mcp = "mcp";
         public const string MassTransit = "masstransit";
     }
     public static class TelemetryActivity

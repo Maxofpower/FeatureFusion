@@ -1,3 +1,5 @@
+using BuildingBlocks.Mcp;
+using BuildingBlocks.Mcp.Hosting;
 using Asp.Versioning.Conventions;
 using FeatureFusion.Domain.Entities;
 using FeatureFusion.Dtos;
@@ -49,7 +51,11 @@ namespace FeatureFusion.API.V2
 			// Approach 3: Using a custom route handler builder extension
 			// This approach encapsulates the endpoint definition and validation in a single method.
 			api.MapPostWithValidation<PersonDto>("/person-genericendpoint", HandleCreatePerson);
-			
+
+			api.MapGet("/lab-ping", LabPing)
+				.WithName("LabPing")
+				.WithSummary("Minimal API ping (not a Mediator command). Same method is an MCP tool lab.ping.")
+				.WithMcp(app);
 
 			return api;
 		}
@@ -144,6 +150,17 @@ namespace FeatureFusion.API.V2
 			return TypedResults.Ok($"Hello Guest person! {person.Name}");
 		}
 
+		/// <summary>
+		/// HTTP GET <c>/api/v2/lab-ping</c> and MCP tool <c>lab.ping</c> — same method, not a Mediator command.
+		/// </summary>
+		[McpTool("lab.ping", Description = "Minimal API ping (not a Mediator command)", Kind = McpToolKind.Query)]
+		public static string LabPing([AsParameters] LabPingRequest request)
+			=> string.IsNullOrWhiteSpace(request.Name) ? "pong" : $"pong:{request.Name}";
+	}
+
+	public sealed class LabPingRequest
+	{
+		public string Name { get; set; } = default!;
 	}
 }
 

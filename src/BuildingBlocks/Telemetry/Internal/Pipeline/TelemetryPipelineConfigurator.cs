@@ -85,6 +85,11 @@ internal static class TelemetryPipelineConfigurator
             tracing.AddSource(TelemetryDefaults.MediatorActivitySource);
         }
 
+        if (options.IntegrateMcp)
+        {
+            tracing.AddSource(TelemetryDefaults.McpActivitySource);
+        }
+
         foreach (var source in options.Sources)
         {
             if (!string.IsNullOrWhiteSpace(source))

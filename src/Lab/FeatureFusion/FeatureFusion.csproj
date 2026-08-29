@@ -44,6 +44,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\BuildingBlocks\Mcp\BuildingBlocks.Mcp.csproj" />
     <ProjectReference Include="..\..\BuildingBlocks\Mediator\BuildingBlocks.Mediator.csproj" />
     <ProjectReference Include="..\EventBus\EventBus.csproj" />
     <ProjectReference Include="..\FeatureFusion.ServiceDefaults\FeatureFusion.AppHost.ServiceDefaults.csproj" />

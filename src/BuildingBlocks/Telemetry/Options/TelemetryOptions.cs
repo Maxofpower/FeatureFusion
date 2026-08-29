@@ -81,6 +81,12 @@ public sealed class TelemetryOptions
     public bool IntegrateMediator { get; set; } = true;
 
     /// <summary>
+    /// When <c>true</c>, adds <see cref="TelemetryDefaults.McpActivitySource"/> so MCP tool spans export.
+    /// Default: <c>false</c> (opt-in).
+    /// </summary>
+    public bool IntegrateMcp { get; set; }
+
+    /// <summary>
     /// Optional ratio-based sampler (0.0–1.0). Wrapped in <c>ParentBasedSampler</c>.
     /// When null: AlwaysOn in Development, SDK default otherwise.
     /// Set explicitly to force a ratio in every environment.
