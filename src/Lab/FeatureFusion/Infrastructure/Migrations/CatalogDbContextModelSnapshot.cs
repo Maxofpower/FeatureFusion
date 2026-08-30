@@ -17,7 +17,7 @@ namespace FeatureFusion.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.0")
+                .HasAnnotation("ProductVersion", "10.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -231,11 +231,35 @@ namespace FeatureFusion.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_products_created_at_asc");
+
+                    b.HasIndex("CreatedAt")
                         .IsDescending()
                         .HasDatabaseName("IX_products_created_at_desc");
 
+                    b.HasIndex(new[] { "CreatedAt", "Id" }, "IX_Product_CreatedAt_Id_AA")
+                        .HasDatabaseName("IX_products_created_at_id");
+
+                    b.HasIndex(new[] { "CreatedAt", "Id" }, "IX_Product_CreatedAt_Id_DA")
+                        .IsDescending(true, false)
+                        .HasDatabaseName("IX_products_created_at_id_desc");
+
                     b.HasIndex("Name")
                         .HasDatabaseName("IX_products_name");
+
+                    b.HasIndex(new[] { "Name", "Id" }, "IX_Product_Name_Id_AA")
+                        .HasDatabaseName("IX_products_name_id");
+
+                    b.HasIndex(new[] { "Name", "Id" }, "IX_Product_Name_Id_DA")
+                        .IsDescending(true, false)
+                        .HasDatabaseName("IX_products_name_id_desc");
+
+                    b.HasIndex(new[] { "Price", "Id" }, "IX_Product_Price_Id_AA")
+                        .HasDatabaseName("IX_products_price_id");
+
+                    b.HasIndex(new[] { "Price", "Id" }, "IX_Product_Price_Id_DA")
+                        .IsDescending(true, false)
+                        .HasDatabaseName("IX_products_price_id_desc");
 
                     b.ToTable("products", (string)null);
                 });

@@ -1,14 +1,18 @@
+using BuildingBlocks.Pagination;
+using BuildingBlocks.Pagination.Dapper;
+using BuildingBlocks.Pagination.EntityFrameworkCore;
 using FeatureFusion.Domain.Entities;
 using FeatureFusion.Dtos;
 using FeatureFusion.Features.Products.Queries;
+using FeatureFusion.Infrastructure.Caching;
 using FeatureFusion.Infrastructure.Context;
 using FeatureFusion.Infrastructure.CursorPagination;
 using FeatureFusion.Infrastructure.Extensions;
-using FeatureFusion.Infrastructure.Caching;
+using FeatureFusion.Infrastructure.Pagination;
 using Microsoft.EntityFrameworkCore;
-using Polly;
-using System.Collections.Generic;
-using System.Linq.Expressions;
+using System.Data;
+using SortDirection = FeatureFusion.Features.Products.Queries.SortDirection;
+using PaginationPageDirection = BuildingBlocks.Pagination.PageDirection;
 namespace FeatureFusion.Services.ProductService
 {
 	public interface IProductService
@@ -19,6 +23,13 @@ namespace FeatureFusion.Services.ProductService
 		ProductSortField sortField,
 		SortDirection sortDirection,
 		string cursor,
+		PaginationPageDirection pageDirection,
+		CancellationToken cancellationToken);
+		Task<Result<PagedResult<ProductDto>>> GetProductsViaDapperAsync(int limit,
+		ProductSortField sortField,
+		SortDirection sortDirection,
+		string cursor,
+		PaginationPageDirection pageDirection,
 		CancellationToken cancellationToken);
 	}
 
@@ -153,30 +164,95 @@ namespace FeatureFusion.Services.ProductService
 			return ValueTask.FromResult(query);
 		}
 	
-	public async Task<Result<PagedResult<ProductDto>>> GetProductsAsync(
-	  int limit,
-	  ProductSortField sortField,
-	  SortDirection direction,
-	  string cursor,
-	  CancellationToken cancellationToken)
+		public async Task<Result<PagedResult<ProductDto>>> GetProductsAsync(
+		  int limit,
+		  ProductSortField sortField,
+		  SortDirection direction,
+		  string cursor,
+		  PaginationPageDirection pageDirection,
+		  CancellationToken cancellationToken)
 		{
 			try
 			{
-				return await PaginationHelper.PaginateAsync<Product, ProductDto, ProductSortField>(
-					_dbContext.Product,
-					limit,
-					sortField,
-					direction,
-					cursor,
-					mapToDto: p => p.ToDto(),
-					getSortFieldName: f => f.ToString(),
-					parseSortField: s => Enum.Parse<ProductSortField>(s),
+				var sortKey = ProductSortKeys.Resolve(sortField, direction);
+				var firstPage = string.IsNullOrWhiteSpace(cursor);
+				var page = await _dbContext.Product
+					.AsNoTracking()
+					.TagWith("products.list")
+					.ToCursorPageAsync(
+					new CursorRequest(cursor, limit, pageDirection),
+					sortKey,
+					p => new ProductDto(p.Id, p.Name, p.Price, p.FullDescription, p.CreatedAt),
+					new PaginationOptions { IncludeTotalCount = firstPage },
 					cancellationToken);
+
+				return Result<PagedResult<ProductDto>>.Success(page.ToPagedResult());
+			}
+			catch (PaginationException ex)
+			{
+				_logger.LogWarning(ex, "Invalid product pagination request");
+				return Result<PagedResult<ProductDto>>.Failure(ex.Message, StatusCodes.Status400BadRequest);
 			}
 			catch (Exception ex)
 			{
 				_logger.LogError(ex, "Failed to retrieve products");
 
+				return Result<PagedResult<ProductDto>>.Failure(
+					"An error occurred while retrieving products",
+					StatusCodes.Status500InternalServerError);
+			}
+		}
+
+		public async Task<Result<PagedResult<ProductDto>>> GetProductsViaDapperAsync(
+			int limit,
+			ProductSortField sortField,
+			SortDirection direction,
+			string cursor,
+			PaginationPageDirection pageDirection,
+			CancellationToken cancellationToken)
+		{
+			try
+			{
+				var sortKey = ProductSortKeys.Resolve(sortField, direction);
+				var firstPage = string.IsNullOrWhiteSpace(cursor);
+				var connection = _dbContext.Database.GetDbConnection();
+				if (connection.State != ConnectionState.Open)
+				{
+					await _dbContext.Database.OpenConnectionAsync(cancellationToken);
+				}
+
+				const string sql = """
+					-- Isolation/hints stay in host SQL (PostgreSQL: session, not SQL Server NOLOCK).
+					SELECT "Id", "Name", "Price", "FullDescription", "CreatedAt", "Published", "Deleted", "VisibleIndividually"
+					FROM products
+					""";
+
+				var page = await connection.QueryCursorPageAsync<Product>(
+					new CursorRequest(cursor, limit, pageDirection),
+					sortKey,
+					sql,
+					SqlDialect.PostgreSql,
+					param: null,
+					new PaginationOptions { IncludeTotalCount = firstPage },
+					cancellationToken);
+
+				return Result<PagedResult<ProductDto>>.Success(
+					new PagedResult<ProductDto>(
+						page.Items.Select(p => p.ToDto()).ToList(),
+						page.Next ?? string.Empty,
+						page.Previous ?? string.Empty,
+						page.HasNext,
+						page.HasPrevious,
+						page.TotalCount ?? 0));
+			}
+			catch (PaginationException ex)
+			{
+				_logger.LogWarning(ex, "Invalid Dapper product pagination request");
+				return Result<PagedResult<ProductDto>>.Failure(ex.Message, StatusCodes.Status400BadRequest);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Failed to retrieve products via Dapper");
 				return Result<PagedResult<ProductDto>>.Failure(
 					"An error occurred while retrieving products",
 					StatusCodes.Status500InternalServerError);

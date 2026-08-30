@@ -16,4 +16,16 @@
 			false,
 			0);
 	}
+
+	public static class PagedResultMapper
+	{
+		public static PagedResult<T> ToPagedResult<T>(this BuildingBlocks.Pagination.CursorPage<T> page)
+			=> new(
+				page.Items,
+				page.Next ?? string.Empty,
+				page.Previous ?? string.Empty,
+				page.HasNext,
+				page.HasPrevious,
+				page.TotalCount ?? 0);
+	}
 }

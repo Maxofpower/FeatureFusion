@@ -1,4 +1,6 @@
-﻿using FeatureFusion.Domain.Entities;
+﻿using BuildingBlocks.Pagination.EntityFrameworkCore;
+using FeatureFusion.Domain.Entities;
+using FeatureFusion.Infrastructure.Pagination;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -34,5 +36,18 @@ class ProductEntityTypeConfiguration
 		builder.HasIndex(ci => ci.CreatedAt)
 			.IsDescending(true)
 			.HasDatabaseName("IX_products_created_at_desc");
+
+		builder.HasKeysetIndex(ProductSortKeys.PriceAsc)
+			.HasDatabaseName("IX_products_price_id");
+		builder.HasKeysetIndex(ProductSortKeys.PriceDesc)
+			.HasDatabaseName("IX_products_price_id_desc");
+		builder.HasKeysetIndex(ProductSortKeys.CreatedAtAsc)
+			.HasDatabaseName("IX_products_created_at_id");
+		builder.HasKeysetIndex(ProductSortKeys.CreatedAtDesc)
+			.HasDatabaseName("IX_products_created_at_id_desc");
+		builder.HasKeysetIndex(ProductSortKeys.NameAsc)
+			.HasDatabaseName("IX_products_name_id");
+		builder.HasKeysetIndex(ProductSortKeys.NameDesc)
+			.HasDatabaseName("IX_products_name_id_desc");
 	}
 }

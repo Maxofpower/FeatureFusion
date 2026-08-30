@@ -1,0 +1,65 @@
+name: Pagination CI
+
+on:
+  push:
+    paths:
+      - "src/BuildingBlocks/Pagination/**"
+      - "src/BuildingBlocks/Pagination.EntityFrameworkCore/**"
+      - "src/BuildingBlocks/Pagination.Dapper/**"
+      - "tests/BuildingBlocks/Pagination.Tests/**"
+      - "tests/BuildingBlocks/Pagination.EntityFrameworkCore.Tests/**"
+      - "tests/BuildingBlocks/Pagination.Dapper.Tests/**"
+      - "tests/BuildingBlocks/Pagination.TestSupport/**"
+      - ".github/workflows/pagination.yml"
+  pull_request:
+    paths:
+      - "src/BuildingBlocks/Pagination/**"
+      - "src/BuildingBlocks/Pagination.EntityFrameworkCore/**"
+      - "src/BuildingBlocks/Pagination.Dapper/**"
+      - "tests/BuildingBlocks/Pagination.Tests/**"
+      - "tests/BuildingBlocks/Pagination.EntityFrameworkCore.Tests/**"
+      - "tests/BuildingBlocks/Pagination.Dapper.Tests/**"
+      - "tests/BuildingBlocks/Pagination.TestSupport/**"
+      - ".github/workflows/pagination.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: pagination-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-pack:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+
+      - name: Test IR
+        run: dotnet test tests/BuildingBlocks/Pagination.Tests/BuildingBlocks.Pagination.Tests.csproj -c Release --verbosity minimal
+
+      - name: Test EF Core package
+        run: dotnet test tests/BuildingBlocks/Pagination.EntityFrameworkCore.Tests/BuildingBlocks.Pagination.EntityFrameworkCore.Tests.csproj -c Release --verbosity minimal
+
+      - name: Test Dapper project (not packed)
+        run: dotnet test tests/BuildingBlocks/Pagination.Dapper.Tests/BuildingBlocks.Pagination.Dapper.Tests.csproj -c Release --verbosity minimal
+
+      - name: Pack EF Core nupkg
+        run: dotnet pack src/BuildingBlocks/Pagination.EntityFrameworkCore/BuildingBlocks.Pagination.EntityFrameworkCore.csproj -c Release -o artifacts/nuget -p:ContinuousIntegrationBuild=true
+
+      - name: Upload nupkg
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages
+          path: |
+            artifacts/nuget/*.nupkg
+            artifacts/nuget/*.snupkg
+          if-no-files-found: error

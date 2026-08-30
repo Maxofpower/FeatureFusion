@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>BuildingBlocks.Pagination.EntityFrameworkCore.Benchmarks</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.15.4" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.0" />
+    <PackageReference Include="MR.EntityFrameworkCore.KeysetPagination" Version="1.5.0" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\BuildingBlocks\Pagination\BuildingBlocks.Pagination.csproj" />
+    <ProjectReference Include="..\..\..\src\BuildingBlocks\Pagination.EntityFrameworkCore\BuildingBlocks.Pagination.EntityFrameworkCore.csproj" />
+  </ItemGroup>
+
+</Project>

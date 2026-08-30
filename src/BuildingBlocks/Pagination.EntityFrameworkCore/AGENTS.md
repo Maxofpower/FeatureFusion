@@ -1,0 +1,20 @@
+# BuildingBlocks.Pagination.EntityFrameworkCore — agent notes
+
+**The** pagination NuGet. The IR (intermediate representation: `SortKey`, cursors) is a non-packable sibling, bundled into this nupkg. Dapper is a lab project, not a package.
+
+Layout matches EF Core packages (`src/EFCore/Extensions`, `Query/Internal`, `Infrastructure`):
+
+```text
+Extensions/EntityFrameworkCursorExtensions.cs   # ToCursorPageAsync / ToCursorPageMappedAsync
+Query/Internal/                                 # CursorOrder, CursorSeek, CursorSlot
+Infrastructure/Internal/CursorDbContext.cs      # ICurrentDbContext + shadow
+Infrastructure/Internal/QueryHintExecutor.cs    # SQL Server ReadUncommitted txn wrap; else no-op
+```
+
+Mapped properties: expressions. Shadow: `ByShadow<TValue>("Name")` → `EF.Property<TValue>`. No `OrderBy(string)`.
+
+`ToCursorPageAsync` + `Expression<Func<T,TDto>>` projects **after** seek (prefer this). In-memory map: `ToCursorPageMappedAsync`. `HasKeysetIndex` builds the matching composite index from the same `SortKey`.
+
+`Take(limit+1)`; reverse in memory when walking backward. `IncludeTotalCount` runs `CountAsync` **before** seek. Host applies `AsNoTracking`/`TagWith` before the extension. Host `OrderBy` is **replaced** by `CursorOrder.Apply`, not merged. `PaginationOptions.Hint` default `None`; `ReadUncommitted` is session isolation (not `WITH (NOLOCK)`): EF begins one SQL Server transaction around count+fetch when there is no ambient transaction; after commit/rollback the still-open connection is restored to `READ COMMITTED`; ambient is ignored; PostgreSQL/Sqlite no-op. There is no `IEnumerable` adapter. Nullable `T?` sort slots are rejected (`NullableSortUnsupported`). Guid CLR order ≠ SQL Server `uniqueidentifier` order. Bool/enum seek converts to the underlying numeric type. Guid seek uses `>` / `<`; string seek uses `string.Compare` (EF translates to SQL `>`). OrderBy lambdas are cached per fingerprint.
+
+Promote with Default-job BDN or the SQLite **SQL** `--probe` numbers in PACKAGE_README (not EF InMemory, not `--job Dry`, not the 5k in-memory micro job). Set `SigningKey` on public HTTP APIs.

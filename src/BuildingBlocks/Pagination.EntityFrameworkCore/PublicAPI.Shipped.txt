@@ -1,0 +1,10 @@
+#nullable enable
+namespace BuildingBlocks.Pagination.EntityFrameworkCore
+{
+    public static partial class EntityFrameworkCursorExtensions
+    {
+        public static System.Threading.Tasks.ValueTask<BuildingBlocks.Pagination.CursorPage<T>> ToCursorPageAsync<T>(this System.Linq.IQueryable<T> query, BuildingBlocks.Pagination.CursorRequest request, BuildingBlocks.Pagination.SortKey<T> sortKey, BuildingBlocks.Pagination.PaginationOptions? options = null, System.Threading.CancellationToken cancellationToken = default) { throw null!; }
+        public static System.Threading.Tasks.ValueTask<BuildingBlocks.Pagination.CursorPage<TResult>> ToCursorPageAsync<T, TResult>(this System.Linq.IQueryable<T> query, BuildingBlocks.Pagination.CursorRequest request, BuildingBlocks.Pagination.SortKey<T> sortKey, System.Linq.Expressions.Expression<System.Func<T, TResult>> selector, BuildingBlocks.Pagination.PaginationOptions? options = null, System.Threading.CancellationToken cancellationToken = default) { throw null!; }
+        public static System.Threading.Tasks.ValueTask<BuildingBlocks.Pagination.CursorPage<TResult>> ToCursorPageMappedAsync<T, TResult>(this System.Linq.IQueryable<T> query, BuildingBlocks.Pagination.CursorRequest request, BuildingBlocks.Pagination.SortKey<T> sortKey, System.Func<T, TResult> map, BuildingBlocks.Pagination.PaginationOptions? options = null, System.Threading.CancellationToken cancellationToken = default) { throw null!; }
+    }
+}

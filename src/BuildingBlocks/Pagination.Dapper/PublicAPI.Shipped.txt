@@ -1,0 +1,10 @@
+#nullable enable
+namespace BuildingBlocks.Pagination.Dapper
+{
+    public enum BuildingBlocks.Pagination.Dapper.SqlDialect { PostgreSql = 0, SqlServer = 1, Sqlite = 2 }
+    public static partial class DapperCursorExtensions
+    {
+        public static System.Threading.Tasks.ValueTask<BuildingBlocks.Pagination.CursorPage<T>> QueryCursorPageAsync<T>(this System.Data.IDbConnection connection, BuildingBlocks.Pagination.CursorRequest request, BuildingBlocks.Pagination.SortKey<T> sortKey, string sql, BuildingBlocks.Pagination.Dapper.SqlDialect dialect, object? param = null, BuildingBlocks.Pagination.PaginationOptions? options = null, System.Threading.CancellationToken cancellationToken = default) { throw null!; }
+        public static string BuildSql<T>(BuildingBlocks.Pagination.SortKey<T> sortKey, string sql, BuildingBlocks.Pagination.Dapper.SqlDialect dialect, object?[]? values, bool walkBackward, int take) { throw null!; }
+    }
+}

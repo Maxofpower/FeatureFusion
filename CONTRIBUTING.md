@@ -11,9 +11,13 @@ Formerly published as `Maxofpower/FeatureManagement`; GitHub redirects the old U
 3. Package tests (multi-TFM where applicable):
    - `dotnet test tests/BuildingBlocks/Mediator.Tests`
    - `dotnet test tests/BuildingBlocks/Mediator.Analyzers.Tests`
+   - `dotnet test tests/BuildingBlocks/Mcp.Tests`
+   - `dotnet test tests/BuildingBlocks/Pagination.Tests`
+   - `dotnet test tests/BuildingBlocks/Pagination.EntityFrameworkCore.Tests`
+   - `dotnet test tests/BuildingBlocks/Pagination.Dapper.Tests`
    - `dotnet test tests/BuildingBlocks/Telemetry.Tests`
    - `dotnet test tests/BuildingBlocks/Aspire.Hosting.SigNoz.Tests`
-4. Pack: `dotnet pack src/BuildingBlocks/Mediator -c Release -o artifacts/nuget`
+4. Pack: `dotnet pack src/BuildingBlocks/Mediator -c Release -o artifacts/nuget` (same for Telemetry, Mcp, `Pagination.EntityFrameworkCore`)
 
 ## Guidelines
 
@@ -24,6 +28,15 @@ Formerly published as `Maxofpower/FeatureManagement`; GitHub redirects the old U
 - Do not add Scrutor, FluentValidation, or other mediator/messaging packages as dependencies of the core library.
 - Add/adjust tests for supported and explicitly unsupported behaviors ([TEST_MATRIX.md](docs/building-blocks/TEST_MATRIX.md)).
 - Public API changes: update `PublicAPI.Unshipped.txt` / XML docs.
+
+### BuildingBlocks.Pagination.EntityFrameworkCore
+
+- **One** packable project: `Pagination.EntityFrameworkCore`. Core IR and Dapper are `IsPackable=false`.
+- Keep EF layout: `Extensions/` (public API), `Query/Internal/`, `Infrastructure/Internal/`.
+- Core stays dependency-free of ORMs. Map host enums to prebuilt `SortKey`s; do not parse property-name strings.
+- Add/adjust tests for supported and unsupported rows ([PAGINATION_TEST_MATRIX.md](docs/building-blocks/PAGINATION_TEST_MATRIX.md)).
+- Public API changes: update `PublicAPI.Shipped.txt` / XML docs.
+- Benchmarks: `dotnet run -c Release --project benchmarks/BuildingBlocks/Pagination.EntityFrameworkCore.Benchmarks -- --filter "*" --job Dry` to smoke; drop `--job Dry` for measurement.
 
 ### BuildingBlocks.Telemetry / SigNoz hosting
 

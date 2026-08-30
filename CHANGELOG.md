@@ -5,6 +5,22 @@ All notable changes to **BuildingBlocks** packages in this repository are docume
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## BuildingBlocks.Pagination.EntityFrameworkCore [1.0.0] - 2026-08-29
+
+### Added
+
+- One nupkg: `SortKey` / `SortKeyRegistry`, opaque HMAC-optional cursors, `ToCursorPageAsync` / `ToCursorPageMappedAsync`; IR DLL bundled (no extra Pagination package)
+- EF Core source layout: `Extensions/`, `Query/Internal/`, `Infrastructure/Internal/`
+- `HasKeysetIndex` — optional model helper to create the composite index that matches a `SortKey` (paging does not require it)
+- Lab: FeatureFusion PostgreSQL catalog uses the EF adapter (`AsNoTracking` + `TagWith("products.list")`, SQL `Select` to `ProductDto`) on `GET /api/v2/products-page` (Minimal API; POST kept) and MVC `POST /api/v2/Product/products`; Dapper remains in-repo at `POST /api/v2/Product/products-dapper` (not packed); MCP `products.list` is the same `GetProductsQuery`
+- Sort-slot CLR allowlist (`UnsupportedSortType`); `PaginationOptions.Default` is a new instance; bool/enum seek via underlying numeric type; nested value-object scalars; last page via empty cursor + `PageDirection.Backward`
+- Source-generated cursor JSON; enum slots encode as `"enum"`; DateTime cursor values are UTC
+- SQLite SQL probe (indexed): 10M skip 5M keyset 17.8 ms vs OFFSET 154.9 ms vs MR 1.5.0 19.9 ms; 100M skip 50M keyset 177.2 ms vs OFFSET 2470.4 ms vs MR 218.0 ms (`--probe` Stopwatch, persist with `PAGINATION_PROBE_DB`)
+- Optional `PaginationOptions.Hint` (default `None`); `QueryHint.ReadUncommitted` is SQL Server session isolation (not `WITH (NOLOCK)`); EF: one transaction isolation around COUNT+PAGE when there is no ambient transaction, then restore `READ COMMITTED` on the still-open connection; ambient EF transactions are ignored (no nest); Dapper: SQL Server `SET TRANSACTION ISOLATION LEVEL` prefix, then the same restore
+- Nullable value-type sort slots rejected (`NullableSortUnsupported`); `SortKeyRegistry.Get` miss is `InvalidOperationException`; slot decode failures wrap as `InvalidCursor`
+- `ThenByUniqueShadowDescending`; document HMAC for untrusted HTTP, host `OrderBy` replacement, Guid vs SQL Server, no `IEnumerable`
+- `ToCursorPageAsync` / `QueryCursorPageAsync` return `ValueTask`; cursor codec uses `Span`/`stackalloc` (no `Split` / `Replace` on the hot path)
+
 ## BuildingBlocks.Mcp [1.0.0] - 2026-08-28
 
 ### Added

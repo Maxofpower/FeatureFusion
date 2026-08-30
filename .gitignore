@@ -198,6 +198,7 @@ src/src.sln
 artifacts/
 *.nupkg
 *.snupkg
+BenchmarkDotNet.Artifacts/
 
 # Temp SigNoz collector configs written by AddSigNoz during aspire run
 **/signoz-otel-*.yaml

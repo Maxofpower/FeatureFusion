@@ -1,0 +1,57 @@
+name: Pagination QueryHint SQL Server
+
+on:
+  push:
+    paths:
+      - "src/BuildingBlocks/Pagination/**"
+      - "src/BuildingBlocks/Pagination.EntityFrameworkCore/**"
+      - "src/BuildingBlocks/Pagination.Dapper/**"
+      - "tests/BuildingBlocks/Pagination.EntityFrameworkCore.SqlServer.Tests/**"
+      - ".github/workflows/pagination-queryhint-sqlserver.yml"
+  pull_request:
+    paths:
+      - "src/BuildingBlocks/Pagination/**"
+      - "src/BuildingBlocks/Pagination.EntityFrameworkCore/**"
+      - "src/BuildingBlocks/Pagination.Dapper/**"
+      - "tests/BuildingBlocks/Pagination.EntityFrameworkCore.SqlServer.Tests/**"
+      - ".github/workflows/pagination-queryhint-sqlserver.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: pagination-queryhint-sqlserver-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      PAGINATION_SQLSERVER_REQUIRED: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+
+      - name: Verify Docker
+        run: docker info
+
+      - name: Test EF and Dapper QueryHint on Aspire SQL Server
+        run: |
+          set -euo pipefail
+          log="${RUNNER_TEMP}/pagination-sqlserver-test.log"
+          dotnet test tests/BuildingBlocks/Pagination.EntityFrameworkCore.SqlServer.Tests/BuildingBlocks.Pagination.EntityFrameworkCore.SqlServer.Tests.csproj -c Release --verbosity minimal | tee "$log"
+          if grep -E 'Skipped:[[:space:]]+[1-9]' "$log"; then
+            echo "::error::SQL Server QueryHint tests were skipped. CI must execute them against Aspire SQL Server."
+            exit 1
+          fi
+          if ! grep -E 'Passed![[:space:]]+-[[:space:]]+Failed:[[:space:]]+0,[[:space:]]+Passed:[[:space:]]+[1-9]' "$log"; then
+            echo "::error::SQL Server QueryHint CI required a passing run with no failures."
+            exit 1
+          fi
