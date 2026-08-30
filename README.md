@@ -374,7 +374,25 @@ var page = await db.Products
 
 Optional `PaginationOptions.Hint` defaults to `None`. `ReadUncommitted` is SQL Server session isolation (not `WITH (NOLOCK)`): EF starts one transaction around COUNT+PAGE when there is no ambient transaction, then restores `READ COMMITTED` on the still-open connection; ambient is ignored; PostgreSQL and Sqlite ignore it. Host `AsNoTracking` / Dapper `WITH (NOLOCK)` still work. Host `OrderBy` is replaced by the `SortKey`. Composite indexes should match each key, e.g. `(Price, Id)` and `(CreatedAt, Id)`. Nullable `T?` sort columns are unsupported. Guid CLR order is not SQL Server `uniqueidentifier` order. `NullOrder` is seek-predicate only (no SQL `NULLS FIRST/LAST`). Updates to a sort column can make a row vanish or reappear (inherent keyset).
 
-Indexed keyset on SQLite SQL with that index: 10M rows, skip 5M: keyset **17.8 ms** vs `OFFSET` **154.9 ms** vs MR 1.5.0 **19.9 ms**; 100M catalog, skip 50M: keyset **177.2 ms** vs `OFFSET` **2470.4 ms** vs MR **218.0 ms** (Stopwatch `--probe`, 1 warmup + 5 repeats, not Dry, not BenchmarkDotNet). Those milliseconds are **this machine’s file SQLite** catalog. The same `ToCursorPageAsync` API also emits SQL on PostgreSQL and SQL Server; do not treat the SQLite probe as PostgreSQL or SQL Server timings. EF InMemory is tests only. Reproduce:
+Indexed keyset on **file SQLite** SQL with index `(Price, Id)`, page 20. `--probe` is Stopwatch (1 warmup + 5 repeats), not BenchmarkDotNet, not Dry, not EF InMemory. Times below are **this machine’s** catalog; do not treat them as PostgreSQL or SQL Server timings. **KB** is mean managed allocations per page (`GC.GetAllocatedBytesForCurrentThread`), not process working set. First page is cheap for all three; allocations stay in the same band (~75–86 KB) because each call opens a context and materializes 20 rows.
+
+**10 million rows** (`--probe 10000000`):
+
+| Skip | OFFSET | FeatureFusion | MR 1.5.0 |
+|------|--------|---------------|----------|
+| 0 | 0.5 ms / 77 KB | 0.6 ms / 79 KB | 0.5 ms / 75 KB |
+| 1,000,000 | 29.7 ms / 77 KB | 15.5 ms / 85 KB | 18.2 ms / 86 KB |
+| 5,000,000 | 154.9 ms / 77 KB | 17.8 ms / 85 KB | 19.9 ms / 86 KB |
+
+**100 million rows** (`--probe 100000000`):
+
+| Skip | OFFSET | FeatureFusion | MR 1.5.0 |
+|------|--------|---------------|----------|
+| 0 | 0.6 ms / 77 KB | 0.7 ms / 79 KB | 0.6 ms / 75 KB |
+| 10,000,000 | 737.9 ms / 75 KB | 379.0 ms / 84 KB | 427.0 ms / 84 KB |
+| 50,000,000 | 2470.4 ms / 75 KB | 177.2 ms / 83 KB | 218.0 ms / 85 KB |
+
+At skip 50M on this catalog, FeatureFusion is about **14×** `OFFSET` (177 ms vs 2470 ms). SQLite plans are not SQL Server or PostgreSQL plans. Reproduce:
 
 ```bash
 dotnet run -c Release --project benchmarks/BuildingBlocks/Pagination.EntityFrameworkCore.Benchmarks -- --filter *CursorCodec*

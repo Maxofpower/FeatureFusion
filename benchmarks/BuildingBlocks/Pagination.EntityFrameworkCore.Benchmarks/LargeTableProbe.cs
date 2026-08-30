@@ -17,6 +17,7 @@ internal static class LargeTableProbe
 		var path = BenchStore.EnsureFile(rows);
 		Console.WriteLine($"Probe rows={rows:N0} file={path} (insert uses synchronous=OFF; queries use NORMAL)");
 		Console.WriteLine("Libraries: FeatureFusion ToCursorPageAsync, EF OFFSET, MR.EntityFrameworkCore.KeysetPagination 1.5.0");
+		Console.WriteLine("KB columns: mean managed allocations per page (this thread), after one warmup.");
 		if (rows >= BenchStore.CatalogRows)
 		{
 			Console.WriteLine("100M catalog: OFFSET at mid/deep skip is expected to take a long time; that is the comparison.");
@@ -51,13 +52,13 @@ internal static class LargeTableProbe
 		}
 
 		Console.WriteLine(
-			$"{"Skip",12} {"OFFSET ms",12} {"FeatureFusion",16} {"MR 1.5.0",12} {"FF/OFFSET",12}");
+			$"{"Skip",12} {"OFFSET ms",12} {"OFFSET KB",12} {"FeatureFusion",16} {"FF KB",10} {"MR 1.5.0",12} {"MR KB",10}");
 		foreach (var skip in skips.Distinct())
 		{
 			var cursor = BenchStore.CursorAtSkip(path, BenchSort.PriceId, skip);
 			var reference = BenchStore.ReferenceAtSkip(path, BenchSort.PriceId, skip);
 
-			var offsetMs = Time(() =>
+			var offset = TimeAndAlloc(() =>
 			{
 				using var db = BenchStore.Create(path);
 				return db.Items.AsNoTracking()
@@ -69,7 +70,7 @@ internal static class LargeTableProbe
 					.Count;
 			});
 
-			var keysetMs = Time(() =>
+			var keyset = TimeAndAlloc(() =>
 			{
 				using var db = BenchStore.Create(path);
 				return db.Items.AsNoTracking()
@@ -79,7 +80,7 @@ internal static class LargeTableProbe
 					.Items.Count;
 			});
 
-			var mrMs = Time(() =>
+			var mr = TimeAndAlloc(() =>
 			{
 				using var db = BenchStore.Create(path);
 				return db.Items.AsNoTracking()
@@ -90,7 +91,7 @@ internal static class LargeTableProbe
 			});
 
 			Console.WriteLine(
-				$"{skip,12:N0} {offsetMs,12:0.0} {keysetMs,16:0.0} {mrMs,12:0.0} {(keysetMs / offsetMs),12:0.00}x");
+				$"{skip,12:N0} {offset.Ms,12:0.0} {offset.AllocKb,12:0.0} {keyset.Ms,16:0.0} {keyset.AllocKb,10:0.0} {mr.Ms,12:0.0} {mr.AllocKb,10:0.0}");
 		}
 
 		var envPath = Environment.GetEnvironmentVariable("PAGINATION_PROBE_DB");
@@ -109,9 +110,14 @@ internal static class LargeTableProbe
 		}
 	}
 
-	private static double Time(Func<int> action)
+	/// <summary>
+	/// One warmup, then 5 repeats. Time is mean wall-clock. Alloc is mean
+	/// <see cref="GC.GetAllocatedBytesForCurrentThread"/> delta (managed, this thread).
+	/// </summary>
+	private static (double Ms, double AllocKb) TimeAndAlloc(Func<int> action)
 	{
 		action();
+		var before = GC.GetAllocatedBytesForCurrentThread();
 		var sw = Stopwatch.StartNew();
 		const int repeats = 5;
 		for (var i = 0; i < repeats; i++)
@@ -120,6 +126,7 @@ internal static class LargeTableProbe
 		}
 
 		sw.Stop();
-		return sw.Elapsed.TotalMilliseconds / repeats;
+		var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+		return (sw.Elapsed.TotalMilliseconds / repeats, allocated / (double)repeats / 1024.0);
 	}
 }

@@ -81,7 +81,7 @@ Same query on:
 
 ## Benchmarks
 
-Indexed keyset on SQLite **SQL** (file, index on `(Price, Id)`, page 20). `--probe` is Stopwatch (1 warmup + 5 repeats), not BenchmarkDotNet, not EF InMemory, not `--job Dry`. 10M rows, skip 5M: keyset **17.8 ms**, `OFFSET` **154.9 ms**, MR 1.5.0 **19.9 ms**. 100M catalog, skip 50M: keyset **177.2 ms**, `OFFSET` **2470.4 ms**, MR **218.0 ms**. OFFSET IDs are verified once (untimed) before timing. First page is cheap for both.
+Indexed keyset on SQLite **SQL** (file, index on `(Price, Id)`, page 20). `--probe` is Stopwatch (1 warmup + 5 repeats), not BenchmarkDotNet, not EF InMemory, not `--job Dry`. Tables (ms and mean managed KB per page) live in the [package README](../../src/BuildingBlocks/Pagination.EntityFrameworkCore/PACKAGE_README.md). OFFSET IDs are verified once (untimed) before timing. First page is cheap for both.
 
 ```bash
 dotnet run -c Release --project benchmarks/BuildingBlocks/Pagination.EntityFrameworkCore.Benchmarks -- --filter *CursorCodec*

@@ -20,7 +20,7 @@ Dapper is an **in-repo project** (not a NuGet package). A LinqToDB adapter is no
 - **Optional total count** — `IncludeTotalCount` runs COUNT with the page (same QueryHint scope on SQL Server)
 - **Cancellation** — `CancellationToken` on EF and Dapper page APIs
 - **`QueryHint`** — allowlist `{ None, ReadUncommitted }`. `ReadUncommitted` is SQL Server session isolation only (not `WITH (NOLOCK)`); PG/Sqlite no-op
-- **Large-table probe** — indexed SQLite `--probe` (Stopwatch, 10M / 100M) with live OFFSET ID checks; not a claim about SQL Server or PostgreSQL speed
+- **Large-table probe** — indexed SQLite `--probe` (Stopwatch, 10M / 100M) with live OFFSET ID checks; reports ms and mean managed KB per page; not a claim about SQL Server or PostgreSQL speed
 
 ## Install
 
@@ -119,9 +119,9 @@ Sort a mapped scalar (enum, bool, `DateOnly`, `p => p.Money.Amount`). Do not `By
 
 ## Performance
 
-Indexed keyset grows more slowly than `OFFSET` as skip increases. The tables below are a **file SQLite SQL** `--probe` (Stopwatch: 1 warmup + 5 repeats). They are **not** BenchmarkDotNet, not EF InMemory, not `--job Dry`, and not a 5k-row micro-benchmark. OFFSET ID equality is checked **once, untimed**, before `Time()`. Query timing is after load (`synchronous=OFF` is insert-only). Index `(Price, Id)`, page size 20, .NET 10.
+Indexed keyset grows more slowly than `OFFSET` as skip increases. The tables below are a **file SQLite SQL** `--probe` (Stopwatch: 1 warmup + 5 repeats). They are **not** BenchmarkDotNet, not EF InMemory, not `--job Dry`, and not a 5k-row micro-benchmark. OFFSET ID equality is checked **once, untimed**, before `TimeAndAlloc()`. Query timing is after load (`synchronous=OFF` is insert-only). Index `(Price, Id)`, page size 20, .NET 10. **KB** is mean managed allocations per page (`GC.GetAllocatedBytesForCurrentThread`), not working set or SQLite cache.
 
-Default BenchmarkDotNet (`--filter *Keyset*`) is a separate 1M-row job; do not mix those milliseconds with `--probe`.
+Default BenchmarkDotNet (`--filter *Keyset*`) is a separate 1M-row job with `MemoryDiagnoser`; do not mix those milliseconds with `--probe`.
 
 **Hardware (this machine):** 11th Gen Intel Core i9-11900K @ 3.50 GHz (8 cores / 16 logical), 63.8 GB RAM, Windows 10.0.26200, .NET SDK 10.0.301 / runtime 10.0.9, EF Core 10.0.0, BenchmarkDotNet 0.15.4, SQLitePCLRaw 3.0.3.
 
@@ -129,9 +129,9 @@ Default BenchmarkDotNet (`--filter *Keyset*`) is a separate 1M-row job; do not m
 
 | Skip | OFFSET | FeatureFusion | MR.EntityFrameworkCore.KeysetPagination 1.5.0 |
 |------|--------|---------------|-----------------------------------------------|
-| 0 | 0.5 ms | 0.6 ms | 0.5 ms |
-| 1,000,000 | 29.7 ms | 15.5 ms | 18.2 ms |
-| 5,000,000 | 154.9 ms | 17.8 ms | 19.9 ms |
+| 0 | 0.5 ms / 77 KB | 0.6 ms / 79 KB | 0.5 ms / 75 KB |
+| 1,000,000 | 29.7 ms / 77 KB | 15.5 ms / 85 KB | 18.2 ms / 86 KB |
+| 5,000,000 | 154.9 ms / 77 KB | 17.8 ms / 85 KB | 19.9 ms / 86 KB |
 
 ```mermaid
 xychart-beta
@@ -147,9 +147,9 @@ xychart-beta
 
 | Skip | OFFSET | FeatureFusion | MR.EntityFrameworkCore.KeysetPagination 1.5.0 |
 |------|--------|---------------|-----------------------------------------------|
-| 0 | 0.6 ms | 0.7 ms | 0.6 ms |
-| 10,000,000 | 737.9 ms | 379.0 ms | 427.0 ms |
-| 50,000,000 | 2470.4 ms | 177.2 ms | 218.0 ms |
+| 0 | 0.6 ms / 77 KB | 0.7 ms / 79 KB | 0.6 ms / 75 KB |
+| 10,000,000 | 737.9 ms / 75 KB | 379.0 ms / 84 KB | 427.0 ms / 84 KB |
+| 50,000,000 | 2470.4 ms / 75 KB | 177.2 ms / 83 KB | 218.0 ms / 85 KB |
 
 ```mermaid
 xychart-beta
