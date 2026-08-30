@@ -26,7 +26,10 @@ namespace FeatureFusion.Controllers.V2
 			_sender = sender;
 		}
 
-		// with cursor-pagination
+		/// <summary>
+		/// Keyset catalog page (same <see cref="GetProductsQuery"/> as
+		/// GET /api/v2/products-page). Prefer the GET Minimal API for new clients.
+		/// </summary>
 		[HttpPost("products")]
 		[ProducesResponseType(typeof(PagedResult<ProductDto>), StatusCodes.Status200OK)]
 		[ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -47,6 +50,34 @@ namespace FeatureFusion.Controllers.V2
 
 				return result.ToHttpResult();
 			}
+		}
+
+		/// <summary>Dapper showcase of the same products table (main list stays EF).</summary>
+		[HttpPost("products-dapper")]
+		[ProducesResponseType(typeof(PagedResult<ProductDto>), StatusCodes.Status200OK)]
+		[ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+		[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+		public async Task<Results<Ok<PagedResult<ProductDto>>,
+		BadRequest<ValidationProblemDetails>, ProblemHttpResult>> GetProductsDapper(
+		[FromQuery] GetProductsQuery command,
+		[FromServices] FeatureFusion.Services.ProductService.IProductService products,
+		CancellationToken cancellationToken)
+		{
+			var validationResult = await _validator.ValidateWithResultAsync(command);
+			if (validationResult.HasErrors())
+			{
+				return TypedResults.BadRequest(validationResult.ProblemDetails);
+			}
+
+			var result = await products.GetProductsViaDapperAsync(
+				command.Limit,
+				command.SortBy,
+				command.SortDirection,
+				command.Cursor,
+				(BuildingBlocks.Pagination.PageDirection)command.PageDirection,
+				cancellationToken);
+
+			return result.ToHttpResult();
 		}
 
 	}

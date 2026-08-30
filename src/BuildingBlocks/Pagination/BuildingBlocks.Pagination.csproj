@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <WarningsAsErrors>CS1591</WarningsAsErrors>
+    <RootNamespace>BuildingBlocks.Pagination</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <Description>Pagination IR (SortKey, cursors). Not shipped as its own nupkg — bundled into BuildingBlocks.Pagination.EntityFrameworkCore.</Description>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="BuildingBlocks.Pagination.EntityFrameworkCore" />
+    <InternalsVisibleTo Include="BuildingBlocks.Pagination.Dapper" />
+    <InternalsVisibleTo Include="BuildingBlocks.Pagination.Tests" />
+    <InternalsVisibleTo Include="BuildingBlocks.Pagination.EntityFrameworkCore.Tests" />
+    <InternalsVisibleTo Include="BuildingBlocks.Pagination.Dapper.Tests" />
+    <InternalsVisibleTo Include="BuildingBlocks.Pagination.TestSupport" />
+    <InternalsVisibleTo Include="BuildingBlocks.Pagination.EntityFrameworkCore.Benchmarks" />
+  </ItemGroup>
+
+</Project>

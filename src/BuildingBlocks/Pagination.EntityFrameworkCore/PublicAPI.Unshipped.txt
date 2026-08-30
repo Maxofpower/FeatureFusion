@@ -1,0 +1,8 @@
+#nullable enable
+namespace BuildingBlocks.Pagination.EntityFrameworkCore
+{
+    public static partial class KeysetIndexExtensions
+    {
+        public static Microsoft.EntityFrameworkCore.Metadata.Builders.IndexBuilder HasKeysetIndex<TEntity>(this Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TEntity> builder, BuildingBlocks.Pagination.SortKey<TEntity> sortKey) where TEntity : class { throw null!; }
+    }
+}

@@ -46,6 +46,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\BuildingBlocks\Mcp\BuildingBlocks.Mcp.csproj" />
     <ProjectReference Include="..\..\BuildingBlocks\Mediator\BuildingBlocks.Mediator.csproj" />
+    <ProjectReference Include="..\..\BuildingBlocks\Pagination\BuildingBlocks.Pagination.csproj" />
+    <ProjectReference Include="..\..\BuildingBlocks\Pagination.EntityFrameworkCore\BuildingBlocks.Pagination.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\BuildingBlocks\Pagination.Dapper\BuildingBlocks.Pagination.Dapper.csproj" />
     <ProjectReference Include="..\EventBus\EventBus.csproj" />
     <ProjectReference Include="..\FeatureFusion.ServiceDefaults\FeatureFusion.AppHost.ServiceDefaults.csproj" />
   </ItemGroup>

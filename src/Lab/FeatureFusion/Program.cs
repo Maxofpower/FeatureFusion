@@ -7,6 +7,7 @@ using Enyim.Caching;
 using Enyim.Caching.Configuration;
 using EventBusRabbitMQ;
 using FeatureFusion.Features.MediatorDemo.Endpoints;
+using FeatureFusion.Features.Products.Endpoints;
 using FeatureFusion.Infrastructure.Behaviors;
 using FeatureFusion.Infrastructure.Exceptions;
 using FeatureFusion.Infrastructure.Extensions;
@@ -52,6 +53,7 @@ builder.Services.AddFeatureManagementWithFilters<UseGreetingFilter>();
 builder.Services.RegisterServices();
 
 builder.Services.AddExceptionHandler<ValidationExceptionHandler>();
+builder.Services.AddExceptionHandler<PaginationExceptionHandler>();
 
 builder.Services.AddMediator(cfg =>
 {
@@ -177,6 +179,7 @@ void ConfigureRequestPipeline(WebApplication app)
 
 app.MapGreetingApiV2();
 app.MapMediatorDemoEndpoints();
+app.MapProductPaginationEndpoints();
 
 #region memchached prestart up validation if enabled
 // Pre-startup validation for memcached and redis

@@ -104,7 +104,9 @@ public sealed class FeatureFusionMcpTests
 
 		json.Should().Contain("Ascending");
 		json.Should().Contain("Descending");
-		json.Should().Contain("Maximum number of items to return");
+		json.Should().Contain("Page size");
+		json.Should().Contain("Forward");
+		json.Should().Contain("Backward");
 
 		if (schema.TryGetProperty("required", out var required))
 		{
@@ -113,6 +115,7 @@ public sealed class FeatureFusionMcpTests
 			names.Should().NotContain("limit");
 			names.Should().NotContain("sortBy");
 			names.Should().NotContain("sortDirection");
+			names.Should().NotContain("pageDirection");
 		}
 	}
 

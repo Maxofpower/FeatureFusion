@@ -1,0 +1,93 @@
+#nullable enable
+namespace BuildingBlocks.Pagination
+{
+    public enum BuildingBlocks.Pagination.SortDirection { Ascending = 0, Descending = 1 }
+    public enum BuildingBlocks.Pagination.PageDirection { Forward = 0, Backward = 1 }
+    public enum BuildingBlocks.Pagination.NullOrder { Last = 0, First = 1 }
+    public enum BuildingBlocks.Pagination.QueryHint { None = 0, ReadUncommitted = 1 }
+    public enum BuildingBlocks.Pagination.PaginationErrorCode
+    {
+        InvalidCursor = 0,
+        InvalidLimit = 1,
+        MissingUniqueKey = 2,
+        MissingSqlIdentifier = 3,
+        InvalidIdentifier = 4,
+        SigningKeyRequired = 5,
+        CursorSortMismatch = 6,
+        MissingKeyColumn = 7,
+        UnknownShadowProperty = 8,
+        ShadowNotSupported = 9,
+        UnsupportedSortType = 10,
+        InvalidHostSql = 11,
+        UnsupportedKeysetIndex = 12,
+        NullableSortUnsupported = 13
+    }
+    public sealed partial class PaginationException : System.Exception
+    {
+        public PaginationException(BuildingBlocks.Pagination.PaginationErrorCode code, string message) { }
+        public PaginationException(BuildingBlocks.Pagination.PaginationErrorCode code, string message, System.Exception inner) { }
+        public BuildingBlocks.Pagination.PaginationErrorCode Code { get { throw null!; } }
+    }
+    public sealed partial class PaginationOptions
+    {
+        public int MaxLimit { get { throw null!; } set { } }
+        public bool IncludeTotalCount { get { throw null!; } set { } }
+        public byte[]? SigningKey { get { throw null!; } set { } }
+        public BuildingBlocks.Pagination.NullOrder Nulls { get { throw null!; } set { } }
+        public BuildingBlocks.Pagination.QueryHint Hint { get { throw null!; } set { } }
+        public static BuildingBlocks.Pagination.PaginationOptions Default { get { throw null!; } }
+    }
+    public sealed partial record CursorRequest
+    {
+        public CursorRequest(string? Cursor, int Limit, BuildingBlocks.Pagination.PageDirection Direction = BuildingBlocks.Pagination.PageDirection.Forward) { }
+        public string? Cursor { get { throw null!; } init { } }
+        public int Limit { get { throw null!; } init { } }
+        public BuildingBlocks.Pagination.PageDirection Direction { get { throw null!; } init { } }
+    }
+    public sealed partial record CursorPage<T>
+    {
+        public CursorPage(System.Collections.Generic.IReadOnlyList<T> Items, string? Next, string? Previous, bool HasNext, bool HasPrevious, int? TotalCount = null) { }
+        public System.Collections.Generic.IReadOnlyList<T> Items { get { throw null!; } init { } }
+        public string? Next { get { throw null!; } init { } }
+        public string? Previous { get { throw null!; } init { } }
+        public bool HasNext { get { throw null!; } init { } }
+        public bool HasPrevious { get { throw null!; } init { } }
+        public int? TotalCount { get { throw null!; } init { } }
+        public static BuildingBlocks.Pagination.CursorPage<T> Empty { get { throw null!; } }
+    }
+    public static partial class SortKey
+    {
+        public static BuildingBlocks.Pagination.SortKeyBuilder<T> For<T>() { throw null!; }
+    }
+    public sealed partial class SortKey<T>
+    {
+        public string Fingerprint { get { throw null!; } }
+    }
+    public sealed partial class SortKeyBuilder<T>
+    {
+        public BuildingBlocks.Pagination.SortKeyBuilder<T> By<TValue>(System.Linq.Expressions.Expression<System.Func<T, TValue>> accessor, string? sql = null) { throw null!; }
+        public BuildingBlocks.Pagination.SortKeyBuilder<T> ByDescending<TValue>(System.Linq.Expressions.Expression<System.Func<T, TValue>> accessor, string? sql = null) { throw null!; }
+        public BuildingBlocks.Pagination.SortKeyBuilder<T> ThenBy<TValue>(System.Linq.Expressions.Expression<System.Func<T, TValue>> accessor, string? sql = null) { throw null!; }
+        public BuildingBlocks.Pagination.SortKeyBuilder<T> ThenByDescending<TValue>(System.Linq.Expressions.Expression<System.Func<T, TValue>> accessor, string? sql = null) { throw null!; }
+        public BuildingBlocks.Pagination.SortKeyBuilder<T> ByShadow<TValue>(string name, string? sql = null) { throw null!; }
+        public BuildingBlocks.Pagination.SortKeyBuilder<T> ByShadowDescending<TValue>(string name, string? sql = null) { throw null!; }
+        public BuildingBlocks.Pagination.SortKey<T> ThenByUnique<TValue>(System.Linq.Expressions.Expression<System.Func<T, TValue>> accessor, string? sql = null) { throw null!; }
+        public BuildingBlocks.Pagination.SortKey<T> ThenByUniqueDescending<TValue>(System.Linq.Expressions.Expression<System.Func<T, TValue>> accessor, string? sql = null) { throw null!; }
+        public BuildingBlocks.Pagination.SortKey<T> ThenByUniqueShadow<TValue>(string name, string? sql = null) { throw null!; }
+        public BuildingBlocks.Pagination.SortKey<T> ThenByUniqueShadowDescending<TValue>(string name, string? sql = null) { throw null!; }
+    }
+    public sealed partial class SortKeyRegistry<TEnum, TEntity> where TEnum : struct, System.Enum
+    {
+        public BuildingBlocks.Pagination.SortKeyRegistry<TEnum, TEntity> Add(TEnum field, BuildingBlocks.Pagination.SortKey<TEntity> key) { throw null!; }
+        public bool TryGet(TEnum field, out BuildingBlocks.Pagination.SortKey<TEntity> key) { throw null!; }
+        public BuildingBlocks.Pagination.SortKey<TEntity> Get(TEnum field) { throw null!; }
+        public bool IsComplete() { throw null!; }
+        public void EnsureComplete() { }
+    }
+    public static partial class CursorCodec
+    {
+        public static bool IsEmpty(string? cursor) { throw null!; }
+        public static void Validate<T>(string? cursor, BuildingBlocks.Pagination.SortKey<T> sortKey, BuildingBlocks.Pagination.PaginationOptions? options = null) { }
+        public static bool TryValidateFormat(string? cursor, BuildingBlocks.Pagination.PaginationOptions? options = null) { throw null!; }
+    }
+}

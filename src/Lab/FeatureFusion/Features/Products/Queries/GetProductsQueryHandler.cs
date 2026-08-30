@@ -1,9 +1,7 @@
 using FeatureFusion.Dtos;
-using FeatureFusion.Features.Order.IntegrationEvents;
 using BuildingBlocks.Mediator;
 using FeatureFusion.Infrastructure.CursorPagination;
 using FeatureFusion.Services.ProductService;
-using static FeatureFusion.Infrastructure.CursorPagination.CursorFactory;
 
 namespace FeatureFusion.Features.Products.Queries
 {
@@ -37,6 +35,7 @@ namespace FeatureFusion.Features.Products.Queries
 					request.SortBy,
 					request.SortDirection,
 					request.Cursor,
+					(BuildingBlocks.Pagination.PageDirection)request.PageDirection,
 					cancellationToken);
 
 				return result;

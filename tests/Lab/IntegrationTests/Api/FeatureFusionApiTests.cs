@@ -127,6 +127,150 @@ public sealed class FeatureFusionApiTests
 		back.Items.Select(i => i.Id).Should().Equal(first.Items.Select(i => i.Id));
 	}
 
+	[Theory]
+	[InlineData("Id", "Ascending")]
+	[InlineData("Id", "Descending")]
+	[InlineData("Name", "Ascending")]
+	[InlineData("Name", "Descending")]
+	[InlineData("Price", "Ascending")]
+	[InlineData("Price", "Descending")]
+	[InlineData("CreatedAt", "Ascending")]
+	[InlineData("CreatedAt", "Descending")]
+	public async Task Product_Products_First_Page_Each_Sort_Field(string sortBy, string sortDirection)
+	{
+		var page = await GetProductsAsync(limit: 5, sortBy: sortBy, sortDirection: sortDirection);
+
+		page.Items.Should().HaveCount(5);
+		page.HasMore.Should().BeTrue();
+		page.NextCursor.Should().NotBeNullOrWhiteSpace();
+		page.HasPrevious.Should().BeFalse();
+		page.TotalCount.Should().BeGreaterThan(5);
+	}
+
+	[Fact]
+	public async Task Product_Products_Dapper_First_Page_Matches_Ef_Ids()
+	{
+		var ef = await GetProductsAsync(limit: 5, sortBy: "Price", sortDirection: "Descending");
+		var dapper = await GetProductsDapperAsync(limit: 5, sortBy: "Price", sortDirection: "Descending");
+
+		dapper.Items.Select(i => i.Id).Should().Equal(ef.Items.Select(i => i.Id));
+		dapper.HasMore.Should().BeTrue();
+		dapper.TotalCount.Should().BeGreaterThan(5);
+	}
+
+	[Fact]
+	public async Task Product_Products_MinimalApi_Get_First_Page_Matches_Controller()
+	{
+		var controller = await GetProductsAsync(limit: 5, sortBy: "Price", sortDirection: "Descending");
+		var minimal = await GetProductsMinimalAsync(limit: 5, sortBy: "Price", sortDirection: "Descending");
+
+		minimal.Items.Select(i => i.Id).Should().Equal(controller.Items.Select(i => i.Id));
+		minimal.HasMore.Should().BeTrue();
+		minimal.NextCursor.Should().NotBeNullOrWhiteSpace();
+		minimal.TotalCount.Should().BeGreaterThan(5);
+	}
+
+	[Fact]
+	public async Task Product_Products_Get_First_Next_Previous()
+	{
+		var first = await GetProductsMinimalAsync(limit: 5, sortBy: "Price", sortDirection: "Ascending");
+
+		first.Items.Should().HaveCount(5);
+		first.HasMore.Should().BeTrue();
+		first.HasPrevious.Should().BeFalse();
+		first.TotalCount.Should().BeGreaterThan(5);
+		first.NextCursor.Should().NotBeNullOrWhiteSpace();
+		first.Items.Select(i => i.Price).Should().BeInAscendingOrder();
+
+		var next = await GetProductsMinimalAsync(
+			limit: 5,
+			cursor: first.NextCursor,
+			sortBy: "Price",
+			sortDirection: "Ascending");
+
+		next.Items.Should().HaveCount(5);
+		next.Items.Select(i => i.Id).Should().NotIntersectWith(first.Items.Select(i => i.Id));
+		next.HasPrevious.Should().BeTrue();
+		next.PreviousCursor.Should().NotBeNullOrWhiteSpace();
+
+		var back = await GetProductsMinimalAsync(
+			limit: 5,
+			cursor: next.PreviousCursor,
+			sortBy: "Price",
+			sortDirection: "Ascending");
+
+		back.Items.Select(i => i.Id).Should().Equal(first.Items.Select(i => i.Id));
+	}
+
+	[Fact]
+	public async Task Product_Products_Get_Last_Page_Via_PageDirection_Backward()
+	{
+		var last = await GetProductsMinimalAsync(
+			limit: 5,
+			sortBy: "Id",
+			sortDirection: "Ascending",
+			pageDirection: "Backward");
+
+		last.Items.Should().HaveCount(5);
+		last.HasMore.Should().BeFalse();
+		last.HasPrevious.Should().BeTrue();
+		last.PreviousCursor.Should().NotBeNullOrWhiteSpace();
+		last.TotalCount.Should().BeGreaterThan(5);
+		last.Items.Select(i => i.Id).Should().BeInAscendingOrder();
+
+		var earlier = await GetProductsMinimalAsync(
+			limit: 5,
+			cursor: last.PreviousCursor,
+			sortBy: "Id",
+			sortDirection: "Ascending");
+
+		earlier.Items.Should().HaveCount(5);
+		earlier.Items.Max(i => i.Id).Should().BeLessThan(last.Items.Min(i => i.Id));
+	}
+
+	[Fact]
+	public async Task Product_Products_Get_Matches_Post()
+	{
+		var get = await GetProductsMinimalAsync(limit: 5, sortBy: "Price", sortDirection: "Descending");
+		var post = await GetProductsMinimalPostAsync(limit: 5, sortBy: "Price", sortDirection: "Descending");
+
+		get.Items.Select(i => i.Id).Should().Equal(post.Items.Select(i => i.Id));
+		get.HasMore.Should().Be(post.HasMore);
+		get.TotalCount.Should().Be(post.TotalCount);
+	}
+
+	[Fact]
+	public async Task Product_Products_MinimalApi_Invalid_Cursor_Returns_BadRequest()
+	{
+		var get = await _client.GetAsync(
+			"/api/v2/products-page?Limit=5&Cursor=not-a-valid-cursor");
+		get.StatusCode.Should().Be(HttpStatusCode.BadRequest, await get.Content.ReadAsStringAsync());
+
+		var post = await _client.PostAsync(
+			"/api/v2/products-page?Limit=5&Cursor=not-a-valid-cursor",
+			content: null);
+		post.StatusCode.Should().Be(HttpStatusCode.BadRequest, await post.Content.ReadAsStringAsync());
+	}
+
+	[Fact]
+	public async Task Swagger_V2_Documents_Get_Products_Page()
+	{
+		var response = await _client.GetAsync("/swagger/v2/swagger.json");
+		response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+
+		using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+		doc.RootElement.TryGetProperty("paths", out var paths).Should().BeTrue();
+		paths.TryGetProperty("/api/v2/products-page", out var productsPage).Should().BeTrue();
+		productsPage.TryGetProperty("get", out var get).Should().BeTrue();
+		productsPage.TryGetProperty("post", out _).Should().BeTrue();
+
+		var getJson = get.GetRawText();
+		getJson.Should().Contain("opaque");
+		getJson.Contains("limit", StringComparison.OrdinalIgnoreCase).Should().BeTrue();
+		getJson.Contains("sortBy", StringComparison.OrdinalIgnoreCase).Should().BeTrue();
+		getJson.Contains("pageDirection", StringComparison.OrdinalIgnoreCase).Should().BeTrue();
+	}
+
 	[Fact]
 	public async Task Product_Products_Sort_By_Price_Descending()
 	{
@@ -207,6 +351,78 @@ public sealed class FeatureFusionApiTests
 		string sortDirection = "Ascending")
 	{
 		var url = $"/api/v2/Product/products?Limit={limit}&SortBy={sortBy}&SortDirection={sortDirection}";
+		if (!string.IsNullOrEmpty(cursor))
+		{
+			url += $"&Cursor={Uri.EscapeDataString(cursor)}";
+		}
+
+		var response = await _client.PostAsync(url, content: null);
+		response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+
+		var page = await response.Content.ReadFromJsonAsync<ProductsPage>(JsonOptions);
+		page.Should().NotBeNull();
+		return page!;
+	}
+
+	private async Task<ProductsPage> GetProductsMinimalAsync(
+		int limit,
+		string? cursor = null,
+		string sortBy = "Id",
+		string sortDirection = "Ascending",
+		string? pageDirection = null)
+	{
+		var url = ProductsPageUrl(limit, cursor, sortBy, sortDirection, pageDirection);
+		var response = await _client.GetAsync(url);
+		response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+
+		var page = await response.Content.ReadFromJsonAsync<ProductsPage>(JsonOptions);
+		page.Should().NotBeNull();
+		return page!;
+	}
+
+	private async Task<ProductsPage> GetProductsMinimalPostAsync(
+		int limit,
+		string? cursor = null,
+		string sortBy = "Id",
+		string sortDirection = "Ascending")
+	{
+		var url = ProductsPageUrl(limit, cursor, sortBy, sortDirection);
+		var response = await _client.PostAsync(url, content: null);
+		response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+
+		var page = await response.Content.ReadFromJsonAsync<ProductsPage>(JsonOptions);
+		page.Should().NotBeNull();
+		return page!;
+	}
+
+	private static string ProductsPageUrl(
+		int limit,
+		string? cursor,
+		string sortBy,
+		string sortDirection,
+		string? pageDirection = null)
+	{
+		var url = $"/api/v2/products-page?limit={limit}&sortBy={sortBy}&sortDirection={sortDirection}";
+		if (!string.IsNullOrEmpty(cursor))
+		{
+			url += $"&cursor={Uri.EscapeDataString(cursor)}";
+		}
+
+		if (!string.IsNullOrEmpty(pageDirection))
+		{
+			url += $"&pageDirection={pageDirection}";
+		}
+
+		return url;
+	}
+
+	private async Task<ProductsPage> GetProductsDapperAsync(
+		int limit,
+		string? cursor = null,
+		string sortBy = "Id",
+		string sortDirection = "Ascending")
+	{
+		var url = $"/api/v2/Product/products-dapper?Limit={limit}&SortBy={sortBy}&SortDirection={sortDirection}";
 		if (!string.IsNullOrEmpty(cursor))
 		{
 			url += $"&Cursor={Uri.EscapeDataString(cursor)}";

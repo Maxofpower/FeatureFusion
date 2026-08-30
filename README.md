@@ -2,7 +2,7 @@
 
 # FeatureFusion
 
-**BuildingBlocks for .NET** — CQRS Send + pipeline, config-driven OpenTelemetry, and a local Aspire SigNoz stack — plus a runnable lab that uses them.
+**BuildingBlocks for .NET** — CQRS Send + pipeline, config-driven OpenTelemetry, MCP tools, keyset pagination, and a local Aspire SigNoz stack — plus a runnable lab that uses them.
 
 Formerly [FeatureManagement](https://github.com/Maxofpower/FeatureManagement) (GitHub redirects).
 
@@ -10,6 +10,7 @@ Formerly [FeatureManagement](https://github.com/Maxofpower/FeatureManagement) (G
 [![Aspire](https://img.shields.io/badge/Aspire-13.4-C3002F?logo=dotnet&logoColor=white)](https://learn.microsoft.com/dotnet/aspire/)
 [![NuGet · BuildingBlocks.Mediator](https://img.shields.io/nuget/v/BuildingBlocks.Mediator.svg?label=NuGet%20·%20Mediator&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Mediator)
 [![NuGet · BuildingBlocks.Mcp](https://img.shields.io/nuget/v/BuildingBlocks.Mcp.svg?label=NuGet%20·%20MCP&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Mcp)
+[![NuGet · BuildingBlocks.Pagination.EntityFrameworkCore](https://img.shields.io/nuget/v/BuildingBlocks.Pagination.EntityFrameworkCore.svg?label=NuGet%20·%20Pagination&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Pagination.EntityFrameworkCore)
 [![NuGet · BuildingBlocks.Telemetry](https://img.shields.io/nuget/v/BuildingBlocks.Telemetry.svg?label=NuGet%20·%20Telemetry&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Telemetry)
 [![NuGet · BuildingBlocks.Aspire.Hosting.SigNoz](https://img.shields.io/nuget/v/BuildingBlocks.Aspire.Hosting.SigNoz.svg?label=NuGet%20·%20SigNoz%20hosting&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
@@ -30,9 +31,11 @@ Formerly [FeatureManagement](https://github.com/Maxofpower/FeatureManagement) (G
   - [How they work together](#how-they-work-together)
   - [BuildingBlocks.Mediator](#buildingblocksmediator)
   - [BuildingBlocks.Mcp](#buildingblocksmcp)
+  - [BuildingBlocks.Pagination.EntityFrameworkCore](#buildingblockspaginationentityframeworkcore)
   - [BuildingBlocks.Telemetry](#buildingblockstelemetry)
   - [BuildingBlocks.Aspire.Hosting.SigNoz](#buildingblocksaspirehostingsignoz)
 - [Lab](#lab)
+  - [Pagination showcase](#pagination-showcase)
 - [Architecture](#architecture)
 - [Stack](#stack)
 - [Repository layout](#repository-layout)
@@ -55,6 +58,7 @@ NuGet packages you can install in **your** hosts. The FeatureFusion API is a sho
 |---------|------|------|
 | **[BuildingBlocks.Mediator](https://www.nuget.org/packages/BuildingBlocks.Mediator)** | CQRS **Send** + ordered pipeline (`ICommand` / `IQuery`, typed behaviors, opt-in traces + metrics) | net8 / net9 / net10 |
 | **[BuildingBlocks.Mcp](https://www.nuget.org/packages/BuildingBlocks.Mcp)** | Message types → MCP tools on the official SDK (deny-by-default, `McpResult`, HTTP + opt-in stdio) | net8 / net9 / net10 |
+| **[BuildingBlocks.Pagination.EntityFrameworkCore](https://www.nuget.org/packages/BuildingBlocks.Pagination.EntityFrameworkCore)** | Typed keyset (cursor) pagination for EF Core (IR bundled) | net8 / net9 / net10 |
 | **[BuildingBlocks.Telemetry](https://www.nuget.org/packages/BuildingBlocks.Telemetry)** | Config-driven OpenTelemetry (traces, metrics, logs) + `IntegrateMediator` / opt-in `IntegrateMcp` | net8 / net9 / net10 |
 | **[BuildingBlocks.Aspire.Hosting.SigNoz](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz)** | Local-dev Aspire `AddSigNoz()` + `WithSigNozOtlpExporter` | net10 (AppHost) |
 
@@ -346,6 +350,46 @@ Cursor HTTP:
 
 ---
 
+### BuildingBlocks.Pagination.EntityFrameworkCore
+
+[![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Pagination.EntityFrameworkCore.svg?logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Pagination.EntityFrameworkCore)
+
+Typed **keyset (cursor)** pagination for EF Core. **One package** — `SortKey` / cursors ship inside it. Hosts map a sort enum to a **prebuilt** key — the library never reflects `"Price"` into a property. Unique last column required. Set `SigningKey` on public HTTP APIs. Dapper is an in-repo lab project, not a nupkg. There is no `IEnumerable` adapter.
+
+```bash
+dotnet add package BuildingBlocks.Pagination.EntityFrameworkCore
+```
+
+Requires .NET 8 / 9 / 10.
+
+```csharp
+var key = SortKey.For<Product>()
+    .By(p => p.Price)
+    .ThenByUnique(p => p.Id);
+
+var page = await db.Products
+    .AsNoTracking()
+    .ToCursorPageAsync(new CursorRequest(cursor, 20), key);
+```
+
+Optional `PaginationOptions.Hint` defaults to `None`. `ReadUncommitted` is SQL Server session isolation (not `WITH (NOLOCK)`): EF starts one transaction around COUNT+PAGE when there is no ambient transaction, then restores `READ COMMITTED` on the still-open connection; ambient is ignored; PostgreSQL and Sqlite ignore it. Host `AsNoTracking` / Dapper `WITH (NOLOCK)` still work. Host `OrderBy` is replaced by the `SortKey`. Composite indexes should match each key, e.g. `(Price, Id)` and `(CreatedAt, Id)`. Nullable `T?` sort columns are unsupported. Guid CLR order is not SQL Server `uniqueidentifier` order. `NullOrder` is seek-predicate only (no SQL `NULLS FIRST/LAST`). Updates to a sort column can make a row vanish or reappear (inherent keyset).
+
+Indexed keyset on SQLite SQL with that index: 10M rows, skip 5M: keyset **17.8 ms** vs `OFFSET` **154.9 ms** vs MR 1.5.0 **19.9 ms**; 100M catalog, skip 50M: keyset **177.2 ms** vs `OFFSET` **2470.4 ms** vs MR **218.0 ms** (Stopwatch `--probe`, 1 warmup + 5 repeats, not Dry, not BenchmarkDotNet). Those milliseconds are **this machine’s file SQLite** catalog. The same `ToCursorPageAsync` API also emits SQL on PostgreSQL and SQL Server; do not treat the SQLite probe as PostgreSQL or SQL Server timings. EF InMemory is tests only. Reproduce:
+
+```bash
+dotnet run -c Release --project benchmarks/BuildingBlocks/Pagination.EntityFrameworkCore.Benchmarks -- --filter *CursorCodec*
+dotnet run -c Release --project benchmarks/BuildingBlocks/Pagination.EntityFrameworkCore.Benchmarks -- --filter *Keyset*
+dotnet run -c Release --project benchmarks/BuildingBlocks/Pagination.EntityFrameworkCore.Benchmarks -- --probe 10000000
+dotnet run -c Release --project benchmarks/BuildingBlocks/Pagination.EntityFrameworkCore.Benchmarks -- --probe 100000000
+```
+
+- Package README: [`Pagination.EntityFrameworkCore`](src/BuildingBlocks/Pagination.EntityFrameworkCore/PACKAGE_README.md) (includes the table)
+- Docs: [`docs/building-blocks/pagination.md`](docs/building-blocks/pagination.md) · ADR [`0003`](docs/adr/0003-pagination-keyset.md) · [test matrix](docs/building-blocks/PAGINATION_TEST_MATRIX.md)
+- Lab: FeatureFusion PostgreSQL catalog — `GET /api/v2/products-page` (Minimal API EF; POST kept) · `POST /api/v2/Product/products` (MVC EF) · `POST /api/v2/Product/products-dapper` (Dapper **project** showcase) · MCP `products.list` — same `GetProductsQuery`. See [Pagination showcase](#pagination-showcase).
+- Catalog: `docs/linkedin-posts.md` → `cursor-pagination`
+
+---
+
 ### BuildingBlocks.Telemetry
 
 [![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Telemetry.svg?logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Telemetry)
@@ -613,10 +657,38 @@ Install the packages above in your own hosts, **or** clone this repo and run **F
 | API surface | Versioned controllers + Minimal APIs, FluentValidation patterns |
 | Gateway | YARP reverse proxy + Memcached distributed rate limiting |
 | Caching | Redis / Memcached / memory managers + middleware demos |
-| Pagination | **Generic bidirectional keyset (cursor) pagination** |
+| Pagination | **`BuildingBlocks.Pagination.EntityFrameworkCore`** — PostgreSQL product catalog via `GET /api/v2/products-page` (same query on MVC, Dapper, MCP); Dapper is in-repo only |
 | Design patterns | Mediator, Decorator, CoR, Strategy, and more — see below |
 
 Also in the lab: app/DB initializers, middleware dynamic caching, Aspire AppHost integration tests, and performance-minded practices (OTel hooks, resilience).
+
+### Pagination showcase
+
+FeatureFusion is the runnable integration of **[BuildingBlocks.Pagination.EntityFrameworkCore](https://www.nuget.org/packages/BuildingBlocks.Pagination.EntityFrameworkCore)** — a real PostgreSQL catalog (~1000 seeded products), not a sample-only API.
+
+One `GetProductsQuery` drives:
+
+| Surface | Endpoint |
+|---------|----------|
+| Minimal API (EF) | **`GET /api/v2/products-page`** (POST kept for compatibility) |
+| MVC (EF) | `POST /api/v2/Product/products` |
+| Dapper | `POST /api/v2/Product/products-dapper` |
+| MCP | `products.list` |
+
+What that path demonstrates: typed `SortKey` / `SortKeyRegistry`, composite keyset order (Price + Id, Name + Id, CreatedAt + Id), unique Id tie-breaker, forward and backward cursors, first-page `TotalCount`, `CancellationToken`, `HasKeysetIndex`, EF Core SQL projection, and the in-repo Dapper adapter. Query names are case-insensitive (`limit` / `Limit`). `sortBy`: `Id` · `Name` · `Price` · `CreatedAt`. `sortDirection`: `Ascending` · `Descending`. Empty cursor + `pageDirection=Backward` is the last page. **Cursors are opaque** — pass `NextCursor` / `PreviousCursor` back unchanged; do not construct them. FeatureFusion is PostgreSQL: `QueryHint` stays `None`.
+
+```http
+GET /api/v2/products-page?limit=20&sortBy=Price&sortDirection=Ascending
+```
+
+Response includes `items`, `hasMore`, `nextCursor`, `previousCursor`, `hasPrevious`, and `totalCount` on this first page. Then:
+
+```http
+GET /api/v2/products-page?limit=20&sortBy=Price&sortDirection=Ascending&cursor=<NextCursor>
+GET /api/v2/products-page?limit=20&sortBy=Price&sortDirection=Ascending&cursor=<PreviousCursor>
+```
+
+Swagger: `http://localhost:5141/swagger`. Details: [`docs/building-blocks/pagination.md`](docs/building-blocks/pagination.md) · [NuGet](https://www.nuget.org/packages/BuildingBlocks.Pagination.EntityFrameworkCore).
 
 > Aspire-hosted functional tests and Compose need **Docker**.
 
@@ -672,6 +744,9 @@ src/                                # C# only
     Mediator.Analyzers/
     Mcp/                            # [McpTool] / MapTool → MCP tools NuGet
     Mcp.Analyzers/
+    Pagination/                     # keyset IR (not packable; bundled into EF nupkg)
+    Pagination.EntityFrameworkCore/ # THE pagination NuGet (EF Core layout)
+    Pagination.Dapper/              # lab/dev project only (not a nupkg)
     Telemetry/                      # Config-driven OpenTelemetry NuGet
     Aspire.Hosting.SigNoz/          # AddSigNoz() Aspire hosting NuGet
   Lab/
@@ -687,6 +762,9 @@ tests/
     Mediator.Analyzers.Tests/
     Mcp.Tests/
     Mcp.Analyzers.Tests/
+    Pagination.Tests/
+    Pagination.EntityFrameworkCore.Tests/
+    Pagination.Dapper.Tests/
     Telemetry.Tests/
     Aspire.Hosting.SigNoz.Tests/
   Lab/
@@ -695,6 +773,7 @@ tests/
     FeatureFusion.ApiGateway.Tests/
     FeatureFusion.Common/
 benchmarks/BuildingBlocks/Mediator.Benchmarks/
+benchmarks/BuildingBlocks/Pagination.EntityFrameworkCore.Benchmarks/
 deploy/signoz/alerts/               # Repo-owned SigNoz alert samples (not packaged)
 docs/
   linkedin-posts.md                 # Post ↔ code map
@@ -813,10 +892,9 @@ Redis / Memcached / memory managers, feature-flagged recommendation cache middle
 
 ### Generic bidirectional cursor (keyset) pagination
 
-Reusable, type-safe keyset pagination for EF Core: Base64 JSON cursors (last value + id + sort + direction), dynamic sorting, forward/back navigation, and expression-tree filters — integrated with CQRS / Mediator.
+See [Pagination showcase](#pagination-showcase) for the FeatureFusion catalog (`GET /api/v2/products-page`). Package API, QueryHint, and SQLite probe numbers: [`PACKAGE_README`](src/BuildingBlocks/Pagination.EntityFrameworkCore/PACKAGE_README.md).
 
-- Code: `src/Lab/FeatureFusion/Infrastructure/CursorPagination`
-- Demo: product listing via `ProductService` / `PaginationHelper`
+- Indexes: `(Price, Id)`, `(CreatedAt, Id)`, `(Name, Id)` on `products` (ASC and DESC variants)
 - LinkedIn: [Reusable Cursor (keyset) Pagination](https://www.linkedin.com/feed/update/urn:li:activity:7325068550614708225/)
 
 ---
@@ -830,12 +908,12 @@ Reusable, type-safe keyset pagination for EF Core: Base64 JSON cursors (last val
 | **Void command** | `ICommand : ICommand<Unit>` — concrete type in pipeline (no Adapter / `IRequest`) |
 | **Decorator** | Pipeline behaviors; EventBus handler decorators in tests |
 | **Singleton** | Cached mediator wrappers / long-lived Redis multiplexer |
-| **Factory** | Resilience / connection helpers; `CursorFactory`; gateway Memcached factory |
+| **Factory** | Resilience / connection helpers; gateway Memcached factory |
 | **Repository / DbContext** | EF Core `CatalogDbContext` + feature handlers |
 | **Unit of work** | `ResilientTransaction` spanning business write + outbox |
 | **Strategy** | Feature filters & validation styles (controller vs Minimal API) |
 | **Template method** | `BaseValidator.PostInitialize` |
-| **Keyset pagination** | `Infrastructure/CursorPagination` — type-safe bidirectional cursors |
+| **Keyset pagination** | `BuildingBlocks.Pagination.EntityFrameworkCore` — typed bidirectional cursors |
 | **Chain of Responsibility** | Feature toggle rule evaluation; mediator pipeline chain |
 | **Observer / messaging** | RabbitMQ integration events (outbox → bus → handlers) |
 | **Outbox / Inbox** | `TransactionalOutbox` + `OutBoxWorker` |
@@ -887,6 +965,9 @@ dotnet test FeatureFusion.sln -c Release
 | `BuildingBlocks.Mediator.Analyzers.Tests` | BBM001 / BBM002 |
 | `BuildingBlocks.Mcp.Tests` | Catalog, invoker, endpoint methods, MapTool scoped SP, idempotency, filters |
 | `BuildingBlocks.Mcp.Analyzers.Tests` | BBMCP001–005 |
+| `BuildingBlocks.Pagination.Tests` | Codec, registry, identifiers (net8 / net9 / net10) |
+| `BuildingBlocks.Pagination.EntityFrameworkCore.Tests` | Sqlite keyset + shadow + projection |
+| `BuildingBlocks.Pagination.Dapper.Tests` | Sqlite execute + dialect SQL asserts |
 | `BuildingBlocks.Telemetry.Tests` | `AddTelemetry` / `IntegrateMediator` / `IntegrateMcp` |
 | `BuildingBlocks.Aspire.Hosting.SigNoz.Tests` | AppHost integration |
 | `IntegrationTests` | Shared Aspire fixture — EventBus, HTTP API smoke, **MCP `/mcp`** (`Api/FeatureFusionMcpTests`) |

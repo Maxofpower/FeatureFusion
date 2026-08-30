@@ -1,0 +1,79 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <WarningsAsErrors>CS1591</WarningsAsErrors>
+    <RootNamespace>BuildingBlocks.Pagination.EntityFrameworkCore</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <PackageId>BuildingBlocks.Pagination.EntityFrameworkCore</PackageId>
+    <Title>BuildingBlocks.Pagination.EntityFrameworkCore</Title>
+    <Version>1.0.0</Version>
+    <Authors>Mohammad Hasan Hosseini</Authors>
+    <Company>Mohammad Hasan Hosseini</Company>
+    <Copyright>Copyright (c) 2026 Mohammad Hasan Hosseini</Copyright>
+    <Description>Typed keyset (cursor) pagination for EF Core: SortKey, opaque cursors, IQueryable ToCursorPageAsync. Includes the Pagination IR assembly — no extra package.</Description>
+    <PackageTags>pagination;keyset;cursor;entityframeworkcore;efcore;net8;net9;net10</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/Maxofpower/FeatureFusion</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Maxofpower/FeatureFusion</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>PACKAGE_README.md</PackageReadmeFile>
+    <PackageIcon>pagination-icon.png</PackageIcon>
+    <PackageReleaseNotes>1.0.0: ToCursorPageAsync for IQueryable; SortKey/cursors ship in this package. https://github.com/Maxofpower/FeatureFusion/blob/main/CHANGELOG.md</PackageReleaseNotes>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <Deterministic>true</Deterministic>
+    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);_IncludeProjectReferenceOutputs</TargetsForTfmSpecificBuildOutput>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="PACKAGE_README.md" Pack="true" PackagePath="\" />
+    <None Include="AGENTS.md" Pack="true" PackagePath="\" />
+    <None Include="..\Pagination\pagination-icon.png" Pack="true" PackagePath="\" />
+    <None Include="PublicAPI.Shipped.txt" Pack="false" />
+    <None Include="PublicAPI.Unshipped.txt" Pack="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.11" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.0" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Pagination\BuildingBlocks.Pagination.csproj">
+      <PrivateAssets>all</PrivateAssets>
+    </ProjectReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="BuildingBlocks.Pagination.EntityFrameworkCore.Tests" />
+    <InternalsVisibleTo Include="BuildingBlocks.Pagination.EntityFrameworkCore.Benchmarks" />
+  </ItemGroup>
+
+  <!-- Bundle the non-packable IR assembly so consumers install one nupkg. -->
+  <Target Name="_IncludeProjectReferenceOutputs" DependsOnTargets="BuildOnlySettings;ResolveReferences">
+    <ItemGroup>
+      <_IrDll Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.ReferenceSourceTarget)' == 'ProjectReference'" />
+      <BuildOutputInPackage Include="@(_IrDll)" />
+      <BuildOutputInPackage Include="@(_IrDll->'%(RootDir)%(Directory)%(Filename).xml')" Condition="Exists('%(RootDir)%(Directory)%(Filename).xml')" />
+    </ItemGroup>
+  </Target>
+
+</Project>
