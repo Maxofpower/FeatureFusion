@@ -46,7 +46,9 @@ Release tags (must match the project `<Version>`): `mediator-v*`, `mcp-v*`, `ide
 
 - HTTP `Idempotency-Key` only — do not fold MCP `IMcpIdempotencyStore` into this package.
 - Host owns `IDistributedCache` (and `IConnectionMultiplexer` when using the Redis lock).
+- Prefer **System.Text.Json** for cache / MVC body capture (no Newtonsoft.Json).
 - Lab provenance: Experiments 3 / 4 / 12 under `tests/Lab/IntegrationTests/Experiments/`.
+- Release tag: `idempotency-v*` must match `<Version>` (current **1.0.1**).
 
 ### BuildingBlocks.Telemetry / SigNoz hosting
 

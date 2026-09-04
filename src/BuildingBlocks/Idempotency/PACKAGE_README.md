@@ -3,10 +3,16 @@
 ASP.NET Core **Idempotency-Key** for MVC and Minimal API. Host-owned `IDistributedCache`, optional Redis lock, opt-in request fingerprint, RFC 9457 ProblemDetails on conflicts, optional ActivitySource.
 
 [![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Idempotency.svg)](https://www.nuget.org/packages/BuildingBlocks.Idempotency)
+[![GitHub Release](https://img.shields.io/github/v/release/Maxofpower/FeatureFusion?filter=idempotency-v*&logo=github&label=GitHub%20Release)](https://github.com/Maxofpower/FeatureFusion/releases?q=idempotency-v)
 [![.NET](https://img.shields.io/badge/.NET-8%20%7C%209%20%7C%2010-512BD4)](https://dotnet.microsoft.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Requires **.NET 8**, **.NET 9**, or **.NET 10**.
+
+## What's new in 1.0.1
+
+- **Package icon** for NuGet listing parity with other BuildingBlocks
+- **System.Text.Json** for the cache envelope and MVC `ObjectResult` body capture (dropped `Newtonsoft.Json`). Minimal API already used STJ. No public API change from 1.0.0.
 
 ## Install
 
@@ -14,7 +20,7 @@ Requires **.NET 8**, **.NET 9**, or **.NET 10**.
 dotnet add package BuildingBlocks.Idempotency
 ```
 
-## Features (1.0.0)
+## Features
 
 - Shared gate for **MVC** (`[Idempotent]`) and **Minimal API** (`WithIdempotency`)
 - Cache **HTTP 2xx** envelopes (status, content-type, body) and replay them
@@ -26,6 +32,7 @@ dotnet add package BuildingBlocks.Idempotency
 - `DuplicateCompletedBehavior`: Replay (default) or Conflict
 - ProblemDetails errors with stable `type` URIs
 - Optional telemetry (`.UseTelemetry()`); host `AddSource("BuildingBlocks.Idempotency")`
+- **System.Text.Json** only (cache + MVC + Minimal API)
 
 ## Quick start
 

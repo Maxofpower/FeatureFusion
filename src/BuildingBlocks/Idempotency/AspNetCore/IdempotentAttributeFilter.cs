@@ -1,9 +1,9 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace BuildingBlocks.Idempotency.AspNetCore;
 
@@ -121,7 +121,7 @@ public sealed class IdempotentAttributeFilter : IAsyncResourceFilter, IAsyncActi
 
 	/// <summary>
 	/// Captures a successful action result for cache storage.
-	/// Keeps Newtonsoft serialization for ObjectResult values (same representation as historical Lab/Exp 3).
+	/// Serializes <see cref="ObjectResult"/> values with <see cref="JsonSerializer"/> (System.Text.Json).
 	/// Caches all HTTP 2xx results (including null StatusCode meaning 200).
 	/// </summary>
 	internal static bool TryCaptureSuccessfulResponse(
@@ -138,7 +138,7 @@ public sealed class IdempotentAttributeFilter : IAsyncResourceFilter, IAsyncActi
 		{
 			statusCode = obj.StatusCode ?? StatusCodes.Status200OK;
 			contentType = "application/json";
-			body = JsonConvert.SerializeObject(obj.Value);
+			body = JsonSerializer.Serialize(obj.Value);
 			return true;
 		}
 

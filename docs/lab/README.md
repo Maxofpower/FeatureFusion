@@ -53,7 +53,7 @@ Aspire: Postgres │ Redis │ RabbitMQ │ Memcached │ SigNoz
 | Family | Experiments | Outcome |
 |--------|-------------|---------|
 | Keyset pagination abuse | 1–2 | Careless HTTP/MCP cursor clients characterized |
-| HTTP Redis idempotency | 3, 4, 12, 15 | Miss/hit, concurrency, fingerprint, ProcessingTtl lease overlap → **BuildingBlocks.Idempotency 1.0.0** |
+| HTTP Redis idempotency | 3, 4, 12, 15 | Miss/hit, concurrency, fingerprint, ProcessingTtl lease overlap → **BuildingBlocks.Idempotency 1.0.1** |
 | MCP write / agent-client semantics | 6, 13, 14, 16 | Confirm+replay, regenerated keys amplify, concurrent same-key safe, **IMcpRateLimiter** bounds distinct-key storms |
 | Outbox → bus → inbox happy path | 5, 8, 10 | HTTP + MCP parity; outbox row lifecycle |
 | Consumer dedup / failure | 7, 9, 11, 17 | Inbox dedup; retry/DLQ; `EnableDeduplication` + `processed_messages` |
@@ -74,7 +74,7 @@ Do **not** extract: Scenario DSL, one-off test gates, fixed-permit rate limiters
 
 ## Package / versioning (current)
 
-- Each packable project owns `<Version>` in its `.csproj` (e.g. `BuildingBlocks.Pagination.EntityFrameworkCore` `1.1.0`, `BuildingBlocks.Mcp` `1.0.0`).
+- Each packable project owns `<Version>` in its `.csproj` (e.g. `BuildingBlocks.Pagination.EntityFrameworkCore` `1.1.0`, `BuildingBlocks.Idempotency` `1.0.1`, `BuildingBlocks.Mcp` `1.0.0`).
 - Release tags are package-prefixed (`mcp-v*`, `mediator-v*`, `telemetry-v*`, …) and must match `<Version>`.
 - Per-package GitHub Actions: `*-yml` CI + `*-release.yml` pack / Trusted Publishing to nuget.org (`idempotency.yml` / `idempotency-release.yml` for this package).
 - IntegrationTests / Exp 1–18 are **not** in CI (local Aspire/Docker).

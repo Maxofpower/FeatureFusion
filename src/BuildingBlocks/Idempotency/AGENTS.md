@@ -1,6 +1,6 @@
 # BuildingBlocks.Idempotency — agent notes
 
-**Status: COMPLETE — 1.0.0**
+**Status: COMPLETE — 1.0.1**
 
 HTTP **Idempotency-Key** for ASP.NET Core. Consumer docs: [PACKAGE_README.md](PACKAGE_README.md). Lab guide: [docs/building-blocks/idempotency.md](../../../docs/building-blocks/idempotency.md).
 
@@ -35,7 +35,7 @@ app.MapPost("/path", handler).WithIdempotency(useLock: true);
 - Errors: ProblemDetails (`https://buildingblocks.dev/errors/idempotency/...`)
 - Fingerprint default **off** (Exp 3); on → method+path+body SHA-256 (Exp 12)
 - Lock only around GetOrCreate when `UseLock` (Exp 4)
-- MVC ObjectResult body: Newtonsoft.Json; Minimal API `IResult`: System.Text.Json
+- MVC ObjectResult body and cache envelope: System.Text.Json; Minimal API `IResult`: System.Text.Json
 - Telemetry optional; no cache-key tag by default; no BuildingBlocks.Telemetry package ref
 
 ## Lab evidence

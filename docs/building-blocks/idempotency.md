@@ -2,7 +2,15 @@
 
 ASP.NET Core HTTP **Idempotency-Key** for MVC and Minimal API: host-owned `IDistributedCache`, optional Redis lock, opt-in fingerprint, ProblemDetails on conflicts, optional ActivitySource.
 
-Canonical consumer docs: [package README](../../src/BuildingBlocks/Idempotency/PACKAGE_README.md). Agent notes: [AGENTS.md](../../src/BuildingBlocks/Idempotency/AGENTS.md).
+[![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Idempotency.svg)](https://www.nuget.org/packages/BuildingBlocks.Idempotency)
+[![GitHub Release](https://img.shields.io/github/v/release/Maxofpower/FeatureFusion?filter=idempotency-v*&logo=github&label=GitHub%20Release)](https://github.com/Maxofpower/FeatureFusion/releases?q=idempotency-v)
+
+**Current package version: 1.0.1.** Canonical consumer docs: [package README](../../src/BuildingBlocks/Idempotency/PACKAGE_README.md). Agent notes: [AGENTS.md](../../src/BuildingBlocks/Idempotency/AGENTS.md).
+
+## What's new in 1.0.1
+
+- NuGet package icon
+- **System.Text.Json** for cache envelope and MVC `ObjectResult` capture (no Newtonsoft.Json). No public API change from 1.0.0.
 
 ## Install
 

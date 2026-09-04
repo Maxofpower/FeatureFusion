@@ -60,7 +60,7 @@ NuGet packages you can install in **your** hosts. The FeatureFusion API is a sho
 |---------|---------|------|------|
 | **[BuildingBlocks.Mediator](https://www.nuget.org/packages/BuildingBlocks.Mediator)** | **1.1.0** | CQRS **Send** + ordered pipeline (`ICommand` / `IQuery`, typed behaviors, opt-in traces + metrics) | net8 / net9 / net10 |
 | **[BuildingBlocks.Mcp](https://www.nuget.org/packages/BuildingBlocks.Mcp)** | **1.0.0** | Message types → MCP tools on the official SDK (deny-by-default, `McpResult`, HTTP + opt-in stdio) | net8 / net9 / net10 |
-| **[BuildingBlocks.Idempotency](https://www.nuget.org/packages/BuildingBlocks.Idempotency)** | **1.0.0** | HTTP **Idempotency-Key** — MVC + Minimal API, 2xx envelope replay, ProblemDetails, optional Redis lock, fingerprint, ActivitySource | net8 / net9 / net10 |
+| **[BuildingBlocks.Idempotency](https://www.nuget.org/packages/BuildingBlocks.Idempotency)** | **1.0.1** | HTTP **Idempotency-Key** — MVC + Minimal API, 2xx envelope replay, ProblemDetails, optional Redis lock, fingerprint, ActivitySource | net8 / net9 / net10 |
 | **[BuildingBlocks.Pagination.EntityFrameworkCore](https://www.nuget.org/packages/BuildingBlocks.Pagination.EntityFrameworkCore)** | **1.1.0** | Typed keyset (cursor) pagination for EF Core (IR bundled): any-width Npgsql row comparison, `NULLS FIRST/LAST`, `HasKeysetIndex` + `NullOrder` | net8 / net9 / net10 |
 | **[BuildingBlocks.Telemetry](https://www.nuget.org/packages/BuildingBlocks.Telemetry)** | **1.0.2** | Config-driven OpenTelemetry (traces, metrics, logs) + `IntegrateMediator` / opt-in `IntegrateMcp` | net8 / net9 / net10 |
 | **[BuildingBlocks.Aspire.Hosting.SigNoz](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz)** | **1.0.0** | Local-dev Aspire `AddSigNoz()` + `WithSigNozOtlpExporter` | net10 (AppHost) |
@@ -362,7 +362,7 @@ Cursor HTTP:
 
 ASP.NET Core HTTP **Idempotency-Key** for MVC and Minimal API. Host-owned `IDistributedCache`, **2xx** envelope replay, ProblemDetails on conflicts, optional Redis SET NX lock, opt-in method/path/body fingerprint, per-endpoint TTL, optional ActivitySource. Distinct from MCP write idempotency (`UseMemoryIdempotency` / `IMcpIdempotencyStore` above).
 
-**What's new in 1.0.0:** shared `IdempotencyGate` for MVC + Minimal API, 2xx envelope replay, ProblemDetails, optional Redis lock / fingerprint / telemetry. NuGet and release badges resolve after `idempotency-v1.0.0` is tagged and published.
+**What's new in 1.0.1:** NuGet package icon; **System.Text.Json** for cache envelope and MVC `ObjectResult` capture (dropped Newtonsoft.Json). No API surface change from 1.0.0.
 
 ```bash
 dotnet add package BuildingBlocks.Idempotency
@@ -718,7 +718,7 @@ Install the packages above in your own hosts, **or** clone this repo and run **F
 | Telemetry | **`BuildingBlocks.Telemetry`** in ServiceDefaults; **`BuildingBlocks.Aspire.Hosting.SigNoz`** on AppHost |
 | Event bus | RabbitMQ + transactional outbox/inbox, DLQ, dedup hooks |
 | Aspire lab | AppHost orchestration for Postgres, Redis, RabbitMQ, Memcached, SigNoz |
-| HTTP idempotency | **`BuildingBlocks.Idempotency`** — MVC + Minimal API, 2xx envelope replay, optional Redis lock (`POST /api/v2/Order/order`) |
+| HTTP idempotency | **`BuildingBlocks.Idempotency` 1.0.1** — MVC + Minimal API, 2xx envelope replay, System.Text.Json, optional Redis lock (`POST /api/v2/Order/order`) |
 | Feature flags (demo) | ASP.NET Core Feature Management + custom filters (claims / VIP) |
 | API surface | Versioned controllers + Minimal APIs, FluentValidation patterns |
 | Gateway | YARP reverse proxy + Memcached distributed rate limiting |
@@ -943,7 +943,7 @@ Conditional features via Microsoft.FeatureManagement and custom filters (e.g. VI
 
 ### HTTP idempotency (BuildingBlocks.Idempotency)
 
-REST idempotency with `IDistributedCache` status tracking, MVC `[Idempotent]` / Minimal API `WithIdempotency`, and optional Redis lock (`POST /api/v2/Order/order`, smoke `POST /api/v2/idempotency-smoke`). See [BuildingBlocks.Idempotency](#buildingblocksidempotency).
+REST idempotency with `IDistributedCache` status tracking, MVC `[Idempotent]` / Minimal API `WithIdempotency`, optional Redis lock, and **System.Text.Json** cache/body serialization (`POST /api/v2/Order/order`, smoke `POST /api/v2/idempotency-smoke`). Package **1.0.1**. See [BuildingBlocks.Idempotency](#buildingblocksidempotency).
 
 - [Idempotency with CQRS](https://www.linkedin.com/feed/update/urn:li:activity:7303686809891356676/)
 - [IdempotentFusion project](https://www.linkedin.com/feed/update/urn:li:activity:7309149985307029504/) (historical Lab name)
@@ -986,7 +986,7 @@ See [Pagination showcase](#pagination-showcase) for the FeatureFusion catalog (`
 | **Polling publisher** | `OutBoxWorker` background poll → publish |
 | **Dead letter queue** | EventBus DLX / DLQ topology |
 | **Message deduplication** | Inbox + `MessageDeduplicationService` |
-| **Idempotency** | `BuildingBlocks.Idempotency` — `[Idempotent]` / `WithIdempotency`, cache envelope, optional Redis lock |
+| **Idempotency** | `BuildingBlocks.Idempotency` **1.0.1** — `[Idempotent]` / `WithIdempotency`, System.Text.Json cache envelope, optional Redis lock |
 | **Feature toggle** | ASP.NET Core Feature Management + custom filters |
 | **Rate limiting** | ApiGateway Memcached fixed-window limiter |
 | **Circuit breaker / resilience** | Polly `ResiliencePipelineFactory` |

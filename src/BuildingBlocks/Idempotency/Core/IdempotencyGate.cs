@@ -1,8 +1,8 @@
 using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace BuildingBlocks.Idempotency;
 
@@ -166,7 +166,7 @@ public sealed class IdempotencyGate
 			RequestFingerprint = requestFingerprint,
 			ProcessingExpiresAtUtc = null
 		};
-		var cacheEntryData = JsonConvert.SerializeObject(cacheEntry);
+		var cacheEntryData = JsonSerializer.Serialize(cacheEntry);
 		var entryTtl = endpoint.EntryTtl ?? _options.EntryTtl;
 
 		await _distributedCache.SetAsync(
@@ -289,7 +289,7 @@ public sealed class IdempotencyGate
 		var cacheData = await _distributedCache.GetAsync(cacheKey, cancellationToken).ConfigureAwait(false);
 		if (cacheData != null)
 		{
-			var existing = JsonConvert.DeserializeObject<IdempotencyCacheEntry>(Encoding.UTF8.GetString(cacheData));
+			var existing = JsonSerializer.Deserialize<IdempotencyCacheEntry>(Encoding.UTF8.GetString(cacheData));
 			if (existing is not null
 				&& existing.Status == "Processing"
 				&& IsProcessingExpired(existing))
@@ -310,7 +310,7 @@ public sealed class IdempotencyGate
 			RequestFingerprint = requestFingerprint,
 			ProcessingExpiresAtUtc = expiresAt
 		};
-		var cacheEntryData = JsonConvert.SerializeObject(cacheEntry);
+		var cacheEntryData = JsonSerializer.Serialize(cacheEntry);
 
 		await _distributedCache.SetAsync(
 			cacheKey,
@@ -345,7 +345,7 @@ public sealed class IdempotencyGate
 			RequestFingerprint = requestFingerprint,
 			ProcessingExpiresAtUtc = DateTimeOffset.UtcNow.Add(processingTtl)
 		};
-		var cacheEntryData = JsonConvert.SerializeObject(cacheEntry);
+		var cacheEntryData = JsonSerializer.Serialize(cacheEntry);
 
 		await _distributedCache.SetAsync(
 			cacheKey,

@@ -12,11 +12,11 @@
     <IsPackable>true</IsPackable>
     <PackageId>BuildingBlocks.Idempotency</PackageId>
     <Title>BuildingBlocks.Idempotency</Title>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <Authors>Mohammad Hasan Hosseini</Authors>
     <Company>Mohammad Hasan Hosseini</Company>
     <Copyright>Copyright (c) 2026 Mohammad Hasan Hosseini</Copyright>
-    <Description>ASP.NET Core HTTP Idempotency-Key filter (MVC + Minimal API): shared IdempotencyGate over IDistributedCache, 2xx response envelope replay, RFC 9457 ProblemDetails errors, optional Redis SET NX lock, ProcessingTtl abandoned recovery, opt-in method+path+body fingerprinting, per-endpoint TTL, and optional ActivitySource instrumentation. Host owns cache registration. No MCP or Telemetry package coupling.</Description>
+    <Description>ASP.NET Core HTTP Idempotency-Key filter (MVC + Minimal API): shared IdempotencyGate over IDistributedCache, 2xx response envelope replay, RFC 9457 ProblemDetails errors, optional Redis SET NX lock, ProcessingTtl abandoned recovery, opt-in method+path+body fingerprinting, per-endpoint TTL, and optional ActivitySource instrumentation. Host owns cache registration. Uses System.Text.Json. No MCP or Telemetry package coupling.</Description>
     <PackageTags>idempotency;idempotency-key;aspnetcore;minimal-api;redis;distributed-lock;distributed-cache;fingerprint;problemdetails;opentelemetry;net8;net9;net10</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/Maxofpower/FeatureFusion</PackageProjectUrl>
@@ -24,7 +24,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>PACKAGE_README.md</PackageReadmeFile>
     <PackageIcon>idempotency-icon.png</PackageIcon>
-    <PackageReleaseNotes>1.0.0: IdempotencyGate; MVC + Minimal API; 2xx envelope replay; ProblemDetails errors; ProcessingTtl / EntryTtl + per-endpoint overrides; optional Redis lock; opt-in method+path+body fingerprint; fluent UseRedisLock/UseTelemetry. Host owns IDistributedCache. https://github.com/Maxofpower/FeatureFusion/blob/main/CHANGELOG.md</PackageReleaseNotes>
+    <PackageReleaseNotes>1.0.1: package icon; System.Text.Json for cache + MVC ObjectResult (drop Newtonsoft.Json). https://github.com/Maxofpower/FeatureFusion/blob/main/CHANGELOG.md</PackageReleaseNotes>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <IncludeSymbols>true</IncludeSymbols>
@@ -43,7 +43,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="StackExchange.Redis" Version="2.8.16" />
     <PackageReference Include="Ulid" Version="1.3.4" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />

@@ -25,6 +25,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - No hard PackageReference on Npgsql in the nupkg; row comparison requires the host already using Npgsql.EntityFrameworkCore.PostgreSQL.
 - Lab: `NameThenPrice` product sort (3-column keyset) + `AddBuildingBlocksPagination` / `UseBuildingBlocksPagination` on FeatureFusion.
 
+## BuildingBlocks.Idempotency [1.0.1] - 2026-09-04
+
+### Changed
+
+- **System.Text.Json** for cache envelope and MVC `ObjectResult` body capture (dropped `Newtonsoft.Json`). Minimal API path already used STJ. Default property names remain PascalCase.
+- **Package icon** (`idempotency-icon.png`) for NuGet listing parity with other BuildingBlocks.
+
+### Notes
+
+- Cache JSON written by 1.0.0 (Newtonsoft) and 1.0.1 (STJ) are compatible for `IdempotencyCacheEntry` under default options; clear cache if you see odd replay after upgrading mid-flight.
+- Package still depends on `Ulid` and `StackExchange.Redis` (Redis lock); hosts that use the lock must register `IConnectionMultiplexer`.
+
 ## BuildingBlocks.Idempotency [1.0.0] - 2026-09-04
 
 ### Added
@@ -45,7 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Notes
 
 - Distinct from MCP write idempotency (`UseMemoryIdempotency` / `IMcpIdempotencyStore` in BuildingBlocks.Mcp)
-- Package depends on `Newtonsoft.Json` (MVC ObjectResult capture), `Ulid`, and `StackExchange.Redis` (Redis lock); hosts that use the lock must register `IConnectionMultiplexer`
+- Package depended on `Newtonsoft.Json` (MVC ObjectResult capture), `Ulid`, and `StackExchange.Redis` (Redis lock); hosts that use the lock must register `IConnectionMultiplexer`
 
 ## BuildingBlocks.Pagination.EntityFrameworkCore [1.0.0] - 2026-08-29
 

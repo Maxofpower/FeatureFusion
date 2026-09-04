@@ -2,6 +2,9 @@
 
 Typed keyset (cursor) pagination. **One NuGet:** `BuildingBlocks.Pagination.EntityFrameworkCore` **1.1.0** (IR + EF Core adapter). Dapper is an in-repo project, not a package.
 
+[![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Pagination.EntityFrameworkCore.svg)](https://www.nuget.org/packages/BuildingBlocks.Pagination.EntityFrameworkCore)
+[![GitHub Release](https://img.shields.io/github/v/release/Maxofpower/FeatureFusion?filter=pagination-v*&logo=github&label=GitHub%20Release)](https://github.com/Maxofpower/FeatureFusion/releases?q=pagination-v)
+
 See ADR [0003](../adr/0003-pagination-keyset.md), the [test matrix](PAGINATION_TEST_MATRIX.md), and [`PACKAGE_README.md`](../../src/BuildingBlocks/Pagination.EntityFrameworkCore/PACKAGE_README.md).
 
 ## Install
