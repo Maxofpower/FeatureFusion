@@ -5,13 +5,16 @@ using EventBusRabbitMQ.Events;
 using EventBusRabbitMQ.Infrastructure;
 using EventBusRabbitMQ.Infrastructure.EventBus;
 using EventBusRabbitMQ.Infrastructure.Context;
+using EventBusRabbitMQ.Infrastructure.Messaging;
 using FeatureFusion.Features.Order.IntegrationEvents.EventHandling;
 using FeatureFusion.Features.Order.IntegrationEvents.Events;
 using IntegrationTests.EventBus;
+using IntegrationTests.Infrastructure.EventBusLab;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -42,6 +45,12 @@ public sealed class AspireFixture : WebApplicationFactory<Program>, IAsyncLifeti
 	private string _memcachedPort = "11211";
 
 	public List<OrderCreatedIntegrationEvent> ProcessedEvents { get; } = new();
+
+	/// <summary>Lab-only EventBus stage journal (Exp 19/20). Cleared by experiments as needed.</summary>
+	public EventBusLabJournal EventBusJournal { get; } = new();
+
+	/// <summary>Lab-only fault arming for point B (publish-then-crash). Default off.</summary>
+	public EventBusLabFaultController EventBusFaults { get; } = new();
 
 	public AspireFixture()
 	{
@@ -129,9 +138,20 @@ public sealed class AspireFixture : WebApplicationFactory<Program>, IAsyncLifeti
 
 			services.AddKeyedScoped<IIntegrationEventHandler<TestIntegrationEvent>,
 				TestIntegrationEventHandler>(typeof(TestIntegrationEvent));
+			services.AddKeyedScoped<IIntegrationEventHandler, TestIntegrationEventHandler>(
+				typeof(TestIntegrationEvent));
 
 			services.AddKeyedScoped<IIntegrationEventHandler<FailingIntegrationEvent>,
 				FailingIntegrationEventHandler>(typeof(FailingIntegrationEvent));
+			services.AddKeyedScoped<IIntegrationEventHandler, FailingIntegrationEventHandler>(
+				typeof(FailingIntegrationEvent));
+
+			services.AddKeyedScoped<IIntegrationEventHandler, TransientThrowingIntegrationEventHandler>(
+				typeof(TransientThrowingIntegrationEvent));
+			services.AddKeyedScoped<IIntegrationEventHandler, BusinessFailureIntegrationEventHandler>(
+				typeof(BusinessFailureIntegrationEvent));
+			services.AddKeyedScoped<IIntegrationEventHandler, OnceTransientThenSucceedIntegrationEventHandler>(
+				typeof(OnceTransientThenSucceedIntegrationEvent));
 
 			services.AddKeyedScoped<IIntegrationEventHandler>(
 				typeof(OrderCreatedIntegrationEvent),
@@ -139,11 +159,30 @@ public sealed class AspireFixture : WebApplicationFactory<Program>, IAsyncLifeti
 					sp.GetRequiredService<OrderCreatedIntegrationEventHandler>(),
 					ProcessedEvents));
 
+			// Lab EventBus observation seam (no-op when faults disarmed).
+			services.AddSingleton(EventBusJournal);
+			services.AddSingleton(EventBusFaults);
+			services.AddSingleton<IEventBusLabHook>(sp =>
+				new EventBusLabHook(EventBusJournal, EventBusFaults));
+
+			services.RemoveAll<IMessageProcessor>();
+			services.AddScoped<MessageProcessor>();
+			services.AddScoped<IMessageProcessor>(sp =>
+				new LabMessageProcessorDecorator(
+					sp.GetRequiredService<MessageProcessor>(),
+					EventBusJournal));
+
 			services.Configure<EventBusSubscriptionInfo>(o =>
 			{
 				o.EventTypes[typeof(OrderCreatedIntegrationEvent).Name] = typeof(OrderCreatedIntegrationEvent);
 				o.EventTypes[typeof(TestIntegrationEvent).Name] = typeof(TestIntegrationEvent);
 				o.EventTypes[typeof(FailingIntegrationEvent).Name] = typeof(FailingIntegrationEvent);
+				o.EventTypes[typeof(TransientThrowingIntegrationEvent).Name] =
+					typeof(TransientThrowingIntegrationEvent);
+				o.EventTypes[typeof(BusinessFailureIntegrationEvent).Name] =
+					typeof(BusinessFailureIntegrationEvent);
+				o.EventTypes[typeof(OnceTransientThenSucceedIntegrationEvent).Name] =
+					typeof(OnceTransientThenSucceedIntegrationEvent);
 			});
 
 			services.AddHostedService(provider =>

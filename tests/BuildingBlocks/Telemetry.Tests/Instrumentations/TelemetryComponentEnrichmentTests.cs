@@ -64,6 +64,7 @@ public sealed class TelemetryComponentEnrichmentTests
     [InlineData("Npgsql", TelemetryComponentTags.Npgsql)]
     [InlineData("EventBus", TelemetryComponentTags.EventBus)]
     [InlineData("BuildingBlocks.Mediator", TelemetryComponentTags.Mediator)]
+    [InlineData("BuildingBlocks.Mcp", TelemetryComponentTags.Mcp)]
     [InlineData("MassTransit", TelemetryComponentTags.MassTransit)]
     [InlineData("Microsoft.AspNetCore", TelemetryComponentTags.AspNetCore)]
     [InlineData("System.Net.Http", TelemetryComponentTags.HttpClient)]

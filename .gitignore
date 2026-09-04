@@ -190,6 +190,8 @@ docs/**
 !docs/building-blocks/**
 !docs/adr/
 !docs/adr/**
+!docs/lab/
+!docs/lab/**
 
 # Local-only polluted/autogen solutions
 src/src.sln

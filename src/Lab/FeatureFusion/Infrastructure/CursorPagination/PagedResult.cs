@@ -1,4 +1,4 @@
-﻿namespace FeatureFusion.Infrastructure.CursorPagination
+namespace FeatureFusion.Infrastructure.CursorPagination
 {
 	public record PagedResult<T>(
 	IReadOnlyList<T> Items,

@@ -59,4 +59,4 @@ Writes (Command / POST / PUT) are never retried. Commands default to requiring `
 
 Agents: send a **new UUID** for a new write; **reuse** the key only on retry of that write. Do not invent keys for query tools.
 
-Optional `IMcpToolFilter`, `IMcpRateLimiter`.
+Optional `IMcpToolFilter`, `IMcpRateLimiter`. `UseTelemetry()` emits `mcp.tool` spans. `IncludeExceptionDetails` is explicit opt-in (not auto-Development). Host export needs `IntegrateMcp`.

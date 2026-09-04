@@ -12,6 +12,8 @@ dotnet add package BuildingBlocks.Pagination.EntityFrameworkCore
 
 Requires .NET 8 / 9 / 10. The nupkg includes `BuildingBlocks.Pagination.dll` (`SortKey`, cursors — the shared **intermediate representation** that adapters execute). Core and Dapper projects in this repo are **not** packed. PackageRef `Microsoft.EntityFrameworkCore` matches the TFM (8 / 9 / 10).
 
+![OFFSET skip growing with page number versus keyset seeking from the last Price and Id.](../medium/images/04-offset-vs-keyset.png)
+
 ## SortKey
 
 ```csharp
@@ -69,6 +71,8 @@ GET /api/v2/products-page?limit=20&sortBy=Price&sortDirection=Ascending&cursor=<
 ```
 
 Empty cursor + `pageDirection=Backward` starts at the last page (`GET /api/v2/products-page?limit=20&pageDirection=Backward`). `sortBy`: `Id` · `Name` · `Price` · `CreatedAt` (each composite key ends with unique `Id`). `sortDirection`: `Ascending` · `Descending`.
+
+![First page, next cursor, previous cursor, last page via pageDirection=Backward.](../medium/images/04b-cursor-flow.png)
 
 Same query on:
 

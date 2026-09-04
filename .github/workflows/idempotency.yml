@@ -1,0 +1,49 @@
+name: Idempotency CI
+
+on:
+  push:
+    paths:
+      - "src/BuildingBlocks/Idempotency/**"
+      - "tests/BuildingBlocks/Idempotency.Tests/**"
+      - ".github/workflows/idempotency.yml"
+  pull_request:
+    paths:
+      - "src/BuildingBlocks/Idempotency/**"
+      - "tests/BuildingBlocks/Idempotency.Tests/**"
+      - ".github/workflows/idempotency.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: idempotency-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-pack:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+
+      - name: Test library (net8 / net9 / net10)
+        run: dotnet test tests/BuildingBlocks/Idempotency.Tests/BuildingBlocks.Idempotency.Tests.csproj -c Release --verbosity minimal
+
+      - name: Pack
+        run: dotnet pack src/BuildingBlocks/Idempotency/BuildingBlocks.Idempotency.csproj -c Release -o artifacts/nuget -p:ContinuousIntegrationBuild=true
+
+      - name: Upload nupkg
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages-idempotency
+          path: |
+            artifacts/nuget/*.nupkg
+            artifacts/nuget/*.snupkg
+          if-no-files-found: error

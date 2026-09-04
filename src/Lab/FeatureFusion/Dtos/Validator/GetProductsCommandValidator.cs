@@ -1,4 +1,4 @@
-﻿using BuildingBlocks.Pagination;
+using BuildingBlocks.Pagination;
 using FeatureFusion.Features.Products.Queries;
 using FeatureFusion.Infrastructure.Pagination;
 using FluentValidation;

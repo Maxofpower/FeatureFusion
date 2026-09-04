@@ -9,7 +9,6 @@ namespace BuildingBlocks.Mcp;
 /// On a public static Minimal API method: JSON binds to the request parameter; other parameters resolve from DI.
 /// MVC controllers are unsupported for now (actions, <c>[FromHeader]</c>, <c>ActionResult</c>).
 /// Use a public static Minimal API method or a message type. Do not use for OpenAPI generation.
-/// Catalog: docs/linkedin-posts.md (<c>mcp-message-tools</c>).
 /// </remarks>
 /// <example>
 /// <code>

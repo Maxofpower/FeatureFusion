@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
@@ -5,9 +6,11 @@ using EventBusRabbitMQ;
 using EventBusRabbitMQ.Events;
 using EventBusRabbitMQ.Infrastructure;
 using EventBusRabbitMQ.Infrastructure.EventBus;
+using EventBusRabbitMQ.Utilities;
 using FeatureFusion.Features.Order.IntegrationEvents.Events;
 using FluentAssertions;
 using IntegrationTests.Aspire;
+using IntegrationTests.Infrastructure.Async;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
@@ -38,12 +41,77 @@ public sealed class RabbitMQEventBusTests : IAsyncLifetime
 			() => new OrderCreatedIntegrationEvent(Guid.NewGuid(), 99.0m));
 	}
 
+	/// <summary>
+	/// Smoke: <see cref="FailingIntegrationEvent"/> handler executes once, then permanent failure dead-letters.
+	/// See Experiment 11.
+	/// </summary>
 	[Fact]
 	public async Task Publishes_And_Processes_Failed_Events()
 	{
 		await _fixture.ResetRabbitMQ();
+		FailingIntegrationEventHandler.ResetInvocationCount();
 		var testEvent = new FailingIntegrationEvent(Guid.NewGuid(), 110.0m);
-		await PublishAndVerifyDlq(testEvent);
+		var eventBus = GetRequiredService<IEventBus>();
+
+		await eventBus.PublishDirect(testEvent);
+
+		await Wait.UntilAsync(
+			() => FailingIntegrationEventHandler.InvocationCount >= 1,
+			TimeSpan.FromSeconds(20));
+
+		await using var channel = await CreateChannelAsync();
+		var dlqName = GetDlqName();
+		await WaitForMessageCount(channel, dlqName, 1, TimeSpan.FromSeconds(20));
+
+		FailingIntegrationEventHandler.InvocationCount.Should().Be(1);
+	}
+
+	/// <summary>
+	/// Smoke: <see cref="TransientThrowingIntegrationEvent"/> is retried until RetryCount handler
+	/// executions, then dead-letters. See Experiment 11.
+	/// </summary>
+	[Fact]
+	public async Task Transient_handler_failure_is_retried_on_redelivery()
+	{
+		await _fixture.ResetRabbitMQ();
+		TransientThrowingIntegrationEventHandler.ResetInvocationCount();
+		var retryCount = GetRequiredService<IOptions<EventBusOptions>>().Value.RetryCount;
+		var testEvent = new TransientThrowingIntegrationEvent(Guid.NewGuid(), 120.0m);
+		var eventBus = GetRequiredService<IEventBus>();
+
+		await eventBus.PublishDirect(testEvent);
+
+		await Wait.UntilAsync(
+			() => TransientThrowingIntegrationEventHandler.InvocationCount >= retryCount,
+			TimeSpan.FromSeconds(30));
+
+		await using var channel = await CreateChannelAsync();
+		var dlqName = GetDlqName();
+		await WaitForMessageCount(channel, dlqName, 1, TimeSpan.FromSeconds(20));
+
+		TransientThrowingIntegrationEventHandler.InvocationCount.Should().Be(retryCount);
+	}
+
+	/// <summary>
+	/// Smoke: first <see cref="TransientException"/> requeues; the next handler execution succeeds.
+	/// </summary>
+	[Fact]
+	public async Task Transient_handler_failure_can_succeed_on_retry()
+	{
+		await _fixture.ResetRabbitMQ();
+		OnceTransientThenSucceedIntegrationEventHandler.Reset();
+		var testEvent = new OnceTransientThenSucceedIntegrationEvent(Guid.NewGuid(), 140.0m);
+		var eventBus = GetRequiredService<IEventBus>();
+
+		await eventBus.PublishDirect(testEvent);
+
+		await Wait.UntilAsync(
+			() => OnceTransientThenSucceedIntegrationEventHandler.InvocationCountFor(testEvent.Id) >= 2,
+			TimeSpan.FromSeconds(30));
+
+		await Task.Delay(1000);
+
+		OnceTransientThenSucceedIntegrationEventHandler.InvocationCountFor(testEvent.Id).Should().Be(2);
 	}
 
 	[Fact]
@@ -236,22 +304,107 @@ public record FailingIntegrationEvent : IntegrationEvent
 
 public class FailingIntegrationEventHandler : IIntegrationEventHandler<FailingIntegrationEvent>
 {
+	private static int _invocationCount;
+
+	/// <summary>Test-only observation counter for behavioral experiments.</summary>
+	public static int InvocationCount => _invocationCount;
+
+	public static void ResetInvocationCount() =>
+		Interlocked.Exchange(ref _invocationCount, 0);
+
 	public Task Handle(FailingIntegrationEvent @event)
 	{
+		Interlocked.Increment(ref _invocationCount);
 		throw new InvalidOperationException("Simulated handler failure");
 	}
 }
 
-public static class Wait
+public record TransientThrowingIntegrationEvent : IntegrationEvent
 {
-	public static async Task UntilAsync(Func<bool> condition, TimeSpan timeout)
+	public decimal Total { get; }
+
+	public TransientThrowingIntegrationEvent(Guid id, decimal total)
 	{
-		var stopwatch = Stopwatch.StartNew();
-		while (stopwatch.Elapsed < timeout)
-		{
-			if (condition()) return;
-			await Task.Delay(100);
-		}
-		throw new TimeoutException("Condition not met within timeout");
+		Id = id;
+		Total = total;
 	}
 }
+
+public sealed class TransientThrowingIntegrationEventHandler
+	: IIntegrationEventHandler<TransientThrowingIntegrationEvent>
+{
+	private static int _invocationCount;
+
+	public static int InvocationCount => _invocationCount;
+
+	public static void ResetInvocationCount() =>
+		Interlocked.Exchange(ref _invocationCount, 0);
+
+	public Task Handle(TransientThrowingIntegrationEvent @event)
+	{
+		Interlocked.Increment(ref _invocationCount);
+		throw new TransientException("Simulated transient handler failure");
+	}
+}
+
+public record BusinessFailureIntegrationEvent : IntegrationEvent
+{
+	public decimal Total { get; }
+
+	public BusinessFailureIntegrationEvent(Guid id, decimal total)
+	{
+		Id = id;
+		Total = total;
+	}
+}
+
+public sealed class BusinessFailureIntegrationEventHandler
+	: IIntegrationEventHandler<BusinessFailureIntegrationEvent>
+{
+	private static int _invocationCount;
+
+	public static int InvocationCount => _invocationCount;
+
+	public static void ResetInvocationCount() =>
+		Interlocked.Exchange(ref _invocationCount, 0);
+
+	public Task Handle(BusinessFailureIntegrationEvent @event)
+	{
+		Interlocked.Increment(ref _invocationCount);
+		throw new BusinessException("Simulated business handler failure");
+	}
+}
+
+public record OnceTransientThenSucceedIntegrationEvent : IntegrationEvent
+{
+	public decimal Total { get; }
+
+	public OnceTransientThenSucceedIntegrationEvent(Guid id, decimal total)
+	{
+		Id = id;
+		Total = total;
+	}
+}
+
+public sealed class OnceTransientThenSucceedIntegrationEventHandler
+	: IIntegrationEventHandler<OnceTransientThenSucceedIntegrationEvent>
+{
+	private static readonly ConcurrentDictionary<Guid, int> AttemptsByMessageId = new();
+
+	public static int InvocationCountFor(Guid messageId) =>
+		AttemptsByMessageId.TryGetValue(messageId, out var count) ? count : 0;
+
+	public static void Reset() => AttemptsByMessageId.Clear();
+
+	public Task Handle(OnceTransientThenSucceedIntegrationEvent @event)
+	{
+		var attempt = AttemptsByMessageId.AddOrUpdate(@event.Id, 1, (_, previous) => previous + 1);
+		if (attempt == 1)
+		{
+			throw new TransientException("Simulated first-attempt transient failure");
+		}
+
+		return Task.CompletedTask;
+	}
+}
+

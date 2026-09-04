@@ -1,3 +1,4 @@
+using BuildingBlocks.Idempotency.AspNetCore;
 using BuildingBlocks.Mcp;
 using BuildingBlocks.Mcp.Hosting;
 using Asp.Versioning.Conventions;
@@ -56,6 +57,12 @@ namespace FeatureFusion.API.V2
 				.WithName("LabPing")
 				.WithSummary("Minimal API ping (not a Mediator command). Same method is an MCP tool lab.ping.")
 				.WithMcp(app);
+
+			// Smoke: BuildingBlocks.Idempotency Minimal API surface (not an Exp gate).
+			api.MapPost("/idempotency-smoke", () => Results.Ok(new { ok = true }))
+				.WithName("IdempotencySmoke")
+				.WithSummary("Minimal API Idempotency-Key smoke (WithIdempotency).")
+				.WithIdempotency(useLock: true);
 
 			return api;
 		}

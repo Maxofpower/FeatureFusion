@@ -5,6 +5,28 @@ All notable changes to **BuildingBlocks** packages in this repository are docume
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## BuildingBlocks.Idempotency [1.0.0] - 2026-09-04
+
+### Added
+
+- ASP.NET Core HTTP **Idempotency-Key** filter via shared `IdempotencyGate`: MVC `[Idempotent]` / `IdempotentAttributeFilter` and Minimal API `WithIdempotency` / `IdempotentEndpointFilter`
+- Response envelope replay on Completed keys: status code, content-type, body, plus configurable replay header (default `X-Idempotent-Response`)
+- Cache **all HTTP 2xx** successes (not only 200)
+- Processing state returns ProblemDetails (default 409) while the lease is active; expired Processing is treated as a miss
+- Separate `ProcessingTtl` / `EntryTtl` with optional per-endpoint seconds on attribute / `WithIdempotency`
+- Optional Redis SET NX lock via fluent `.UseRedisLock()` / `AddRedisIdempotencyLock` when `UseLock` is true (lock covers GetOrCreate)
+- Opt-in request fingerprinting (`EnableRequestFingerprint`): `SHA-256(method + "\n" + path + "\n" + body)`; mismatch → ProblemDetails (default 422); default off (Exp 3 compatible)
+- `DuplicateCompletedBehavior` (Replay default / Conflict), configurable processing/duplicate/fingerprint status codes, `MaxKeyLength` + control-character validation
+- RFC 9457 `ProblemDetails` errors with stable `type` URIs under `https://buildingblocks.dev/errors/idempotency/`
+- Optional ActivitySource via `.UseTelemetry()` / `AddIdempotencyTelemetry` (no cache key tag by default; no BuildingBlocks.Telemetry package dependency)
+- Fluent DI: `AddBuildingBlocksIdempotency(...).UseRedisLock().UseTelemetry()`
+- Multi-target `net8.0` / `net9.0` / `net10.0`; Lab FeatureFusion hosts MVC on `POST /api/v2/Order/order` and Minimal API smoke on `POST /api/v2/idempotency-smoke` (provenance Exp 3 / 4 / 12)
+
+### Notes
+
+- Distinct from MCP write idempotency (`UseMemoryIdempotency` / `IMcpIdempotencyStore` in BuildingBlocks.Mcp)
+- Package depends on `Newtonsoft.Json` (MVC ObjectResult capture), `Ulid`, and `StackExchange.Redis` (Redis lock); hosts that use the lock must register `IConnectionMultiplexer`
+
 ## BuildingBlocks.Pagination.EntityFrameworkCore [1.0.0] - 2026-08-29
 
 ### Added

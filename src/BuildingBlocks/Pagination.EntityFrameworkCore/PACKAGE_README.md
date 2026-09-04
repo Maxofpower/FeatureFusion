@@ -8,6 +8,8 @@ Typed **keyset (cursor)** pagination for EF Core: `SortKey`, opaque versioned cu
 
 **When to use:** Stable “next page” over large tables without `OFFSET`. Map a host sort enum to a **prebuilt** `SortKey` — the library never turns `"Price"` into a property name.
 
+![OFFSET skip growing with page number versus keyset seeking from the last Price and Id.](https://raw.githubusercontent.com/Maxofpower/FeatureFusion/main/docs/medium/images/04-offset-vs-keyset.png)
+
 Dapper is an **in-repo project** (not a NuGet package). A LinqToDB adapter is not shipped.
 
 ## What you get
@@ -54,6 +56,8 @@ builder.HasKeysetIndex(priceDescKey).HasDatabaseName("IX_products_price_id_desc"
 `(Price DESC, Id ASC)` is not a reverse scan of `(Price ASC, Id ASC)` — add both when you expose both directions. Nested paths (`Vendor.Name`) are not mapped; index those columns yourself.
 
 Empty cursor + `PageDirection.Backward` is the last page.
+
+![First page, next cursor, previous cursor, last page via pageDirection=Backward.](https://raw.githubusercontent.com/Maxofpower/FeatureFusion/main/docs/medium/images/04b-cursor-flow.png)
 
 There is **no** `IEnumerable` / in-memory adapter. Relational providers execute seek SQL. EF Core InMemory is the same API in-process (tests only).
 

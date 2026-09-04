@@ -2,6 +2,7 @@
 using EventBusRabbitMQ.Events;
 using EventBusRabbitMQ.Infrastructure;
 using EventBusRabbitMQ.Infrastructure.EventBus;
+using EventBusRabbitMQ.Infrastructure.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -86,6 +87,29 @@ public class OutboxWorker<TDbContext> : BackgroundService where TDbContext : DbC
 				}
 
 				await eventBus.PublishDirect((dynamic)@event, ct: stoppingToken);
+
+				// Optional Lab seam (IEventBusLabHook). Unregistered → no-op.
+				var labHook = scope.ServiceProvider.GetService<IEventBusLabHook>();
+				if (labHook is not null)
+				{
+					try
+					{
+						await labHook.OnAfterPublishBeforeOutboxMarkAsync(
+							message.Id,
+							message.EventType,
+							@event,
+							stoppingToken);
+					}
+					catch (EventBusLabSimulatedCrashException)
+					{
+						// Leave ProcessedAt null (pending) — do not MarkProcessed or MarkFailed.
+						_logger.LogWarning(
+							"Lab simulated crash after publish for outbox message {MessageId}; leaving pending",
+							message.Id);
+						continue;
+					}
+				}
+
 				await MarkMessageAsProcessedAsync(dbContext, message, stoppingToken);
 			}
 			catch (JsonException jsonEx)

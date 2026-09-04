@@ -2,9 +2,7 @@
 
 **Status:** NuGet 1.1.0 (CQRS-first Send + pipeline; typed command/query behaviors; UseTelemetry traces + metrics)  
 **Date:** 2026-08-27  
-**Author:** Mohammad Hasan Hosseini  
-**LinkedIn:** [BuildingBlocks.Mediator v1.0.1](https://lnkd.in/p/eU5TsuR4) · [Mediator Pattern + Pipeline Behavior](https://www.linkedin.com/feed/update/urn:li:activity:7311311587372367873/) (prior)  
-**Catalog:** `docs/linkedin-posts.md` → `mediator` / `mediator-building-blocks`
+**Author:** Mohammad Hasan Hosseini
 
 Docs: [getting-started](getting-started.md) · [design](mediator-design.md) · [TEST_MATRIX](TEST_MATRIX.md)
 
