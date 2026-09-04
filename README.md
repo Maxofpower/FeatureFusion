@@ -14,6 +14,12 @@ Formerly [FeatureManagement](https://github.com/Maxofpower/FeatureManagement) (G
 [![NuGet · BuildingBlocks.Pagination.EntityFrameworkCore](https://img.shields.io/nuget/v/BuildingBlocks.Pagination.EntityFrameworkCore.svg?label=NuGet%20·%20Pagination&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Pagination.EntityFrameworkCore)
 [![NuGet · BuildingBlocks.Telemetry](https://img.shields.io/nuget/v/BuildingBlocks.Telemetry.svg?label=NuGet%20·%20Telemetry&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Telemetry)
 [![NuGet · BuildingBlocks.Aspire.Hosting.SigNoz](https://img.shields.io/nuget/v/BuildingBlocks.Aspire.Hosting.SigNoz.svg?label=NuGet%20·%20SigNoz%20hosting&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz)
+[![Release · Mediator](https://img.shields.io/github/v/release/Maxofpower/FeatureFusion?filter=mediator-v*&logo=github&label=Release%20·%20Mediator)](https://github.com/Maxofpower/FeatureFusion/releases?q=mediator-v)
+[![Release · MCP](https://img.shields.io/github/v/release/Maxofpower/FeatureFusion?filter=mcp-v*&logo=github&label=Release%20·%20MCP)](https://github.com/Maxofpower/FeatureFusion/releases?q=mcp-v)
+[![Release · Idempotency](https://img.shields.io/github/v/release/Maxofpower/FeatureFusion?filter=idempotency-v*&logo=github&label=Release%20·%20Idempotency)](https://github.com/Maxofpower/FeatureFusion/releases?q=idempotency-v)
+[![Release · Pagination](https://img.shields.io/github/v/release/Maxofpower/FeatureFusion?filter=pagination-v*&logo=github&label=Release%20·%20Pagination)](https://github.com/Maxofpower/FeatureFusion/releases?q=pagination-v)
+[![Release · Telemetry](https://img.shields.io/github/v/release/Maxofpower/FeatureFusion?filter=telemetry-v*&logo=github&label=Release%20·%20Telemetry)](https://github.com/Maxofpower/FeatureFusion/releases?q=telemetry-v)
+[![Release · SigNoz](https://img.shields.io/github/v/release/Maxofpower/FeatureFusion?filter=signoz-v*&logo=github&label=Release%20·%20SigNoz)](https://github.com/Maxofpower/FeatureFusion/releases?q=signoz-v)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
 [![Stars](https://img.shields.io/github/stars/Maxofpower/FeatureFusion?style=social)](https://github.com/Maxofpower/FeatureFusion/stargazers)
 [![Last commit](https://img.shields.io/github/last-commit/Maxofpower/FeatureFusion)](https://github.com/Maxofpower/FeatureFusion/commits)
@@ -56,14 +62,14 @@ Formerly [FeatureManagement](https://github.com/Maxofpower/FeatureManagement) (G
 
 NuGet packages you can install in **your** hosts. The FeatureFusion API is a showcase, not a required dependency.
 
-| Package | Role | TFMs |
-|---------|------|------|
-| **[BuildingBlocks.Mediator](https://www.nuget.org/packages/BuildingBlocks.Mediator)** | CQRS **Send** + ordered pipeline (`ICommand` / `IQuery`, typed behaviors, opt-in traces + metrics) | net8 / net9 / net10 |
-| **[BuildingBlocks.Mcp](https://www.nuget.org/packages/BuildingBlocks.Mcp)** | Message types → MCP tools on the official SDK (deny-by-default, `McpResult`, HTTP + opt-in stdio) | net8 / net9 / net10 |
-| **[BuildingBlocks.Idempotency](https://www.nuget.org/packages/BuildingBlocks.Idempotency)** | HTTP **Idempotency-Key** — MVC + Minimal API, 2xx envelope replay, ProblemDetails, optional Redis lock, fingerprint, ActivitySource | net8 / net9 / net10 |
-| **[BuildingBlocks.Pagination.EntityFrameworkCore](https://www.nuget.org/packages/BuildingBlocks.Pagination.EntityFrameworkCore)** | Typed keyset (cursor) pagination for EF Core (IR bundled) | net8 / net9 / net10 |
-| **[BuildingBlocks.Telemetry](https://www.nuget.org/packages/BuildingBlocks.Telemetry)** | Config-driven OpenTelemetry (traces, metrics, logs) + `IntegrateMediator` / opt-in `IntegrateMcp` | net8 / net9 / net10 |
-| **[BuildingBlocks.Aspire.Hosting.SigNoz](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz)** | Local-dev Aspire `AddSigNoz()` + `WithSigNozOtlpExporter` | net10 (AppHost) |
+| Package | Version | Role | TFMs |
+|---------|---------|------|------|
+| **[BuildingBlocks.Mediator](https://www.nuget.org/packages/BuildingBlocks.Mediator)** | **1.1.0** | CQRS **Send** + ordered pipeline (`ICommand` / `IQuery`, typed behaviors, opt-in traces + metrics) | net8 / net9 / net10 |
+| **[BuildingBlocks.Mcp](https://www.nuget.org/packages/BuildingBlocks.Mcp)** | **1.0.0** | Message types → MCP tools on the official SDK (deny-by-default, `McpResult`, HTTP + opt-in stdio) | net8 / net9 / net10 |
+| **[BuildingBlocks.Idempotency](https://www.nuget.org/packages/BuildingBlocks.Idempotency)** | **1.0.0** | HTTP **Idempotency-Key** — MVC + Minimal API, 2xx envelope replay, ProblemDetails, optional Redis lock, fingerprint, ActivitySource | net8 / net9 / net10 |
+| **[BuildingBlocks.Pagination.EntityFrameworkCore](https://www.nuget.org/packages/BuildingBlocks.Pagination.EntityFrameworkCore)** | **1.1.0** | Typed keyset (cursor) pagination for EF Core (IR bundled): any-width Npgsql row comparison, `NULLS FIRST/LAST`, `HasKeysetIndex` + `NullOrder` | net8 / net9 / net10 |
+| **[BuildingBlocks.Telemetry](https://www.nuget.org/packages/BuildingBlocks.Telemetry)** | **1.0.2** | Config-driven OpenTelemetry (traces, metrics, logs) + `IntegrateMediator` / opt-in `IntegrateMcp` | net8 / net9 / net10 |
+| **[BuildingBlocks.Aspire.Hosting.SigNoz](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz)** | **1.0.0** | Local-dev Aspire `AddSigNoz()` + `WithSigNozOtlpExporter` | net10 (AppHost) |
 
 Production apps use **Mediator + Telemetry** and export OTLP to any backend. SigNoz hosting is **local AppHost only**.
 
@@ -118,6 +124,7 @@ builder.AddProject<Projects.Api>("api")
 ### BuildingBlocks.Mediator
 
 [![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Mediator.svg?logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Mediator)
+[![GitHub Release](https://img.shields.io/github/v/release/Maxofpower/FeatureFusion?filter=mediator-v*&logo=github&label=GitHub%20Release)](https://github.com/Maxofpower/FeatureFusion/releases?q=mediator-v)
 [![Downloads](https://img.shields.io/nuget/dt/BuildingBlocks.Mediator.svg)](https://www.nuget.org/packages/BuildingBlocks.Mediator)
 
 CQRS-first **Send** + ordered **pipeline**. Manual control over registration, pipeline order, validation, and telemetry — not a MediatR or messaging replacement (no `Publish` / `INotification` in v1).
@@ -230,6 +237,7 @@ await sender.Send((object)new CreateOrder("SKU-1", 2), ct); // MCP / dynamic
 ### BuildingBlocks.Mcp
 
 [![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Mcp.svg?logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Mcp)
+[![GitHub Release](https://img.shields.io/github/v/release/Maxofpower/FeatureFusion?filter=mcp-v*&logo=github&label=GitHub%20Release)](https://github.com/Maxofpower/FeatureFusion/releases?q=mcp-v)
 
 Map **application message types** (commands, queries, DTOs) and **public static Minimal API methods** to MCP tools. The official C# SDK owns the protocol; this package owns the catalog, `McpResult`, filters, and safe defaults. **Not** OpenAPI, **not** MVC controllers (unsupported for now), **not** a SOLID linter.
 
@@ -356,10 +364,11 @@ Cursor HTTP:
 ### BuildingBlocks.Idempotency
 
 [![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Idempotency.svg?logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Idempotency)
+[![GitHub Release](https://img.shields.io/github/v/release/Maxofpower/FeatureFusion?filter=idempotency-v*&logo=github&label=GitHub%20Release)](https://github.com/Maxofpower/FeatureFusion/releases?q=idempotency-v)
 
 ASP.NET Core HTTP **Idempotency-Key** for MVC and Minimal API. Host-owned `IDistributedCache`, **2xx** envelope replay, ProblemDetails on conflicts, optional Redis SET NX lock, opt-in method/path/body fingerprint, per-endpoint TTL, optional ActivitySource. Distinct from MCP write idempotency (`UseMemoryIdempotency` / `IMcpIdempotencyStore` above).
 
-**Version 1.0.0** is in this repo; the NuGet badge resolves after `idempotency-v1.0.0` is tagged and published.
+**What's new in 1.0.0:** shared `IdempotencyGate` for MVC + Minimal API, 2xx envelope replay, ProblemDetails, optional Redis lock / fingerprint / telemetry. NuGet and release badges resolve after `idempotency-v1.0.0` is tagged and published.
 
 ```bash
 dotnet add package BuildingBlocks.Idempotency
@@ -390,10 +399,16 @@ app.MapPost("/orders", CreateAsync).WithIdempotency(useLock: true);
 ### BuildingBlocks.Pagination.EntityFrameworkCore
 
 [![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Pagination.EntityFrameworkCore.svg?logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Pagination.EntityFrameworkCore)
+[![GitHub Release](https://img.shields.io/github/v/release/Maxofpower/FeatureFusion?filter=pagination-v*&logo=github&label=GitHub%20Release)](https://github.com/Maxofpower/FeatureFusion/releases?q=pagination-v)
 
 Typed **keyset (cursor)** pagination for EF Core. **One package** — `SortKey` / cursors ship inside it. Hosts map a sort enum to a **prebuilt** key — the library never reflects `"Price"` into a property. Unique last column required. Set `SigningKey` on public HTTP APIs. Dapper is an in-repo lab project, not a nupkg. There is no `IEnumerable` adapter.
 
-**What's new in 1.1.0:** Npgsql row-comparison seek for uniform non-nullable composite keys of any width; `ORDER BY NULLS FIRST/LAST` on Npgsql/Sqlite via `AddBuildingBlocksPagination` + `UseBuildingBlocksPagination`; `HasKeysetIndex(sortKey, NullOrder)`.
+**What's new in 1.1.0:**
+- **Npgsql row comparison** for uniform non-nullable multi-column keys of **any width** (`(a, b, …) > …`; 2–8 via `ValueTuple`, 9+ nested `TRest`). Mixed ASC/DESC and `string` slots stay on the OR form; Sqlite/SQL Server stay OR.
+- **`AddBuildingBlocksPagination` + `UseBuildingBlocksPagination`** — tagged command interceptor appends `ORDER BY NULLS FIRST/LAST` on Npgsql/Sqlite (tag `BuildingBlocks.Pagination:First|Last`; inverted on backward walks).
+- **`HasKeysetIndex(sortKey, NullOrder)`** — optional soft Npgsql `HasNullSortOrder`. One-arg `HasKeysetIndex(sortKey)` does not write null-sort metadata.
+- **Dapper (in-repo):** emits `NULLS FIRST/LAST` on PG/Sqlite from `PaginationOptions.Nulls`.
+- Tag / publish: `pagination-v1.1.0` (must match the EF package `<Version>`).
 
 ```bash
 dotnet add package BuildingBlocks.Pagination.EntityFrameworkCore
@@ -450,7 +465,7 @@ dotnet run -c Release --project benchmarks/BuildingBlocks/Pagination.EntityFrame
 ### BuildingBlocks.Telemetry
 
 [![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Telemetry.svg?logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Telemetry)
-[![GitHub Release](https://img.shields.io/github/v/release/Maxofpower/FeatureFusion?filter=telemetry-v*&logo=github&label=GitHub%20Release)](https://github.com/Maxofpower/FeatureFusion/releases/tag/telemetry-v1.0.0)
+[![GitHub Release](https://img.shields.io/github/v/release/Maxofpower/FeatureFusion?filter=telemetry-v*&logo=github&label=GitHub%20Release)](https://github.com/Maxofpower/FeatureFusion/releases?q=telemetry-v)
 
 Config-driven OpenTelemetry for ASP.NET Core: traces, metrics, and logs from one `AddTelemetry` call. Export **OTLP to any backend** (SigNoz, collectors, Tempo, Azure Monitor). Requires `IHostApplicationBuilder`. This package is **not** a SigNoz SDK — local Aspire SigNoz lives in `BuildingBlocks.Aspire.Hosting.SigNoz`.
 
@@ -623,7 +638,7 @@ Startup: one Information log of signals and instrumentation — never endpoints 
 ### BuildingBlocks.Aspire.Hosting.SigNoz
 
 [![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Aspire.Hosting.SigNoz.svg?logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz)
-[![GitHub Release](https://img.shields.io/github/v/release/Maxofpower/FeatureFusion?filter=signoz-v*&logo=github&label=GitHub%20Release)](https://github.com/Maxofpower/FeatureFusion/releases/tag/signoz-v1.0.0)
+[![GitHub Release](https://img.shields.io/github/v/release/Maxofpower/FeatureFusion?filter=signoz-v*&logo=github&label=GitHub%20Release)](https://github.com/Maxofpower/FeatureFusion/releases?q=signoz-v)
 
 Local-dev **Aspire AppHost** integration: ClickHouse, ZooKeeper, schema migrator, OTLP collector, and SigNoz UI. **Not for production** — production still uses `BuildingBlocks.Telemetry` against any OTLP endpoint. Docker required. TFM **net10.0** (Aspire 13.4.6).
 
