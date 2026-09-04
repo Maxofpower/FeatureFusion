@@ -14,7 +14,7 @@ Requires .NET 8 / 9 / 10. HTTP is the default: `MapBuildingBlocksMcp()` → `/mc
 
 Cursor talks to a **running** API. After you add or rename tools, restart the host **and** reload the MCP server in Cursor. Aspire restart does not refresh Cursor’s cached `tools/list`.
 
-Host OpenTelemetry: `IntegrateMcp = true` on `AddServiceDefaults` / `AddTelemetry`, plus `o.UseTelemetry()` on the MCP builder.
+Host OpenTelemetry: `IntegrateMcp = true` on `AddServiceDefaults` / `AddTelemetry`, plus `o.UseTelemetry()` on the MCP builder. `UseTelemetry(t => t.IncludeExceptionDetails = true)` is an explicit Development-only opt-in for exception text on `McpErrorCode.Internal`; it is not enabled automatically from the environment. Without `IntegrateMcp`, `mcp.tool` spans stay in-process.
 
 ## What this package is
 

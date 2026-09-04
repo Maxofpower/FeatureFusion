@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using Asp.Versioning.Conventions;
+using BuildingBlocks.Idempotency.DependencyInjection;
 using FeatureFusion.Features.Order.IntegrationEvents;
 using FeatureFusion.Features.Order.IntegrationEvents.EventHandling;
 using FeatureFusion.Features.Order.IntegrationEvents.Events;
@@ -213,6 +214,14 @@ namespace FeatureFusion.Infrastructure.Extensions
 			services.AddFluentValidatorsFromAssemblies(Assembly.GetExecutingAssembly());
 
 			services.AddSingleton<IRedisConnectionWrapper, RedisConnectionWrapper>();
+
+			// BuildingBlocks.Idempotency — Lab-compatible UserIdFallback; host owns IDistributedCache + multiplexer.
+			services.AddBuildingBlocksIdempotency(o =>
+				{
+					o.UserIdFallback = "123";
+				})
+				.UseRedisLock()
+				.UseTelemetry();
 
 			services.AddSingleton<IValidatorProvider, ValidatorProvider>();
 

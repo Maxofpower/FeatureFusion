@@ -22,6 +22,10 @@ Config-driven OpenTelemetry traces, metrics, and logs for ASP.NET Core from one 
 
 This package is **not** a SigNoz SDK. Local Aspire SigNoz: `BuildingBlocks.Aspire.Hosting.SigNoz`. Libraries **emit** with `UseTelemetry()`; this host **exports** when `IntegrateMediator` / `IntegrateMcp` is on.
 
+![SigNoz metrics explorer: HTTP server duration, mediator.send.duration, Npgsql connection create time.](https://raw.githubusercontent.com/Maxofpower/FeatureFusion/main/docs/medium/images/07b-signoz-metrics-explorer.png)
+
+*`mediator.send.duration` is Mediator telemetry leaving the FeatureFusion lab process. This package exports OTLP; it is not a SigNoz SDK.*
+
 ## Install
 
 ```bash

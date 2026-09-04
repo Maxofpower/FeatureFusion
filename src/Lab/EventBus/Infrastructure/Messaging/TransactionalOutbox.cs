@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Data;
 using System.Reflection.Emit;
 using System.Text.Json;
@@ -174,11 +174,18 @@ namespace EventBusRabbitMQ.Infrastructure.Messaging
 					return MessageStoreResult.StorageFailed;
 				}
 
-				if (await _dbContext.InboxMessages
+				var existing = await _dbContext.InboxMessages
 					.AsNoTracking()
-					.AnyAsync(m => m.Id == messageId))
+					.FirstOrDefaultAsync(m => m.Id == messageId);
+
+				if (existing is not null)
 				{
-					return MessageStoreResult.Duplicate;
+					if (IsSuccessfullyProcessed(existing))
+					{
+						return MessageStoreResult.Duplicate;
+					}
+
+					return MessageStoreResult.Success;
 				}
 
 				var message = new InboxMessage
@@ -240,14 +247,20 @@ namespace EventBusRabbitMQ.Infrastructure.Messaging
 
 		public async Task<MessageStoreResult> IsDuplicateAsync(Guid messageId)
 		{
-			//var cutoff = DateTime.UtcNow - _deduplicationWindow; //if needed
-
-			if (await _dbContext.InboxMessages
+			var message = await _dbContext.InboxMessages
 				.AsNoTracking()
-				.AnyAsync(x => x.Id == messageId))
-				return MessageStoreResult.Duplicate;
-			return MessageStoreResult.Success;
+				.FirstOrDefaultAsync(x => x.Id == messageId);
+
+			if (message is null || !IsSuccessfullyProcessed(message))
+			{
+				return MessageStoreResult.Success;
+			}
+
+			return MessageStoreResult.Duplicate;
 		}
+
+		private static bool IsSuccessfullyProcessed(InboxMessage message) =>
+			message.IsProcessed || message.Status == MessageStatus.Processed;
 
 
 		public async Task MarkMessageAsProcessedAsync(Guid messageId)
@@ -264,36 +277,32 @@ namespace EventBusRabbitMQ.Infrastructure.Messaging
 			}
 		}
 		
-		public async Task UpdateHandlerStatuses(List<(string handlerType, ProcessingResult result,Guid messageID)> resultStatuses)
+		public async Task<IReadOnlyList<(string HandlerType, int Attempts)>> UpdateHandlerStatuses(
+			List<(string handlerType, ProcessingResult result, Guid messageID)> resultStatuses)
 		{
-			try
+			var attempts = new List<(string HandlerType, int Attempts)>(resultStatuses.Count);
+			var attemptedAt = DateTime.UtcNow;
+
+			foreach (var (handlerType, result, messageId) in resultStatuses)
 			{
-			
-				foreach (var (handlerType, result,messageId) in resultStatuses)
+				var handlerRecord = await _dbContext.InboxSubscriber
+					.FirstOrDefaultAsync(h => h.SubscriberName == handlerType && h.MessageId == messageId);
+				if (handlerRecord is null)
 				{
-					
-						var handlerRecord = await _dbContext.InboxSubscriber
-							.FirstOrDefaultAsync(h => h.SubscriberName == handlerType && h.MessageId==messageId); 
-						if (handlerRecord != null)
-						{
-							if (result == ProcessingResult.Success)
-							{
-								handlerRecord.Status = MessageStatus.Processed;
-							}
-							else
-							{
-								handlerRecord.Status = MessageStatus.Failed;
-							}
-						}
-					
+					continue;
 				}
-				await  _dbContext.SaveChangesAsync();
+
+				handlerRecord.Attempts++;
+				handlerRecord.LastAttemptedAt = attemptedAt;
+				handlerRecord.Status = result == ProcessingResult.Success
+					? MessageStatus.Processed
+					: MessageStatus.Failed;
+
+				attempts.Add((handlerType, handlerRecord.Attempts));
 			}
-			catch
-			{
-				// we cant re throw here 
-			}
-			
+
+			await _dbContext.SaveChangesAsync();
+			return attempts;
 		}
 		private List<string> GetSubscribersForEventType(EventBusSubscriptionInfo subscriptionInfo, string eventType)
 		{

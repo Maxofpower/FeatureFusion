@@ -1,4 +1,4 @@
-using FeatureFusion.Infrastructure.Filters;
+using BuildingBlocks.Idempotency.AspNetCore;
 using BuildingBlocks.Mediator;
 using FeatureFusion.Models;
 using FeatureFusion.Services.FeatureToggleService;

@@ -17,7 +17,7 @@ Map **application message types** (commands, queries, DTOs) and **public static 
 - Successful calls return JSON text **and** `structuredContent`
 - Safe writes: `idempotencyKey`, confirmation, timeout, `IMcpToolFilter`, `IMcpRateLimiter`, `catalog://tools`
 - Analyzers BBMCP001–005 packed in the NuGet
-- Opt-in ActivitySource `BuildingBlocks.Mcp`
+- Opt-in ActivitySource `BuildingBlocks.Mcp` (`UseTelemetry()`). `IncludeExceptionDetails` is explicit opt-in (Development only recommended); it is not auto-enabled by environment.
 
 ## Install
 
@@ -177,7 +177,7 @@ Cursor HTTP (API must already be running):
 - **`structuredContent`** on success
 - **Catalog resource:** `catalog://tools`
 - **Roslyn analyzers** BBMCP001–005
-- **`UseTelemetry()`:** ActivitySource `BuildingBlocks.Mcp`
+- **`UseTelemetry()`:** ActivitySource `BuildingBlocks.Mcp`. Optional `t => t.IncludeExceptionDetails = true` includes exception messages on `McpErrorCode.Internal` (keep off in production). Host export still requires `IntegrateMcp = true` on `AddTelemetry` / `AddServiceDefaults`.
 
 ## What it is not (v1)
 

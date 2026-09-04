@@ -38,6 +38,7 @@ builder.AddServiceDefaults(
 	configureTelemetry: telemetry =>
 	{
 		telemetry.AddSource("DbMigrations");
+		telemetry.AddSource("BuildingBlocks.Idempotency");
 		telemetry.ConfigureTracing(t => t
 			.AddEntityFrameworkCoreInstrumentation()
 			.AddRedisInstrumentation());
@@ -70,7 +71,7 @@ if (builder.Environment.IsDevelopment())
 	builder.Services.AddBuildingBlocksMcp(o =>
 	{
 		o.ScanAssembly(Assembly.GetExecutingAssembly());
-		o.UseTelemetry();
+		o.UseTelemetry(t => t.IncludeExceptionDetails = true);
 		o.UseMemoryIdempotency(TimeSpan.FromHours(1));
 	}).UseDispatcher(async (sp, msg, ct) =>
 	{

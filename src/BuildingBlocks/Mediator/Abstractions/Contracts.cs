@@ -7,9 +7,6 @@ namespace BuildingBlocks.Mediator;
 /// Prefer this over <see cref="IMediator"/> at call sites for a narrower dependency.
 /// CQRS-first: <see cref="ICommand"/> / <see cref="ICommand{TResponse}"/> / <see cref="IQuery{TResponse}"/> —
 /// there is no public <c>IRequest</c>.
-/// LinkedIn: https://lnkd.in/p/eU5TsuR4
-/// LinkedIn (prior): https://www.linkedin.com/feed/update/urn:li:activity:7311311587372367873/
-/// Catalog: docs/linkedin-posts.md (<c>mediator-building-blocks</c>).
 /// </remarks>
 /// <example>
 /// <code>
@@ -57,11 +54,6 @@ public interface ISender
 /// <summary>
 /// Extends <see cref="ISender"/> with the familiar Mediator name. No Publish/notifications in v1.
 /// </summary>
-/// <remarks>
-/// LinkedIn: https://lnkd.in/p/eU5TsuR4
-/// LinkedIn (prior): https://www.linkedin.com/feed/update/urn:li:activity:7311311587372367873/
-/// Catalog: docs/linkedin-posts.md (<c>mediator-building-blocks</c>).
-/// </remarks>
 public interface IMediator : ISender
 {
 }

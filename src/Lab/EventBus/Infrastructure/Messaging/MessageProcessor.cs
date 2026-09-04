@@ -1,4 +1,4 @@
-﻿using EventBusRabbitMQ.Domain;
+using EventBusRabbitMQ.Domain;
 using EventBusRabbitMQ.Events;
 using EventBusRabbitMQ.Infrastructure.EventBus;
 using EventBusRabbitMQ.Utilities;
@@ -183,9 +183,59 @@ namespace EventBusRabbitMQ.Infrastructure.Messaging
 				}
 			}
 
-			await inbox.UpdateHandlerStatuses(resultStatuses);
+			var attemptRecords = await inbox.UpdateHandlerStatuses(resultStatuses);
+			// Per-subscriber Attempts is the budget. Exhausted RetryLater becomes PermanentFailure
+			// before aggregation so Phase 3 order (RetryLater > PermanentFailure > Success) is unchanged.
+			var budgetedResults = ApplyRetryBudget(resultStatuses, attemptRecords);
 
-			return ProcessingResult.Success;
+			return AggregateHandlerResults(budgetedResults);
+		}
+
+		private List<(string handlerType, ProcessingResult result, Guid messageId)> ApplyRetryBudget(
+			IReadOnlyList<(string handlerType, ProcessingResult result, Guid messageId)> resultStatuses,
+			IReadOnlyList<(string HandlerType, int Attempts)> attemptRecords)
+		{
+			var attemptsByHandler = attemptRecords.ToDictionary(
+				r => r.HandlerType,
+				r => r.Attempts,
+				StringComparer.Ordinal);
+
+			var budgeted = new List<(string handlerType, ProcessingResult result, Guid messageId)>(resultStatuses.Count);
+			foreach (var (handlerType, result, messageId) in resultStatuses)
+			{
+				if (result == ProcessingResult.RetryLater
+					&& attemptsByHandler.TryGetValue(handlerType, out var attempts)
+					&& attempts >= _options.RetryCount)
+				{
+					budgeted.Add((handlerType, ProcessingResult.PermanentFailure, messageId));
+					continue;
+				}
+
+				budgeted.Add((handlerType, result, messageId));
+			}
+
+			return budgeted;
+		}
+
+		private static ProcessingResult AggregateHandlerResults(
+			IReadOnlyList<(string handlerType, ProcessingResult result, Guid messageId)> resultStatuses)
+		{
+			var aggregate = ProcessingResult.Success;
+
+			foreach (var (_, result, _) in resultStatuses)
+			{
+				if (result == ProcessingResult.RetryLater)
+				{
+					return ProcessingResult.RetryLater;
+				}
+
+				if (result == ProcessingResult.PermanentFailure)
+				{
+					aggregate = ProcessingResult.PermanentFailure;
+				}
+			}
+
+			return aggregate;
 		}
 
 	}

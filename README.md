@@ -2,7 +2,7 @@
 
 # FeatureFusion
 
-**BuildingBlocks for .NET** — CQRS Send + pipeline, config-driven OpenTelemetry, MCP tools, keyset pagination, and a local Aspire SigNoz stack — plus a runnable lab that uses them.
+**BuildingBlocks for .NET** — CQRS Send + pipeline, HTTP Idempotency-Key, config-driven OpenTelemetry, MCP tools, keyset pagination, and a local Aspire SigNoz stack — plus a runnable lab that uses them.
 
 Formerly [FeatureManagement](https://github.com/Maxofpower/FeatureManagement) (GitHub redirects).
 
@@ -10,6 +10,7 @@ Formerly [FeatureManagement](https://github.com/Maxofpower/FeatureManagement) (G
 [![Aspire](https://img.shields.io/badge/Aspire-13.4-C3002F?logo=dotnet&logoColor=white)](https://learn.microsoft.com/dotnet/aspire/)
 [![NuGet · BuildingBlocks.Mediator](https://img.shields.io/nuget/v/BuildingBlocks.Mediator.svg?label=NuGet%20·%20Mediator&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Mediator)
 [![NuGet · BuildingBlocks.Mcp](https://img.shields.io/nuget/v/BuildingBlocks.Mcp.svg?label=NuGet%20·%20MCP&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Mcp)
+[![NuGet · BuildingBlocks.Idempotency](https://img.shields.io/nuget/v/BuildingBlocks.Idempotency.svg?label=NuGet%20·%20Idempotency&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Idempotency)
 [![NuGet · BuildingBlocks.Pagination.EntityFrameworkCore](https://img.shields.io/nuget/v/BuildingBlocks.Pagination.EntityFrameworkCore.svg?label=NuGet%20·%20Pagination&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Pagination.EntityFrameworkCore)
 [![NuGet · BuildingBlocks.Telemetry](https://img.shields.io/nuget/v/BuildingBlocks.Telemetry.svg?label=NuGet%20·%20Telemetry&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Telemetry)
 [![NuGet · BuildingBlocks.Aspire.Hosting.SigNoz](https://img.shields.io/nuget/v/BuildingBlocks.Aspire.Hosting.SigNoz.svg?label=NuGet%20·%20SigNoz%20hosting&logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz)
@@ -31,6 +32,7 @@ Formerly [FeatureManagement](https://github.com/Maxofpower/FeatureManagement) (G
   - [How they work together](#how-they-work-together)
   - [BuildingBlocks.Mediator](#buildingblocksmediator)
   - [BuildingBlocks.Mcp](#buildingblocksmcp)
+  - [BuildingBlocks.Idempotency](#buildingblocksidempotency)
   - [BuildingBlocks.Pagination.EntityFrameworkCore](#buildingblockspaginationentityframeworkcore)
   - [BuildingBlocks.Telemetry](#buildingblockstelemetry)
   - [BuildingBlocks.Aspire.Hosting.SigNoz](#buildingblocksaspirehostingsignoz)
@@ -58,6 +60,7 @@ NuGet packages you can install in **your** hosts. The FeatureFusion API is a sho
 |---------|------|------|
 | **[BuildingBlocks.Mediator](https://www.nuget.org/packages/BuildingBlocks.Mediator)** | CQRS **Send** + ordered pipeline (`ICommand` / `IQuery`, typed behaviors, opt-in traces + metrics) | net8 / net9 / net10 |
 | **[BuildingBlocks.Mcp](https://www.nuget.org/packages/BuildingBlocks.Mcp)** | Message types → MCP tools on the official SDK (deny-by-default, `McpResult`, HTTP + opt-in stdio) | net8 / net9 / net10 |
+| **[BuildingBlocks.Idempotency](https://www.nuget.org/packages/BuildingBlocks.Idempotency)** | HTTP **Idempotency-Key** — MVC + Minimal API, 2xx envelope replay, ProblemDetails, optional Redis lock, fingerprint, ActivitySource | net8 / net9 / net10 |
 | **[BuildingBlocks.Pagination.EntityFrameworkCore](https://www.nuget.org/packages/BuildingBlocks.Pagination.EntityFrameworkCore)** | Typed keyset (cursor) pagination for EF Core (IR bundled) | net8 / net9 / net10 |
 | **[BuildingBlocks.Telemetry](https://www.nuget.org/packages/BuildingBlocks.Telemetry)** | Config-driven OpenTelemetry (traces, metrics, logs) + `IntegrateMediator` / opt-in `IntegrateMcp` | net8 / net9 / net10 |
 | **[BuildingBlocks.Aspire.Hosting.SigNoz](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz)** | Local-dev Aspire `AddSigNoz()` + `WithSigNozOtlpExporter` | net10 (AppHost) |
@@ -347,6 +350,40 @@ Cursor HTTP:
 - Docs: [`docs/building-blocks/mcp.md`](docs/building-blocks/mcp.md) · ADR [`0002`](docs/adr/0002-mcp-message-tools.md) · [test matrix](docs/building-blocks/MCP_TEST_MATRIX.md)
 - Lab (Development): `orders.create`, `products.list`, `demo.echo`, `lab.ping` at `http://localhost:5141/mcp`
 - Catalog: `docs/linkedin-posts.md` → `mcp-message-tools` (planned)
+
+---
+
+### BuildingBlocks.Idempotency
+
+[![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Idempotency.svg?logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Idempotency)
+
+ASP.NET Core HTTP **Idempotency-Key** for MVC and Minimal API. Host-owned `IDistributedCache`, **2xx** envelope replay, ProblemDetails on conflicts, optional Redis SET NX lock, opt-in method/path/body fingerprint, per-endpoint TTL, optional ActivitySource. Distinct from MCP write idempotency (`UseMemoryIdempotency` / `IMcpIdempotencyStore` above).
+
+**Version 1.0.0** is in this repo; the NuGet badge resolves after `idempotency-v1.0.0` is tagged and published.
+
+```bash
+dotnet add package BuildingBlocks.Idempotency
+```
+
+```csharp
+builder.Services.AddBuildingBlocksIdempotency(o =>
+{
+    o.ProcessingTtl = TimeSpan.FromMinutes(2); // longer than worst-case handler
+    // o.EnableRequestFingerprint = true; // method+path+body; mismatch → 422
+})
+.UseRedisLock()
+.UseTelemetry(); // optional — AddSource("BuildingBlocks.Idempotency")
+
+[HttpPost]
+[Idempotent(useLock: true)]
+public async Task<ActionResult<OrderResponse>> Create([FromBody] CreateOrder request) { ... }
+
+app.MapPost("/orders", CreateAsync).WithIdempotency(useLock: true);
+```
+
+- Package README: [`src/BuildingBlocks/Idempotency/PACKAGE_README.md`](src/BuildingBlocks/Idempotency/PACKAGE_README.md) · agent notes: [`AGENTS.md`](src/BuildingBlocks/Idempotency/AGENTS.md)
+- Docs: [`docs/building-blocks/idempotency.md`](docs/building-blocks/idempotency.md)
+- Lab: MVC `POST /api/v2/Order/order`, Minimal API smoke `POST /api/v2/idempotency-smoke`. Provenance: Experiments **3**, **4**, **12** ([catalog](tests/Lab/IntegrationTests/Experiments/README.md)).
 
 ---
 
@@ -670,7 +707,7 @@ Install the packages above in your own hosts, **or** clone this repo and run **F
 | Telemetry | **`BuildingBlocks.Telemetry`** in ServiceDefaults; **`BuildingBlocks.Aspire.Hosting.SigNoz`** on AppHost |
 | Event bus | RabbitMQ + transactional outbox/inbox, DLQ, dedup hooks |
 | Aspire lab | AppHost orchestration for Postgres, Redis, RabbitMQ, Memcached, SigNoz |
-| IdempotentFusion | ULID `Idempotency-Key` + Redis status tracking + optional lock |
+| HTTP idempotency | **`BuildingBlocks.Idempotency`** — MVC + Minimal API, 2xx envelope replay, optional Redis lock (`POST /api/v2/Order/order`) |
 | Feature flags (demo) | ASP.NET Core Feature Management + custom filters (claims / VIP) |
 | API surface | Versioned controllers + Minimal APIs, FluentValidation patterns |
 | Gateway | YARP reverse proxy + Memcached distributed rate limiting |
@@ -893,12 +930,12 @@ docker compose up -d
 
 Conditional features via Microsoft.FeatureManagement and custom filters (e.g. VIP claims). Versioned controllers and Minimal APIs under `/api/v1|v2/...`.
 
-### IdempotentFusion
+### HTTP idempotency (BuildingBlocks.Idempotency)
 
-REST idempotency with ULID keys and Redis status tracking (`POST /api/v2/Order/order`).
+REST idempotency with `IDistributedCache` status tracking, MVC `[Idempotent]` / Minimal API `WithIdempotency`, and optional Redis lock (`POST /api/v2/Order/order`, smoke `POST /api/v2/idempotency-smoke`). See [BuildingBlocks.Idempotency](#buildingblocksidempotency).
 
 - [Idempotency with CQRS](https://www.linkedin.com/feed/update/urn:li:activity:7303686809891356676/)
-- [IdempotentFusion project](https://www.linkedin.com/feed/update/urn:li:activity:7309149985307029504/)
+- [IdempotentFusion project](https://www.linkedin.com/feed/update/urn:li:activity:7309149985307029504/) (historical Lab name)
 
 ### API versioning & validation
 
@@ -938,7 +975,7 @@ See [Pagination showcase](#pagination-showcase) for the FeatureFusion catalog (`
 | **Polling publisher** | `OutBoxWorker` background poll → publish |
 | **Dead letter queue** | EventBus DLX / DLQ topology |
 | **Message deduplication** | Inbox + `MessageDeduplicationService` |
-| **Idempotency** | `IdempotentAttribute` + Redis status tracking |
+| **Idempotency** | `BuildingBlocks.Idempotency` — `[Idempotent]` / `WithIdempotency`, cache envelope, optional Redis lock |
 | **Feature toggle** | ASP.NET Core Feature Management + custom filters |
 | **Rate limiting** | ApiGateway Memcached fixed-window limiter |
 | **Circuit breaker / resilience** | Polly `ResiliencePipelineFactory` |

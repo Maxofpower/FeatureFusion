@@ -1,4 +1,4 @@
-﻿using EventBusRabbitMQ.Domain;
+using EventBusRabbitMQ.Domain;
 using EventBusRabbitMQ.Events;
 using EventBusRabbitMQ.Infrastructure.EventBus;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -19,6 +19,7 @@ namespace EventBusRabbitMQ.Infrastructure.Messaging
 			byte[] payload,
 			string serviceName);
 		Task MarkMessageAsProcessedAsync(Guid messageId);
-		Task UpdateHandlerStatuses(List<(string handlerType, ProcessingResult result, Guid messageID)> resultStatuses);
+		Task<IReadOnlyList<(string HandlerType, int Attempts)>> UpdateHandlerStatuses(
+			List<(string handlerType, ProcessingResult result, Guid messageID)> resultStatuses);
 	}
 }

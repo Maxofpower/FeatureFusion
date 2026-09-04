@@ -2,6 +2,7 @@ using System.Text.Json;
 using BuildingBlocks.Mcp;
 using FluentAssertions;
 using IntegrationTests.Aspire;
+using IntegrationTests.Infrastructure.Mcp;
 using Microsoft.AspNetCore.Mvc.Testing;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
@@ -27,7 +28,7 @@ public sealed class FeatureFusionMcpTests
 	[Fact]
 	public async Task Tools_List_Contains_Opt_In_Tools_Only()
 	{
-		await using var mcp = await CreateClientAsync();
+		await using var mcp = await LabMcpClient.CreateAsync(_http);
 		var tools = await mcp.ListToolsAsync();
 		var names = tools.Select(t => t.Name).ToArray();
 
@@ -38,7 +39,7 @@ public sealed class FeatureFusionMcpTests
 	[Fact]
 	public async Task Call_Demo_Echo_Succeeds()
 	{
-		await using var mcp = await CreateClientAsync();
+		await using var mcp = await LabMcpClient.CreateAsync(_http);
 		var result = await mcp.CallToolAsync(
 			"demo.echo",
 			new Dictionary<string, object?> { ["message"] = "hello-mcp" });
@@ -51,7 +52,7 @@ public sealed class FeatureFusionMcpTests
 	[Fact]
 	public async Task Call_Orders_Create_Without_Confirm_And_Key_Is_Error()
 	{
-		await using var mcp = await CreateClientAsync();
+		await using var mcp = await LabMcpClient.CreateAsync(_http);
 		var result = await mcp.CallToolAsync(
 			"orders.create",
 			new Dictionary<string, object?>
@@ -73,7 +74,7 @@ public sealed class FeatureFusionMcpTests
 	[Fact]
 	public async Task Call_Orders_Create_With_Confirm_And_Key_Succeeds()
 	{
-		await using var mcp = await CreateClientAsync();
+		await using var mcp = await LabMcpClient.CreateAsync(_http);
 		var result = await mcp.CallToolAsync(
 			"orders.create",
 			new Dictionary<string, object?>
@@ -96,7 +97,7 @@ public sealed class FeatureFusionMcpTests
 	[Fact]
 	public async Task Products_List_Schema_Has_Enums_And_Optional_Cursor()
 	{
-		await using var mcp = await CreateClientAsync();
+		await using var mcp = await LabMcpClient.CreateAsync(_http);
 		var tools = await mcp.ListToolsAsync();
 		var products = tools.Should().ContainSingle(t => t.Name == "products.list").Subject;
 		var schema = products.ProtocolTool.InputSchema;
@@ -122,7 +123,7 @@ public sealed class FeatureFusionMcpTests
 	[Fact]
 	public async Task Call_Demo_Echo_Includes_StructuredContent()
 	{
-		await using var mcp = await CreateClientAsync();
+		await using var mcp = await LabMcpClient.CreateAsync(_http);
 		var result = await mcp.CallToolAsync(
 			"demo.echo",
 			new Dictionary<string, object?> { ["message"] = "hello-mcp" });
@@ -136,7 +137,7 @@ public sealed class FeatureFusionMcpTests
 	[Fact]
 	public async Task Catalog_Resource_Lists_Lab_Tools()
 	{
-		await using var mcp = await CreateClientAsync();
+		await using var mcp = await LabMcpClient.CreateAsync(_http);
 		var read = await mcp.ReadResourceAsync(new Uri(McpDefaults.CatalogResourceUri));
 		var markdown = string.Join("\n", read.Contents.OfType<TextResourceContents>().Select(c => c.Text));
 		markdown.Should().Contain("demo.echo");
@@ -148,7 +149,7 @@ public sealed class FeatureFusionMcpTests
 	[Fact]
 	public async Task Call_Lab_Ping_From_Minimal_Api_Method_Succeeds()
 	{
-		await using var mcp = await CreateClientAsync();
+		await using var mcp = await LabMcpClient.CreateAsync(_http);
 		var result = await mcp.CallToolAsync(
 			"lab.ping",
 			new Dictionary<string, object?> { ["name"] = "Ada" });
@@ -156,16 +157,6 @@ public sealed class FeatureFusionMcpTests
 		(result.IsError ?? false).Should().BeFalse();
 		GetText(result).Should().Contain("pong:Ada");
 		result.StructuredContent.Should().NotBeNull();
-	}
-
-	private async Task<McpClient> CreateClientAsync()
-	{
-		var endpoint = new Uri(_http.BaseAddress ?? new Uri("http://localhost"), "mcp");
-		var transport = new HttpClientTransport(
-			new HttpClientTransportOptions { Endpoint = endpoint },
-			_http,
-			ownsHttpClient: false);
-		return await McpClient.CreateAsync(transport);
 	}
 
 	private static string GetText(CallToolResult result)

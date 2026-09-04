@@ -212,6 +212,12 @@ Vertical slices under `Internal/`: `Pipeline/`, `Exporters/`, `Instrumentations/
 
 ## SigNoz click-through (local Aspire)
 
+![SigNoz ASP .NET Core Metrics for FeatureFusion in Development after catalog load.](../medium/images/07-signoz-dashboard.png)
+
+![SigNoz metrics explorer: HTTP server duration, mediator.send.duration, Npgsql connection create time.](../medium/images/07b-signoz-metrics-explorer.png)
+
+Crops from a Development session for service `FeatureFusion` after catalog traffic — not an SLA.
+
 AppHost: `AddSigNoz().WithUi().WithDashboards()` + `WithSigNozOtlpExporter`. FeatureFusion AppHost uses `WithUiFromConfiguration` (`src/Lab/FeatureFusion.AppHost/appsettings.Development.json`): **`dev@local.test` / `DevPassword123!`**. Override with `SigNoz__AdminEmail`, `SigNoz__AdminPassword`, `SigNoz__UiPort`, …. The UI still requires login; root-user env only skips signup. Custom lab credentials are not shown on the Aspire connection panel. Omits `WithDataVolume()` (writable layer still persists when `Lifetime = Persistent`; sqlite volume always persists). After traffic: **Services** → **Traces** (waterfall) → **Metrics** / **Logs**. Filter spans with `telemetry.component`. Dashboard tiles use SigNoz **View in Traces**.
 
 The seeded **BuildingBlocks Telemetry** dashboard has four sections — Service RED, Components (grouped by

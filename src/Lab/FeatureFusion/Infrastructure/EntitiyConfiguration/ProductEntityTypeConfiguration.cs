@@ -1,4 +1,4 @@
-﻿using BuildingBlocks.Pagination.EntityFrameworkCore;
+using BuildingBlocks.Pagination.EntityFrameworkCore;
 using FeatureFusion.Domain.Entities;
 using FeatureFusion.Infrastructure.Pagination;
 using Microsoft.EntityFrameworkCore;

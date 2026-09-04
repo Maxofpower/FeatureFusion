@@ -262,6 +262,35 @@ public sealed class CatalogAndInvokerTests
 	}
 
 	[Fact]
+	public async Task Handler_Throw_Includes_Exception_Message_When_Details_Enabled()
+	{
+		const string knownMessage = "known-exception-detail";
+		var descriptor = McpToolScanner.FromType(
+			typeof(ListedOrder),
+			(_, _, _, _) => throw new InvalidOperationException(knownMessage));
+		var invoker = new McpInvoker(
+			[descriptor],
+			new ServiceCollection().BuildServiceProvider(),
+			[],
+			new NoOpRateLimiter(),
+			new DefaultMcpResultMapper(),
+			dispatcher: null,
+			idempotency: null,
+			resilience: null,
+			telemetry: null,
+			includeExceptionDetails: true);
+
+		var result = await invoker.InvokeAsync(
+			"tests.list",
+			JsonDocument.Parse("""{"sku":"x"}""").RootElement,
+			McpInvokeContext.None,
+			CancellationToken.None);
+
+		Assert.Equal(McpErrorCode.Internal, result.Error!.Code);
+		Assert.Contains(knownMessage, result.Error.Message);
+	}
+
+	[Fact]
 	public async Task Writes_Are_Not_Retried_By_Invoker()
 	{
 		var calls = 0;

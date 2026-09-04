@@ -1,0 +1,45 @@
+# FeatureFusion
+
+> .NET engineering lab that extracts focused MIT BuildingBlocks (Mediator, Idempotency, keyset pagination, MCP, OpenTelemetry, Aspire SigNoz). The application is the laboratory; NuGet is the reusable result.
+
+## Canonical
+
+- [README](https://github.com/Maxofpower/FeatureFusion/blob/main/README.md): lab + package overview
+- [AGENTS.md](https://github.com/Maxofpower/FeatureFusion/blob/main/AGENTS.md): repo map for coding agents
+- [Medium](https://medium.com/@m2hweb86/featurefusion-an-engineering-lab-that-extracts-reusable-net-building-blocks-28152cafafb9): lab-to-package narrative
+- [Writing catalog](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/linkedin-posts.md): LinkedIn / Medium post ↔ code map
+- [CONTRIBUTING](https://github.com/Maxofpower/FeatureFusion/blob/main/CONTRIBUTING.md)
+
+## BuildingBlocks — NuGet READMEs
+
+- [Mediator PACKAGE_README](https://github.com/Maxofpower/FeatureFusion/blob/main/src/BuildingBlocks/Mediator/PACKAGE_README.md)
+- [Idempotency PACKAGE_README](https://github.com/Maxofpower/FeatureFusion/blob/main/src/BuildingBlocks/Idempotency/PACKAGE_README.md)
+- [Pagination.EntityFrameworkCore PACKAGE_README](https://github.com/Maxofpower/FeatureFusion/blob/main/src/BuildingBlocks/Pagination.EntityFrameworkCore/PACKAGE_README.md)
+- [Mcp PACKAGE_README](https://github.com/Maxofpower/FeatureFusion/blob/main/src/BuildingBlocks/Mcp/PACKAGE_README.md)
+- [Telemetry PACKAGE_README](https://github.com/Maxofpower/FeatureFusion/blob/main/src/BuildingBlocks/Telemetry/PACKAGE_README.md)
+- [Aspire.Hosting.SigNoz PACKAGE_README](https://github.com/Maxofpower/FeatureFusion/blob/main/src/BuildingBlocks/Aspire.Hosting.SigNoz/PACKAGE_README.md)
+
+## BuildingBlocks — agent notes
+
+- [Mediator AGENTS](https://github.com/Maxofpower/FeatureFusion/blob/main/src/BuildingBlocks/Mediator/AGENTS.md)
+- [Idempotency AGENTS](https://github.com/Maxofpower/FeatureFusion/blob/main/src/BuildingBlocks/Idempotency/AGENTS.md)
+- [Pagination.EntityFrameworkCore AGENTS](https://github.com/Maxofpower/FeatureFusion/blob/main/src/BuildingBlocks/Pagination.EntityFrameworkCore/AGENTS.md)
+- [Pagination IR AGENTS](https://github.com/Maxofpower/FeatureFusion/blob/main/src/BuildingBlocks/Pagination/AGENTS.md)
+- [Pagination.Dapper AGENTS](https://github.com/Maxofpower/FeatureFusion/blob/main/src/BuildingBlocks/Pagination.Dapper/AGENTS.md)
+- [Mcp AGENTS](https://github.com/Maxofpower/FeatureFusion/blob/main/src/BuildingBlocks/Mcp/AGENTS.md)
+- [Telemetry AGENTS](https://github.com/Maxofpower/FeatureFusion/blob/main/src/BuildingBlocks/Telemetry/AGENTS.md)
+- [Aspire.Hosting.SigNoz AGENTS](https://github.com/Maxofpower/FeatureFusion/blob/main/src/BuildingBlocks/Aspire.Hosting.SigNoz/AGENTS.md)
+
+## Guides
+
+- [Getting started](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/getting-started.md)
+- [Mediator](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/mediator.md)
+- [Idempotency](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/idempotency.md)
+- [Pagination](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/pagination.md)
+- [MCP](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/mcp.md)
+- [Telemetry](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/telemetry.md)
+
+## Lab integration experiments
+
+- [Lab charter](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/lab/README.md): evidence families, extraction rules, roadmap
+- [Experiments README](https://github.com/Maxofpower/FeatureFusion/blob/main/tests/Lab/IntegrationTests/Experiments/README.md): behavioral experiment catalog Exp 1–18 + MAF prototype, evidence model, conventions

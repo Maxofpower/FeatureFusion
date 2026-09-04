@@ -79,6 +79,7 @@ public sealed class AddTelemetryRegistrationTests
             o.Instrumentation.EventBus = true;
             o.Instrumentation.SqlClient = true;
             o.Instrumentation.MassTransit = true;
+            o.IntegrateMcp = true;
         });
 
         using var app = host.Build();
@@ -87,6 +88,7 @@ public sealed class AddTelemetryRegistrationTests
         Assert.True(options.Instrumentation.EventBus);
         Assert.True(options.Instrumentation.SqlClient);
         Assert.True(options.Instrumentation.MassTransit);
+        Assert.True(options.IntegrateMcp);
     }
 
     [Fact]

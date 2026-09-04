@@ -34,6 +34,12 @@ builder.AddProject<Projects.Api>("api")
 
 Run the AppHost **https** profile. Add `.WithDataVolume()` if you need ClickHouse/ZooKeeper history across restarts. Do not use `WithReference` for OTLP.
 
+![SigNoz ASP .NET Core Metrics for FeatureFusion in Development after catalog load.](https://raw.githubusercontent.com/Maxofpower/FeatureFusion/main/docs/medium/images/07-signoz-dashboard.png)
+
+![SigNoz metrics explorer: HTTP server duration, mediator.send.duration, Npgsql connection create time.](https://raw.githubusercontent.com/Maxofpower/FeatureFusion/main/docs/medium/images/07b-signoz-metrics-explorer.png)
+
+These screenshots are a Development lab session after catalog traffic — not an SLA.
+
 ## Quick start — all options
 
 Local-dev AppHost only. Production still uses `BuildingBlocks.Telemetry` + a real OTLP endpoint. Run the AppHost **https** profile. Do not use `WithReference` for OTLP.
