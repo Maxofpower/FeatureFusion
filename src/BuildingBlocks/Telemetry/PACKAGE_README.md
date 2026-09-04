@@ -3,6 +3,7 @@
 Config-driven OpenTelemetry traces, metrics, and logs for ASP.NET Core from one `AddTelemetry` call. Export **OTLP to any backend**. Requires `IHostApplicationBuilder`.
 
 [![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Telemetry.svg)](https://www.nuget.org/packages/BuildingBlocks.Telemetry)
+[![GitHub Release](https://img.shields.io/github/v/release/Maxofpower/FeatureFusion?filter=telemetry-v*&logo=github&label=GitHub%20Release)](https://github.com/Maxofpower/FeatureFusion/releases?q=telemetry-v)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## What's new in 1.0.2

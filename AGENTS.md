@@ -22,7 +22,7 @@ Do not treat FeatureFusion as a framework. Install a BuildingBlock only when it 
 | `BuildingBlocks.Mediator` | CQRS Send + ordered pipeline | [Mediator](src/BuildingBlocks/Mediator/AGENTS.md) |
 | `BuildingBlocks.Pagination.EntityFrameworkCore` | Keyset (cursor) paging for EF Core (**1.1.0**: any-width Npgsql row comparison, NULLS, `HasKeysetIndex` + `NullOrder`) | [Pagination.EF](src/BuildingBlocks/Pagination.EntityFrameworkCore/AGENTS.md) |
 | `BuildingBlocks.Mcp` | Same logic as HTTP as deny-by-default MCP tools | [Mcp](src/BuildingBlocks/Mcp/AGENTS.md) |
-| `BuildingBlocks.Idempotency` | HTTP Idempotency-Key + optional Redis lock | [Idempotency](src/BuildingBlocks/Idempotency/AGENTS.md) |
+| `BuildingBlocks.Idempotency` | HTTP Idempotency-Key + optional Redis lock (**1.0.1**: System.Text.Json, package icon) | [Idempotency](src/BuildingBlocks/Idempotency/AGENTS.md) |
 | `BuildingBlocks.Telemetry` | Config-driven OpenTelemetry (not a SigNoz SDK) | [Telemetry](src/BuildingBlocks/Telemetry/AGENTS.md) |
 | `BuildingBlocks.Aspire.Hosting.SigNoz` | Local AppHost SigNoz only (net10) | [SigNoz](src/BuildingBlocks/Aspire.Hosting.SigNoz/AGENTS.md) |
 

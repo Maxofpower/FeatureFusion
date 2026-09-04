@@ -5,6 +5,7 @@ Local Aspire AppHost integration for SigNoz. Production telemetry belongs in `Bu
 **TFM:** net10.0 (Aspire 13.4.6 AppHost). Docker required.
 
 [![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Aspire.Hosting.SigNoz.svg)](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz)
+[![GitHub Release](https://img.shields.io/github/v/release/Maxofpower/FeatureFusion?filter=signoz-v*&logo=github&label=GitHub%20Release)](https://github.com/Maxofpower/FeatureFusion/releases?q=signoz-v)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 | API | Role |

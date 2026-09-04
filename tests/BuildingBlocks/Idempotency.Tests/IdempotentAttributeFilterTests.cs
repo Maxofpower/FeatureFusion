@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 using BuildingBlocks.Idempotency;
 using BuildingBlocks.Idempotency.AspNetCore;
 using BuildingBlocks.Idempotency.DependencyInjection;
@@ -15,7 +16,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
-using Newtonsoft.Json;
 using Xunit;
 
 namespace BuildingBlocks.Idempotency.Tests;
@@ -179,7 +179,7 @@ public sealed class IdempotentAttributeFilterTests
 		var cachedData = await _distributedCache.GetAsync(cacheKey);
 		Assert.NotNull(cachedData);
 
-		var cachedEntry = JsonConvert.DeserializeObject<IdempotencyCacheEntry>(Encoding.UTF8.GetString(cachedData));
+		var cachedEntry = JsonSerializer.Deserialize<IdempotencyCacheEntry>(Encoding.UTF8.GetString(cachedData));
 		Assert.Equal("Completed", cachedEntry?.Status);
 		Assert.Equal(200, cachedEntry?.StatusCode);
 		Assert.Equal("application/json", cachedEntry?.ContentType);
@@ -220,7 +220,7 @@ public sealed class IdempotentAttributeFilterTests
 			StatusCode = 200,
 			ContentType = "application/json"
 		};
-		await _distributedCache.SetAsync(cacheKey, Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(cacheEntry)));
+		await _distributedCache.SetAsync(cacheKey, Encoding.UTF8.GetBytes(JsonSerializer.Serialize(cacheEntry)));
 
 		var filter = CreateFilter();
 		var context = CreateActionContext(httpContext);
@@ -243,7 +243,7 @@ public sealed class IdempotentAttributeFilterTests
 		};
 		var idempotencyKey = Ulid.NewUlid().ToString();
 		var cacheKey = $"Idempotency_1_{idempotencyKey}";
-		await _distributedCache.SetAsync(cacheKey, Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new IdempotencyCacheEntry
+		await _distributedCache.SetAsync(cacheKey, Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new IdempotencyCacheEntry
 		{
 			Status = "Completed",
 			Response = "{}",
@@ -268,7 +268,7 @@ public sealed class IdempotentAttributeFilterTests
 			Status = "Processing",
 			ProcessingExpiresAtUtc = DateTimeOffset.UtcNow.AddMinutes(1)
 		};
-		await _distributedCache.SetAsync(cacheKey, Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(cacheEntry)));
+		await _distributedCache.SetAsync(cacheKey, Encoding.UTF8.GetBytes(JsonSerializer.Serialize(cacheEntry)));
 
 		var filter = CreateFilter();
 		var context = CreateActionContext(httpContext);
@@ -289,7 +289,7 @@ public sealed class IdempotentAttributeFilterTests
 			Status = "Processing",
 			ProcessingExpiresAtUtc = DateTimeOffset.UtcNow.AddMinutes(-1)
 		};
-		await _distributedCache.SetAsync(cacheKey, Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(stale)));
+		await _distributedCache.SetAsync(cacheKey, Encoding.UTF8.GetBytes(JsonSerializer.Serialize(stale)));
 
 		var filter = CreateFilter();
 		var context = CreateActionContext(httpContext);
@@ -304,7 +304,7 @@ public sealed class IdempotentAttributeFilterTests
 
 		Assert.True(ran);
 		var cachedData = await _distributedCache.GetAsync(cacheKey);
-		var entry = JsonConvert.DeserializeObject<IdempotencyCacheEntry>(Encoding.UTF8.GetString(cachedData!));
+		var entry = JsonSerializer.Deserialize<IdempotencyCacheEntry>(Encoding.UTF8.GetString(cachedData!));
 		Assert.Equal("Completed", entry?.Status);
 	}
 
@@ -449,7 +449,7 @@ public sealed class IdempotentAttributeFilterTests
 		var cacheKey = $"Idempotency_7_{idempotencyKey}";
 		var raw = await _distributedCache.GetAsync(cacheKey);
 		Assert.NotNull(raw);
-		var entry = JsonConvert.DeserializeObject<IdempotencyCacheEntry>(Encoding.UTF8.GetString(raw));
+		var entry = JsonSerializer.Deserialize<IdempotencyCacheEntry>(Encoding.UTF8.GetString(raw));
 		Assert.NotNull(entry?.ProcessingExpiresAtUtc);
 		var remaining = entry!.ProcessingExpiresAtUtc!.Value - DateTimeOffset.UtcNow;
 		Assert.True(remaining <= TimeSpan.FromSeconds(30) + TimeSpan.FromSeconds(2));

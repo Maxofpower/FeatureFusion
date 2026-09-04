@@ -102,7 +102,7 @@ This is research infrastructure only — not Exp 15 and not a BuildingBlock.
 
 ### Workstream status — HTTP Redis idempotency (Exp 3, 4, 12)
 
-**COMPLETE — BuildingBlocks.Idempotency 1.0.0**
+**COMPLETE — BuildingBlocks.Idempotency 1.0.1** (extraction evidence from 1.0.0; packaging/STJ polish in 1.0.1)
 
 Reusable implementation: [`src/BuildingBlocks/Idempotency`](../../../../src/BuildingBlocks/Idempotency). Lab hosts the package on `POST /api/v2/Order/order`; these three experiments are the **evidence / provenance trail**, not unfinished extraction work. Package unit tests live under `tests/BuildingBlocks/Idempotency.Tests`. MCP `orders.create` idempotency (Exp 6) is a separate in-memory store and is **not** part of this BuildingBlock.
 
@@ -123,16 +123,16 @@ Reusable implementation: [`src/BuildingBlocks/Idempotency`](../../../../src/Buil
 ### Experiment 3 — HTTP Redis idempotency vs production (CacheVsProduction)
 
 - **Role:** Originally characterized Lab HTTP idempotency; now **regression / provenance** that extracted `BuildingBlocks.Idempotency` preserves the intended miss/hit workflow (fingerprint **off**, Lab default).
-- **Workstream:** COMPLETE — BuildingBlocks.Idempotency 1.0.0 (extraction proof set).
+- **Workstream:** COMPLETE — BuildingBlocks.Idempotency 1.0.1 (extraction proof set).
 - **Hypothesis / problem:** Package filter (Redis `IDistributedCache`) separates cache replay from production execution on `POST /api/v2/Order/order`.
 - **Surface:** HTTP order create → `[Idempotent(useLock: true)]` → `CreateOrderCommandHandler` (Mediator + catalog SaveChanges + outbox insert on miss).
-- **Primary behavior:** Miss runs production (Mediator + Npgsql); hit replays with `X-Idempotent-Response`; same key + different body keeps original order (body not part of key when fingerprint off); new key runs production again. Replay body casing reflects package Newtonsoft cache serialization.
+- **Primary behavior:** Miss runs production (Mediator + Npgsql); hit replays with `X-Idempotent-Response`; same key + different body keeps original order (body not part of key when fingerprint off); new key runs production again. Replay body casing reflects package System.Text.Json cache serialization (PascalCase by default).
 - **Limitation / non-goal:** Does not cover MCP `orders.create` (Exp 6). Does not assert async handler delivery (Exp 5). Does not prove concurrency lock races (Exp 4) or opt-in fingerprinting (Exp 12).
 
 ### Experiment 4 — HTTP idempotency concurrency (ConcurrencyRace)
 
 - **Role:** Originally proved the Redis same-key concurrency problem and lock behavior; now **regression / provenance** for `RedisIdempotencyLock` + Processing/Completed coordination under concurrent clients.
-- **Workstream:** COMPLETE — BuildingBlocks.Idempotency 1.0.0 (extraction proof set).
+- **Workstream:** COMPLETE — BuildingBlocks.Idempotency 1.0.1 (extraction proof set).
 - **Hypothesis / problem:** Concurrent clients with the **same** `Idempotency-Key` coordinate through Redis lock/status; different keys run independently.
 - **Surface:** Same HTTP order-create path as Exp 3 (`BuildingBlocks.Idempotency`).
 - **Primary behavior:** Three concurrent same-key requests → exactly one production winner, one unique `orderId`; losers are cached replay, HTTP 409, or lock-failure HTTP 500 (as observed). Two different keys both run production.
@@ -193,7 +193,7 @@ Reusable implementation: [`src/BuildingBlocks/Idempotency`](../../../../src/Buil
 ### Experiment 12 — HTTP idempotency request fingerprint (opt-in)
 
 - **Role:** Proves the **opt-in request fingerprint** capability added in richer BuildingBlocks.Idempotency v1 (not part of the original extraction proof set). Remains a **regression / proof gate** for that feature.
-- **Workstream:** COMPLETE — BuildingBlocks.Idempotency 1.0.0 (richer v1 evidence).
+- **Workstream:** COMPLETE — BuildingBlocks.Idempotency 1.0.1 (richer v1 evidence).
 - **Hypothesis / problem:** With `EnableRequestFingerprint=true`, same key + same body replays; same key + different body conflicts (422) without production.
 - **Surface:** Same order-create path as Exp 3; fingerprint enabled via test-host `PostConfigure<IdempotencyOptions>` only (Lab app default stays off).
 - **Primary behavior:** Miss runs production; same-body replay sets `X-Idempotent-Response`; different quantity → HTTP 422, no Mediator.
@@ -220,6 +220,7 @@ Reusable implementation: [`src/BuildingBlocks/Idempotency`](../../../../src/Buil
 ### Experiment 15 — HTTP idempotency ProcessingTtl lease overlap
 
 - **Role:** Closes the lease-expiry gap deferred by Exp 4 / package docs: what happens when the first same-key request stays in `Processing` longer than `ProcessingTtl`.
+- **Workstream:** COMPLETE — BuildingBlocks.Idempotency 1.0.1 (lease-overlap characterization; unchanged in STJ packaging polish).
 - **Hypothesis / problem:** After the Processing lease expires, a second client with the same `Idempotency-Key` may run production while the first handler is still in flight → duplicate orders/outbox.
 - **Surface:** HTTP `POST /api/v2/Order/order` → `BuildingBlocks.Idempotency` (`useLock: true`) → Mediator `CreateOrderCommand` → outbox. Test host only: short `ProcessingTtl` via `PostConfigure` + test-only gated handler wrapper (production handler unchanged).
 - **Primary behavior (characterized by this experiment):** Probe while first held → HTTP 409; after lease expiry → second request executes production; both complete with distinct `orderId`s and outbox rows when the packaged lease tradeoff admits overlap.

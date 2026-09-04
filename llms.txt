@@ -4,11 +4,26 @@
 
 ## Canonical
 
-- [README](https://github.com/Maxofpower/FeatureFusion/blob/main/README.md): lab + package overview
+- [README](https://github.com/Maxofpower/FeatureFusion/blob/main/README.md): lab + package overview (versions below)
 - [AGENTS.md](https://github.com/Maxofpower/FeatureFusion/blob/main/AGENTS.md): repo map for coding agents
+- [CHANGELOG](https://github.com/Maxofpower/FeatureFusion/blob/main/CHANGELOG.md): BuildingBlocks release notes
 - [Medium](https://medium.com/@m2hweb86/featurefusion-an-engineering-lab-that-extracts-reusable-net-building-blocks-28152cafafb9): lab-to-package narrative
 - [Writing catalog](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/linkedin-posts.md): LinkedIn / Medium post ↔ code map
 - [CONTRIBUTING](https://github.com/Maxofpower/FeatureFusion/blob/main/CONTRIBUTING.md)
+- [web/README](https://github.com/Maxofpower/FeatureFusion/blob/main/web/README.md): reserved Next.js frontend root (not in the .NET solution)
+
+## Packages (current versions)
+
+| Package | Version | NuGet | GitHub releases |
+|---------|---------|-------|-----------------|
+| BuildingBlocks.Mediator | 1.1.0 | [nuget.org](https://www.nuget.org/packages/BuildingBlocks.Mediator/1.1.0) | [mediator-v*](https://github.com/Maxofpower/FeatureFusion/releases?q=mediator-v) |
+| BuildingBlocks.Mcp | 1.0.0 | [nuget.org](https://www.nuget.org/packages/BuildingBlocks.Mcp/1.0.0) | [mcp-v*](https://github.com/Maxofpower/FeatureFusion/releases?q=mcp-v) |
+| BuildingBlocks.Idempotency | 1.0.1 | [nuget.org](https://www.nuget.org/packages/BuildingBlocks.Idempotency/1.0.1) | [idempotency-v*](https://github.com/Maxofpower/FeatureFusion/releases?q=idempotency-v) |
+| BuildingBlocks.Pagination.EntityFrameworkCore | 1.1.0 | [nuget.org](https://www.nuget.org/packages/BuildingBlocks.Pagination.EntityFrameworkCore/1.1.0) | [pagination-v*](https://github.com/Maxofpower/FeatureFusion/releases?q=pagination-v) |
+| BuildingBlocks.Telemetry | 1.0.2 | [nuget.org](https://www.nuget.org/packages/BuildingBlocks.Telemetry/1.0.2) | [telemetry-v*](https://github.com/Maxofpower/FeatureFusion/releases?q=telemetry-v) |
+| BuildingBlocks.Aspire.Hosting.SigNoz | 1.0.0 | [nuget.org](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz/1.0.0) | [signoz-v*](https://github.com/Maxofpower/FeatureFusion/releases?q=signoz-v) |
+
+**Highlights:** Pagination **1.1.0** — any-width Npgsql row comparison, `NULLS FIRST/LAST` interceptor, `HasKeysetIndex` + `NullOrder`. Idempotency **1.0.1** — package icon, System.Text.Json only (no Newtonsoft).
 
 ## BuildingBlocks — NuGet READMEs
 
@@ -33,13 +48,17 @@
 ## Guides
 
 - [Getting started](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/getting-started.md)
+- [Cookbook](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/cookbook.md)
 - [Mediator](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/mediator.md)
-- [Idempotency](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/idempotency.md)
-- [Pagination](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/pagination.md)
+- [Pipeline behaviors](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/pipeline-behaviors.md)
+- [Idempotency](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/idempotency.md) (1.0.1)
+- [Pagination](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/pagination.md) (1.1.0)
+- [Pagination test matrix](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/PAGINATION_TEST_MATRIX.md)
 - [MCP](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/mcp.md)
 - [Telemetry](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/telemetry.md)
+- [ADR 0003 — pagination keyset](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/adr/0003-pagination-keyset.md)
 
 ## Lab integration experiments
 
 - [Lab charter](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/lab/README.md): evidence families, extraction rules, roadmap
-- [Experiments README](https://github.com/Maxofpower/FeatureFusion/blob/main/tests/Lab/IntegrationTests/Experiments/README.md): behavioral experiment catalog Exp 1–18 + MAF prototype, evidence model, conventions
+- [Experiments README](https://github.com/Maxofpower/FeatureFusion/blob/main/tests/Lab/IntegrationTests/Experiments/README.md): behavioral experiment catalog Exp 1–18 + MAF prototype, evidence model, conventions (HTTP Idempotency Exp 3/4/12/15 → package 1.0.1)

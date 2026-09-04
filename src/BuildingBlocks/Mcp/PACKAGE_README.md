@@ -3,6 +3,7 @@
 Map **application message types** (commands, queries, DTOs) and **public static Minimal API methods** to MCP tools on the official C# SDK. Deny-by-default catalog, typed `McpResult`, HTTP by default (stdio opt-in). Does not require BuildingBlocks.Mediator.
 
 [![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Mcp.svg)](https://www.nuget.org/packages/BuildingBlocks.Mcp)
+[![GitHub Release](https://img.shields.io/github/v/release/Maxofpower/FeatureFusion?filter=mcp-v*&logo=github&label=GitHub%20Release)](https://github.com/Maxofpower/FeatureFusion/releases?q=mcp-v)
 [![.NET](https://img.shields.io/badge/.NET-8%20%7C%209%20%7C%2010-512BD4)](https://dotnet.microsoft.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 

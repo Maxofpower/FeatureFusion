@@ -152,7 +152,7 @@ public sealed class CacheVsProductionExperimentTests
 		miss.Body.Should().Contain("\"orderId\"",
 			"production MVC serialization is camelCase System.Text.Json");
 		hit.Body.Should().Contain("\"OrderId\"",
-			"the cached replay is Newtonsoft.Json from BuildingBlocks.Idempotency, which defaults to PascalCase");
+			"the cached replay is System.Text.Json from BuildingBlocks.Idempotency, which defaults to PascalCase");
 
 		mutatedBody.HttpStatus.Should().Be(200);
 		mutatedBody.OrderId.Should().Be(miss.OrderId);

@@ -14,7 +14,6 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Newtonsoft.Json;
 using Xunit.Abstractions;
 using static FeatureFusion.Features.Orders.Commands.CreateOrderCommandHandler;
 using static IntegrationTests.Infrastructure.Telemetry.LabTrace;
@@ -269,7 +268,7 @@ public sealed class IdempotencyProcessingLeaseExperimentTests
 		if (bytes is null || bytes.Length == 0)
 			return null;
 
-		return JsonConvert.DeserializeObject<IdempotencyCacheEntry>(Encoding.UTF8.GetString(bytes));
+		return JsonSerializer.Deserialize<IdempotencyCacheEntry>(Encoding.UTF8.GetString(bytes));
 	}
 
 	private async Task<LeaseCall> SendAsync(
