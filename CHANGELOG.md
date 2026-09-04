@@ -5,6 +5,26 @@ All notable changes to **BuildingBlocks** packages in this repository are docume
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## BuildingBlocks.Pagination.EntityFrameworkCore [1.1.0] - 2026-09-04
+
+### Added
+
+- **Npgsql row-comparison seek** when the `SortKey` is tuple-eligible (uniform ASC/DESC) and every slot is a non-nullable value type: emits `(a, b, …) > (@0, @1, …)` via soft-resolved `EF.Functions.GreaterThan/LessThan` for **any column count** (9+ uses nested `ValueTuple` `TRest`). Mixed directions, strings, Sqlite, and SQL Server keep the expanded OR form.
+- **`AddBuildingBlocksPagination` / `UseBuildingBlocksPagination`** — registers a command interceptor that appends `NULLS FIRST/LAST` to tagged pagination `ORDER BY` on Npgsql and Sqlite (null placement is encoded in the query tag; inverted on backward walks).
+- **`HasKeysetIndex(sortKey, NullOrder)`** — optional Npgsql `HasNullSortOrder` on the composite index (soft API). The one-argument overload does not write null-sort metadata.
+- Dapper: `ORDER BY … NULLS FIRST/LAST` on PostgreSQL and Sqlite from `PaginationOptions.Nulls` (also inverted on backward walks). SQL Server still omits `NULLS`.
+
+### Changed
+
+- `NullOrder` now documents seek **and** ORDER BY null placement where supported (was seek-predicate only).
+- EF seek null comparisons for reference slots align with true NULLS FIRST/LAST semantics (fix for end-to-end null ordering).
+
+### Notes
+
+- Nullable value-type sort slots (`int?`, `DateTime?`) remain unsupported.
+- No hard PackageReference on Npgsql in the nupkg; row comparison requires the host already using Npgsql.EntityFrameworkCore.PostgreSQL.
+- Lab: `NameThenPrice` product sort (3-column keyset) + `AddBuildingBlocksPagination` / `UseBuildingBlocksPagination` on FeatureFusion.
+
 ## BuildingBlocks.Idempotency [1.0.0] - 2026-09-04
 
 ### Added

@@ -33,6 +33,10 @@ public sealed class CatalogItem
 	public long LongId { get; set; }
 	public DateTime? OptionalAt { get; set; }
 	public int VendorId { get; set; }
+	/// <summary>Extra value-type slot for 8–9 column keyset tests.</summary>
+	public byte Flag { get; set; }
+	/// <summary>Extra value-type slot for 8–9 column keyset tests.</summary>
+	public short Rank { get; set; }
 	public Vendor? Vendor { get; set; }
 }
 

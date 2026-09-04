@@ -35,11 +35,24 @@ public static class ProductSortKeys
 	public static readonly SortKey<Product> CreatedAtDesc =
 		SortKey.For<Product>().ByDescending(p => p.CreatedAt, sql: "CreatedAt").ThenByUnique(p => p.Id, sql: "Id");
 
+	public static readonly SortKey<Product> NameThenPriceAsc =
+		SortKey.For<Product>()
+			.By(p => p.Name, sql: "Name")
+			.ThenBy(p => p.Price, sql: "Price")
+			.ThenByUnique(p => p.Id, sql: "Id");
+
+	public static readonly SortKey<Product> NameThenPriceDesc =
+		SortKey.For<Product>()
+			.ByDescending(p => p.Name, sql: "Name")
+			.ThenByDescending(p => p.Price, sql: "Price")
+			.ThenByUniqueDescending(p => p.Id, sql: "Id");
+
 	public static readonly SortKeyRegistry<ProductSortField, Product> Ascending = new SortKeyRegistry<ProductSortField, Product>()
 		.Add(ProductSortField.Id, IdAsc)
 		.Add(ProductSortField.Name, NameAsc)
 		.Add(ProductSortField.Price, PriceAsc)
-		.Add(ProductSortField.CreatedAt, CreatedAtAsc);
+		.Add(ProductSortField.CreatedAt, CreatedAtAsc)
+		.Add(ProductSortField.NameThenPrice, NameThenPriceAsc);
 
 	public static SortKey<Product> Resolve(ProductSortField field, SortDirection direction)
 	{
@@ -50,6 +63,7 @@ public static class ProductSortKeys
 			(ProductSortField.Name, SortDirection.Descending) => NameDesc,
 			(ProductSortField.Price, SortDirection.Descending) => PriceDesc,
 			(ProductSortField.CreatedAt, SortDirection.Descending) => CreatedAtDesc,
+			(ProductSortField.NameThenPrice, SortDirection.Descending) => NameThenPriceDesc,
 			_ => Ascending.Get(field)
 		};
 	}

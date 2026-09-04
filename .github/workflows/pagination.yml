@@ -46,8 +46,24 @@ jobs:
       - name: Test IR
         run: dotnet test tests/BuildingBlocks/Pagination.Tests/BuildingBlocks.Pagination.Tests.csproj -c Release --verbosity minimal
 
+      - name: Verify Docker
+        run: docker info
+
       - name: Test EF Core package
-        run: dotnet test tests/BuildingBlocks/Pagination.EntityFrameworkCore.Tests/BuildingBlocks.Pagination.EntityFrameworkCore.Tests.csproj -c Release --verbosity minimal
+        env:
+          PAGINATION_POSTGRES_REQUIRED: "true"
+        run: |
+          set -euo pipefail
+          log="${RUNNER_TEMP}/pagination-ef-test.log"
+          dotnet test tests/BuildingBlocks/Pagination.EntityFrameworkCore.Tests/BuildingBlocks.Pagination.EntityFrameworkCore.Tests.csproj -c Release --verbosity minimal | tee "$log"
+          if grep -E 'Skipped:[[:space:]]+[1-9]' "$log"; then
+            echo "::error::PostgreSQL EF tuple tests were skipped. CI must execute them against Testcontainers Postgres."
+            exit 1
+          fi
+          if ! grep -E 'Passed![[:space:]]+-[[:space:]]+Failed:[[:space:]]+0,[[:space:]]+Passed:[[:space:]]+[1-9]' "$log"; then
+            echo "::error::Pagination EF CI required a passing run with no failures."
+            exit 1
+          fi
 
       - name: Test Dapper project (not packed)
         run: dotnet test tests/BuildingBlocks/Pagination.Dapper.Tests/BuildingBlocks.Pagination.Dapper.Tests.csproj -c Release --verbosity minimal

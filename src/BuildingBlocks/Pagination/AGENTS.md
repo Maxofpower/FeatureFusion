@@ -12,4 +12,6 @@ Consumers install `BuildingBlocks.Pagination.EntityFrameworkCore`. Dapper is a s
 - Hosts map `PaginationException.Code` to HTTP 400.
 - No `pageIndex`, no `Skip`/`OFFSET` API.
 - Sort a mapped scalar. Do not `By` a value object, `byte[]`, or navigation.
+- Composite keys are n-column: codec and seek have no slot cap. EF Npgsql row comparison requires uniform directions and non-nullable value-type slots; otherwise OR-chain.
+- `NullOrder` is seek + ORDER BY NULLS on PG/Sqlite (EF needs `AddBuildingBlocksPagination` + `UseBuildingBlocksPagination`).
 - Do not put `NOLOCK` / isolation on `PaginationOptions`.

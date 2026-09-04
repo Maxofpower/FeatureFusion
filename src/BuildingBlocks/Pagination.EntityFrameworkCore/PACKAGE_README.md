@@ -12,13 +12,20 @@ Typed **keyset (cursor)** pagination for EF Core: `SortKey`, opaque versioned cu
 
 Dapper is an **in-repo project** (not a NuGet package). A LinqToDB adapter is not shipped.
 
+## What's new in 1.1.0
+
+- **Npgsql row comparison** for uniform non-nullable multi-column keys of **any width** (`(a, b, …) >`). 2–8 slots use `ValueTuple.Create`; 9+ nest `TRest`. Mixed ASC/DESC and `string` slots stay on the expanded OR seek. Sqlite and SQL Server always use OR.
+- **`ORDER BY NULLS FIRST/LAST`** on Npgsql/Sqlite when the host registers `AddBuildingBlocksPagination` + `UseBuildingBlocksPagination`. Stock LINQ cannot emit NULLS; a tagged command interceptor is the index-honest path (do not `CASE`/`IS NULL` in `OrderBy`). Dapper emits NULLS on those dialects without extra registration. SQL Server does not emit `NULLS`.
+- **`HasKeysetIndex(sortKey, NullOrder)`** — optional Npgsql `HasNullSortOrder` on the composite index (soft API). The one-argument `HasKeysetIndex(sortKey)` does not write null-sort metadata. Npgsql omits `NULLS` from `CREATE INDEX` when it matches the column's ASC/DESC default.
+
 ## What you get
 
 - **Keyset (cursor) pagination** — seek SQL instead of `OFFSET` / `SKIP`
 - **Forward and backward** — `HasNext` / `HasPrevious`; empty cursor + `PageDirection.Backward` is the last page
 - **Typed composite `SortKey`** — expressions ending in a unique column; enum registry, no `"Price"` reflection
 - **EF Core** in this nupkg (`ToCursorPageAsync`); **Dapper** in-repo only (`QueryCursorPageAsync`, not packed)
-- **`NullOrder` for strings** — seek-side null placement; does not emit SQL `NULLS FIRST/LAST`. Nullable value types (`int?`, `DateTime?`, …) are rejected
+- **`NullOrder` for strings** — seek + `ORDER BY … NULLS FIRST/LAST` on Npgsql/Sqlite when the host registers `AddBuildingBlocksPagination` + `UseBuildingBlocksPagination`. Does not emit NULLS on SQL Server. Nullable value types (`int?`, `DateTime?`, …) are rejected
+- **Npgsql row comparison** — uniform non-null keys of any width use `(a,b,…) > …` when Npgsql is loaded; otherwise OR-chain
 - **Optional total count** — `IncludeTotalCount` runs COUNT with the page (same QueryHint scope on SQL Server)
 - **Cancellation** — `CancellationToken` on EF and Dapper page APIs
 - **`QueryHint`** — allowlist `{ None, ReadUncommitted }`. `ReadUncommitted` is SQL Server session isolation only (not `WITH (NOLOCK)`); PG/Sqlite no-op
@@ -51,9 +58,15 @@ Map `CursorPage<T>` to your HTTP DTO (`HasNext` → `HasMore`, `Next` → `NextC
 ```csharp
 builder.HasKeysetIndex(priceKey).HasDatabaseName("IX_products_price_id");
 builder.HasKeysetIndex(priceDescKey).HasDatabaseName("IX_products_price_id_desc");
+// Optional: match ORDER BY NULLS FIRST on an ASC string key (non-default for ASC).
+builder.HasKeysetIndex(nameKey, NullOrder.First);
 ```
 
 `(Price DESC, Id ASC)` is not a reverse scan of `(Price ASC, Id ASC)` — add both when you expose both directions. Nested paths (`Vendor.Name`) are not mapped; index those columns yourself.
+
+**Npgsql multi-column seek:** when every sort slot is a non-nullable value type and directions are uniform, EF emits a Postgres row comparison `(a, b, …) > (@0, @1, …)` for **n columns** (same idea as the in-repo Dapper adapter). Mixed ASC/DESC, `string` keys, Sqlite, and SQL Server use the expanded OR form.
+
+**NULLS FIRST/LAST:** call `services.AddBuildingBlocksPagination()` and `options.UseBuildingBlocksPagination()` so EF appends `NULLS FIRST/LAST` on Npgsql/Sqlite at **execute** time (a `DbCommandInterceptor` on queries tagged `BuildingBlocks.Pagination:First|Last`). LINQ has no NULLS API; wrapping `OrderBy` in `CASE` would typically prevent a matching btree from being used. `ToQueryString()` does not run interceptors — assert executed SQL. Without registration, `NullOrder` is seek-predicate only for EF. Dapper always emits NULLS on PG/Sqlite from `PaginationOptions.Nulls`. SQL Server does not emit `NULLS`.
 
 Empty cursor + `PageDirection.Backward` is the last page.
 
@@ -65,7 +78,7 @@ There is **no** `IEnumerable` / in-memory adapter. Relational providers execute 
 
 - **HMAC on public HTTP.** Unsigned cursors are forgeable (`Walk` and key values). Set `PaginationOptions.SigningKey` for untrusted clients. Omit the key only for trusted internal callers.
 - **Host `OrderBy` is replaced**, not merged. Put filters/`AsNoTracking`/`TagWith` on the query; the sort comes from `SortKey`.
-- **Nullable value types are unsupported.** `int?` / `DateTime?` / `bool?` / nullable enums throw `NullableSortUnsupported` at `SortKey` construction. Coalesce in the model. `NullOrder` does **not** emit SQL `NULLS FIRST/LAST` (provider `ORDER BY` nulls stay as-is). `string` remains allowed.
+- **Nullable value types are unsupported.** `int?` / `DateTime?` / `bool?` / nullable enums throw `NullableSortUnsupported` at `SortKey` construction. Coalesce in the model. On PostgreSQL and Sqlite, `NullOrder` drives seek **and** `ORDER BY … NULLS FIRST/LAST` when the host registers `AddBuildingBlocksPagination` + `UseBuildingBlocksPagination` (Dapper emits NULLS without that). SQL Server does not emit `NULLS`. `string` remains allowed.
 - **Guid vs SQL Server.** CLR `Guid` ordinal comparison matches SQLite/PostgreSQL. SQL Server `uniqueidentifier` order is different for some sets — do not assume CLR `>` equals SQL Server order.
 - **`QueryHint.ReadUncommitted`:** SQL Server **session isolation** (`READ UNCOMMITTED`), not table-hint `WITH (NOLOCK)`. EF begins one transaction around COUNT (if requested) and PAGE when there is no ambient transaction, then restores `READ COMMITTED` on the still-open connection. An ambient transaction is **ignored** (no nest). Dapper prefixes `SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;` on both COUNT and page SQL, then restores `READ COMMITTED` on the open connection. PostgreSQL and Sqlite no-op. Host `WITH (NOLOCK)` in Dapper SQL is still allowed when `Hint` is `None`.
 - **Updates to a sort column** can make a row reappear or vanish (inherent keyset). Inserts after the cursor show up on later pages; that is expected.
@@ -179,9 +192,9 @@ Methodology, competitor notes, and limitations: [benchmarks README](https://gith
 ## Layout (EF Core style)
 
 ```text
-Extensions/           public ToCursorPageAsync (like EntityFrameworkQueryableExtensions)
+Extensions/           public ToCursorPageAsync / HasKeysetIndex (like EntityFrameworkQueryableExtensions)
 Query/Internal/       OrderBy / seek expression trees
-Infrastructure/Internal/  DbContext + shadow property access
+Infrastructure/Internal/  DbContext, QueryHint, NULLS interceptor, soft Npgsql HasNullSortOrder
 ```
 
 The IR (`SortKey`, `CursorCodec`, `CursorPage`) is a non-packable sibling project, bundled into this nupkg as `BuildingBlocks.Pagination.dll`.

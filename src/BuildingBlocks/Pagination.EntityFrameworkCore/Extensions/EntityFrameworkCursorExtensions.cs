@@ -105,12 +105,7 @@ public static class EntityFrameworkCursorExtensions
 			total = await query.CountAsync(cancellationToken).ConfigureAwait(false);
 		}
 
-		var ordered = CursorOrder.Apply(query, sortKey, walkBackward);
-		if (values is not null)
-		{
-			ordered = ordered.Where(CursorSeek.Build(sortKey, values, walkBackward, options.Nulls));
-		}
-
+		var ordered = PreparePageQuery(query, sortKey, values, walkBackward, options.Nulls);
 		var fetched = await ordered.Take(request.Limit + 1).ToListAsync(cancellationToken).ConfigureAwait(false);
 		var ctx = CursorDbContext.TryGet(query);
 		var keys = new List<object?[]>(fetched.Count);
@@ -139,12 +134,7 @@ public static class EntityFrameworkCursorExtensions
 			total = await query.CountAsync(cancellationToken).ConfigureAwait(false);
 		}
 
-		var ordered = CursorOrder.Apply(query, sortKey, walkBackward);
-		if (values is not null)
-		{
-			ordered = ordered.Where(CursorSeek.Build(sortKey, values, walkBackward, options.Nulls));
-		}
-
+		var ordered = PreparePageQuery(query, sortKey, values, walkBackward, options.Nulls);
 		var dtos = await ordered.Take(request.Limit + 1).Select(selector).ToListAsync(cancellationToken).ConfigureAwait(false);
 		var projectedKey = new SortKey<TResult>(sortKey.Slots);
 		var keys = new List<object?[]>(dtos.Count);
@@ -156,9 +146,49 @@ public static class EntityFrameworkCursorExtensions
 		return PageAssembler.Assemble(dtos, keys, projectedKey, request.Limit, walkBackward, fromCursor, options, total);
 	}
 
-	internal static string DebugQueryString<T>(IQueryable<T> query, SortKey<T> sortKey, bool walkBackward, int? take = null)
+	private static IQueryable<T> PreparePageQuery<T>(
+		IQueryable<T> query,
+		SortKey<T> sortKey,
+		object?[]? values,
+		bool walkBackward,
+		NullOrder nulls)
 	{
-		IQueryable<T> ordered = CursorOrder.Apply(query, sortKey, walkBackward);
+		var ordered = CursorOrder.Apply(query, sortKey, walkBackward)
+			.TagWith(PaginationNullsInterceptor.TagFor(nulls, walkBackward));
+		if (values is not null)
+		{
+			ordered = ordered.Where(BuildSeek(query, sortKey, values, walkBackward, nulls));
+		}
+
+		return ordered;
+	}
+
+	private static Expression<Func<T, bool>> BuildSeek<T>(
+		IQueryable<T> query,
+		SortKey<T> sortKey,
+		object?[] values,
+		bool walkBackward,
+		NullOrder nulls)
+	{
+		var ctx = CursorDbContext.TryGet(query);
+		if (CursorProvider.IsNpgsql(ctx)
+			&& CursorSeekTuple.TryBuild(sortKey, values, walkBackward, out var tuple))
+		{
+			return tuple;
+		}
+
+		return CursorSeek.Build(sortKey, values, walkBackward, nulls);
+	}
+
+	internal static string DebugQueryString<T>(
+		IQueryable<T> query,
+		SortKey<T> sortKey,
+		bool walkBackward,
+		int? take = null,
+		NullOrder nulls = NullOrder.Last)
+	{
+		IQueryable<T> ordered = CursorOrder.Apply(query, sortKey, walkBackward)
+			.TagWith(PaginationNullsInterceptor.TagFor(nulls, walkBackward));
 		if (take is int n)
 		{
 			ordered = ordered.Take(n);
@@ -176,7 +206,5 @@ public static class EntityFrameworkCursorExtensions
 		object?[] values,
 		bool walkBackward,
 		NullOrder nulls = NullOrder.Last)
-		=> CursorOrder.Apply(query, sortKey, walkBackward)
-			.Where(CursorSeek.Build(sortKey, values, walkBackward, nulls))
-			.ToQueryString();
+		=> PreparePageQuery(query, sortKey, values, walkBackward, nulls).ToQueryString();
 }

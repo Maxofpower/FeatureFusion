@@ -15,7 +15,8 @@ internal static class SeekSql
 		bool walkBackward,
 		int take,
 		SqlDialect dialect,
-		object? param)
+		object? param,
+		NullOrder nulls = NullOrder.Last)
 	{
 		var parameters = new DynamicParameters(param);
 		parameters.Add("take", take);
@@ -30,7 +31,7 @@ internal static class SeekSql
 		}
 
 		sb.Append(" ORDER BY ");
-		AppendOrder(sb, sortKey, walkBackward, dialect);
+		AppendOrder(sb, sortKey, walkBackward, dialect, nulls);
 		AppendLimit(sb, dialect);
 
 		return new SeekCommand(sb.ToString(), parameters);
@@ -85,8 +86,18 @@ internal static class SeekSql
 		sb.Append(')');
 	}
 
-	private static void AppendOrder<T>(StringBuilder sb, SortKey<T> sortKey, bool walkBackward, SqlDialect dialect)
+	private static void AppendOrder<T>(
+		StringBuilder sb,
+		SortKey<T> sortKey,
+		bool walkBackward,
+		SqlDialect dialect,
+		NullOrder nulls)
 	{
+		var emitNulls = dialect is SqlDialect.PostgreSql or SqlDialect.Sqlite;
+		var effective = walkBackward
+			? (nulls == NullOrder.Last ? NullOrder.First : NullOrder.Last)
+			: nulls;
+		var nullsSql = effective == NullOrder.First ? " NULLS FIRST" : " NULLS LAST";
 		for (var i = 0; i < sortKey.Slots.Count; i++)
 		{
 			if (i > 0)
@@ -97,6 +108,10 @@ internal static class SeekSql
 			var dir = SeekOps.OrderDirection(sortKey.Slots[i], walkBackward);
 			sb.Append(Quote(sortKey.Slots[i].SqlIdentifier!, dialect))
 				.Append(dir == SortDirection.Ascending ? " ASC" : " DESC");
+			if (emitNulls)
+			{
+				sb.Append(nullsSql);
+			}
 		}
 	}
 

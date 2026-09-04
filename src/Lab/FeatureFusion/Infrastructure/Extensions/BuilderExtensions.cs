@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using Asp.Versioning.Conventions;
 using BuildingBlocks.Idempotency.DependencyInjection;
+using BuildingBlocks.Pagination.EntityFrameworkCore;
 using FeatureFusion.Features.Order.IntegrationEvents;
 using FeatureFusion.Features.Order.IntegrationEvents.EventHandling;
 using FeatureFusion.Features.Order.IntegrationEvents.Events;
@@ -292,6 +293,7 @@ namespace FeatureFusion.Infrastructure.Extensions
 
 			builder.AddNpgsqlDbContext<CatalogDbContext>("catalogdb", configureDbContextOptions: dbContextOptionsBuilder =>
 			{
+				dbContextOptionsBuilder.UseBuildingBlocksPagination();
 				dbContextOptionsBuilder.UseNpgsql(
 				npgsqlOptions =>
 				{
@@ -303,6 +305,7 @@ namespace FeatureFusion.Infrastructure.Extensions
 			});
 			// Migrations must register before OutboxWorker / AppInitializer so
 			// MigrationHostedService.StartAsync completes before they begin work.
+			builder.Services.AddBuildingBlocksPagination();
 			builder.Services.AddMigration<CatalogDbContext, CatalogDContextSeed>();
 
 			// Resolve catalogdb from config at runtime (Aspire/WAF injects ConnectionStrings__catalogdb).

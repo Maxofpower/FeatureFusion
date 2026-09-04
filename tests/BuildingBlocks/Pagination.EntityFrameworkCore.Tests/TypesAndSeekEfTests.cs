@@ -177,7 +177,9 @@ public sealed class TypesAndSeekEfTests
 				ExternalId = item.ExternalId,
 				LongId = item.LongId,
 				OptionalAt = item.OptionalAt,
-				VendorId = item.VendorId
+				VendorId = item.VendorId,
+				Flag = item.Flag,
+				Rank = item.Rank
 			});
 		}
 

@@ -18,7 +18,7 @@ namespace FeatureFusion.Features.Products.Queries
 		[SwaggerParameter(Required = false, Description = "Opaque cursor from a previous response (NextCursor or PreviousCursor). Pass it back unchanged. Empty = first page, or last page when pageDirection is Backward.")]
 		public string Cursor { get; init; } = string.Empty;
 
-		[SwaggerParameter(Description = "Sort field: Id, Name, Price, or CreatedAt. Composite keys always include unique Id as the tie-breaker.")]
+		[SwaggerParameter(Description = "Sort field: Id, Name, Price, CreatedAt, or NameThenPrice. Composite keys always include unique Id as the tie-breaker.")]
 		public ProductSortField SortBy { get; init; } = ProductSortField.Id;
 
 		[SwaggerParameter(Description = "Sort direction: Ascending or Descending.")]
@@ -34,7 +34,9 @@ namespace FeatureFusion.Features.Products.Queries
 		Id,
 		Name,
 		Price,
-		CreatedAt
+		CreatedAt,
+		/// <summary>Composite: Name, then Price, then unique Id (3-column keyset showcase).</summary>
+		NameThenPrice
 	}
 
 	[JsonConverter(typeof(JsonStringEnumConverter))]

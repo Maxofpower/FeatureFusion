@@ -174,6 +174,92 @@ public sealed class DapperPagingTests(SqliteDapperFixture fixture)
 	}
 
 	[Fact]
+	public void Postgres_Tuple_Three_Column_Sql()
+	{
+		var sql = DapperCursorExtensions.BuildSql(
+			CatalogSeed.ByPriceCreatedAt,
+			FilterSql,
+			SqlDialect.PostgreSql,
+			[10d, CatalogSeed.T0.AddDays(1), 1],
+			walkBackward: false,
+			take: 6);
+		Assert.Contains("(\"Price\", \"CreatedAt\", \"Id\") > (@ks0, @ks1, @ks2)", sql, StringComparison.Ordinal);
+		Assert.DoesNotContain(" OR ", sql, StringComparison.Ordinal);
+	}
+
+	[Fact]
+	public void Postgres_Tuple_Four_Column_Sql()
+	{
+		var sql = DapperCursorExtensions.BuildSql(
+			CatalogSeed.ByNamePriceCreatedAt,
+			FilterSql,
+			SqlDialect.PostgreSql,
+			["Item-A", 10d, CatalogSeed.T0.AddDays(1), 1],
+			walkBackward: false,
+			take: 6);
+		// Name is a string slot — Dapper still emits tuple when directions match (host SQL assumes non-null).
+		Assert.Contains("(\"Name\", \"Price\", \"CreatedAt\", \"Id\") > (@ks0, @ks1, @ks2, @ks3)", sql, StringComparison.Ordinal);
+	}
+
+	[Fact]
+	public void Postgres_Tuple_Nine_Column_Sql()
+	{
+		var first = CatalogSeed.Items[0];
+		var sql = DapperCursorExtensions.BuildSql(
+			CatalogSeed.ByNineValueTypes,
+			FilterSql,
+			SqlDialect.PostgreSql,
+			[first.Price, first.CreatedAt, first.LongId, first.Kind, first.ExternalId, first.VendorId, first.Flag, first.Rank, first.Id],
+			walkBackward: false,
+			take: 6);
+		Assert.Contains("(\"Price\", \"CreatedAt\", \"LongId\", \"Kind\", \"ExternalId\", \"VendorId\", \"Flag\", \"Rank\", \"Id\") >", sql, StringComparison.Ordinal);
+		Assert.DoesNotContain(" OR ", sql, StringComparison.Ordinal);
+	}
+
+	[Fact]
+	public void Postgres_OrderBy_Nulls_Last_In_Sql()
+	{
+		var sql = DapperCursorExtensions.BuildSql(
+			CatalogSeed.ByName,
+			FilterSql,
+			SqlDialect.PostgreSql,
+			values: null,
+			walkBackward: false,
+			take: 6,
+			new PaginationOptions { Nulls = NullOrder.Last });
+		Assert.Contains("\"Name\" ASC NULLS LAST", sql, StringComparison.Ordinal);
+		Assert.Contains("\"Id\" ASC NULLS LAST", sql, StringComparison.Ordinal);
+	}
+
+	[Fact]
+	public void Sqlite_OrderBy_Nulls_First_In_Sql()
+	{
+		var sql = DapperCursorExtensions.BuildSql(
+			CatalogSeed.ByName,
+			FilterSql,
+			SqlDialect.Sqlite,
+			values: null,
+			walkBackward: false,
+			take: 6,
+			new PaginationOptions { Nulls = NullOrder.First });
+		Assert.Contains("\"Name\" ASC NULLS FIRST", sql, StringComparison.Ordinal);
+	}
+
+	[Fact]
+	public void SqlServer_OrderBy_Has_No_Nulls_Keyword()
+	{
+		var sql = DapperCursorExtensions.BuildSql(
+			CatalogSeed.ByName,
+			FilterSql,
+			SqlDialect.SqlServer,
+			values: null,
+			walkBackward: false,
+			take: 6,
+			new PaginationOptions { Nulls = NullOrder.Last });
+		Assert.DoesNotContain("NULLS", sql, StringComparison.OrdinalIgnoreCase);
+	}
+
+	[Fact]
 	public void Mixed_Direction_Is_Or_Not_Tuple()
 	{
 		var key = SortKey.For<CatalogItem>().ByDescending(x => x.Price, sql: "Price").ThenByUnique(x => x.Id, sql: "Id");

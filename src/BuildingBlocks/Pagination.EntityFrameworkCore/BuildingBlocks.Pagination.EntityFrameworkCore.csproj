@@ -11,7 +11,7 @@
     <IsPackable>true</IsPackable>
     <PackageId>BuildingBlocks.Pagination.EntityFrameworkCore</PackageId>
     <Title>BuildingBlocks.Pagination.EntityFrameworkCore</Title>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Authors>Mohammad Hasan Hosseini</Authors>
     <Company>Mohammad Hasan Hosseini</Company>
     <Copyright>Copyright (c) 2026 Mohammad Hasan Hosseini</Copyright>
@@ -23,7 +23,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>PACKAGE_README.md</PackageReadmeFile>
     <PackageIcon>pagination-icon.png</PackageIcon>
-    <PackageReleaseNotes>1.0.0: ToCursorPageAsync for IQueryable; SortKey/cursors ship in this package. https://github.com/Maxofpower/FeatureFusion/blob/main/CHANGELOG.md</PackageReleaseNotes>
+    <PackageReleaseNotes>1.1.0: Npgsql row-comparison seek for multi-column keys; ORDER BY NULLS FIRST/LAST (AddBuildingBlocksPagination); HasKeysetIndex NullOrder overload. https://github.com/Maxofpower/FeatureFusion/blob/main/CHANGELOG.md</PackageReleaseNotes>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <IncludeSymbols>true</IncludeSymbols>
@@ -65,6 +65,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="BuildingBlocks.Pagination.EntityFrameworkCore.Tests" />
     <InternalsVisibleTo Include="BuildingBlocks.Pagination.EntityFrameworkCore.Benchmarks" />
+    <InternalsVisibleTo Include="IntegrationTests" />
   </ItemGroup>
 
   <!-- Bundle the non-packable IR assembly so consumers install one nupkg. -->

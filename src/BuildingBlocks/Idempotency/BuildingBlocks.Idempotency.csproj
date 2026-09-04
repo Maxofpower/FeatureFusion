@@ -23,6 +23,7 @@
     <RepositoryUrl>https://github.com/Maxofpower/FeatureFusion</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>PACKAGE_README.md</PackageReadmeFile>
+    <PackageIcon>idempotency-icon.png</PackageIcon>
     <PackageReleaseNotes>1.0.0: IdempotencyGate; MVC + Minimal API; 2xx envelope replay; ProblemDetails errors; ProcessingTtl / EntryTtl + per-endpoint overrides; optional Redis lock; opt-in method+path+body fingerprint; fluent UseRedisLock/UseTelemetry. Host owns IDistributedCache. https://github.com/Maxofpower/FeatureFusion/blob/main/CHANGELOG.md</PackageReleaseNotes>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
@@ -34,6 +35,7 @@
   <ItemGroup>
     <None Include="PACKAGE_README.md" Pack="true" PackagePath="\" />
     <None Include="AGENTS.md" Pack="true" PackagePath="\" />
+    <None Include="idempotency-icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>

@@ -4,5 +4,12 @@ namespace BuildingBlocks.Pagination.EntityFrameworkCore
     public static partial class KeysetIndexExtensions
     {
         public static Microsoft.EntityFrameworkCore.Metadata.Builders.IndexBuilder HasKeysetIndex<TEntity>(this Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TEntity> builder, BuildingBlocks.Pagination.SortKey<TEntity> sortKey) where TEntity : class { throw null!; }
+        public static Microsoft.EntityFrameworkCore.Metadata.Builders.IndexBuilder HasKeysetIndex<TEntity>(this Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TEntity> builder, BuildingBlocks.Pagination.SortKey<TEntity> sortKey, BuildingBlocks.Pagination.NullOrder nulls) where TEntity : class { throw null!; }
+    }
+    public static partial class PaginationServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddBuildingBlocksPagination(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { throw null!; }
+        public static Microsoft.EntityFrameworkCore.DbContextOptionsBuilder UseBuildingBlocksPagination(this Microsoft.EntityFrameworkCore.DbContextOptionsBuilder optionsBuilder) { throw null!; }
+        public static Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<TContext> UseBuildingBlocksPagination<TContext>(this Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<TContext> optionsBuilder) where TContext : Microsoft.EntityFrameworkCore.DbContext { throw null!; }
     }
 }
