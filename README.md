@@ -393,6 +393,8 @@ app.MapPost("/orders", CreateAsync).WithIdempotency(useLock: true);
 
 Typed **keyset (cursor)** pagination for EF Core. **One package** — `SortKey` / cursors ship inside it. Hosts map a sort enum to a **prebuilt** key — the library never reflects `"Price"` into a property. Unique last column required. Set `SigningKey` on public HTTP APIs. Dapper is an in-repo lab project, not a nupkg. There is no `IEnumerable` adapter.
 
+**What's new in 1.1.0:** Npgsql row-comparison seek for uniform non-nullable composite keys of any width; `ORDER BY NULLS FIRST/LAST` on Npgsql/Sqlite via `AddBuildingBlocksPagination` + `UseBuildingBlocksPagination`; `HasKeysetIndex(sortKey, NullOrder)`.
+
 ```bash
 dotnet add package BuildingBlocks.Pagination.EntityFrameworkCore
 ```
@@ -409,7 +411,7 @@ var page = await db.Products
     .ToCursorPageAsync(new CursorRequest(cursor, 20), key);
 ```
 
-Optional `PaginationOptions.Hint` defaults to `None`. `ReadUncommitted` is SQL Server session isolation (not `WITH (NOLOCK)`): EF starts one transaction around COUNT+PAGE when there is no ambient transaction, then restores `READ COMMITTED` on the still-open connection; ambient is ignored; PostgreSQL and Sqlite ignore it. Host `AsNoTracking` / Dapper `WITH (NOLOCK)` still work. Host `OrderBy` is replaced by the `SortKey`. Composite indexes should match each key, e.g. `(Price, Id)` and `(CreatedAt, Id)`. Nullable `T?` sort columns are unsupported. Guid CLR order is not SQL Server `uniqueidentifier` order. `NullOrder` is seek-predicate only (no SQL `NULLS FIRST/LAST`). Updates to a sort column can make a row vanish or reappear (inherent keyset).
+Optional `PaginationOptions.Hint` defaults to `None`. `ReadUncommitted` is SQL Server session isolation (not `WITH (NOLOCK)`): EF starts one transaction around COUNT+PAGE when there is no ambient transaction, then restores `READ COMMITTED` on the still-open connection; ambient is ignored; PostgreSQL and Sqlite ignore it. Host `AsNoTracking` / Dapper `WITH (NOLOCK)` still work. Host `OrderBy` is replaced by the `SortKey`. Composite indexes should match each key, e.g. `(Price, Id)` and `(CreatedAt, Id)`. Nullable `T?` sort columns are unsupported. Guid CLR order is not SQL Server `uniqueidentifier` order. `NullOrder` drives seek and, on PostgreSQL/Sqlite, `ORDER BY NULLS FIRST/LAST` (EF: register `AddBuildingBlocksPagination` + `UseBuildingBlocksPagination`). Updates to a sort column can make a row vanish or reappear (inherent keyset).
 
 Indexed keyset on **file SQLite** SQL with index `(Price, Id)`, page 20. `--probe` is Stopwatch (1 warmup + 5 repeats), not BenchmarkDotNet, not Dry, not EF InMemory. Times below are **this machine’s** catalog; do not treat them as PostgreSQL or SQL Server timings. **KB** is mean managed allocations per page (`GC.GetAllocatedBytesForCurrentThread`), not process working set. First page is cheap for all three; allocations stay in the same band (~75–86 KB) because each call opens a context and materializes 20 rows.
 
@@ -810,7 +812,7 @@ src/                                # C# only
     FeatureFusion.AppHost/          # Aspire AppHost (+ SigNoz stack)
     FeatureFusion.ServiceDefaults/
     EventBus/                       # Reusable RabbitMQ event bus (namespaces stay EventBusRabbitMQ)
-web/                                # reserved — Next.js project root (not created yet; not in the .sln)
+web/                                # reserved Next.js showcase (README only; not in the .sln)
 tests/
   BuildingBlocks/
     Mediator.Tests/
@@ -1002,7 +1004,7 @@ BuildingBlocks.Mediator: [NuGet v1.0.1](https://lnkd.in/p/eU5TsuR4) · [manual p
 This remains a **public .NET lab**. Near-term direction:
 
 - More **BuildingBlocks.\*** packages extracted from the showcase
-- Frontend showcase (`web/`, Next.js project root)
+- Frontend showcase (`web/`, Next.js project root — folder exists with a README; app not scaffolded yet)
 - Keep the LinkedIn catalog in sync when new posts ship (`mcp-message-tools` planned)
 - Pub/sub stays a **sibling** story (not Mediator notifications)
 
@@ -1021,7 +1023,7 @@ dotnet test FeatureFusion.sln -c Release
 | `BuildingBlocks.Mcp.Tests` | Catalog, invoker, endpoint methods, MapTool scoped SP, idempotency, filters |
 | `BuildingBlocks.Mcp.Analyzers.Tests` | BBMCP001–005 |
 | `BuildingBlocks.Pagination.Tests` | Codec, registry, identifiers (net8 / net9 / net10) |
-| `BuildingBlocks.Pagination.EntityFrameworkCore.Tests` | Sqlite keyset + shadow + projection |
+| `BuildingBlocks.Pagination.EntityFrameworkCore.Tests` | Sqlite keyset + shadow + projection; Postgres Testcontainers when Docker is available |
 | `BuildingBlocks.Pagination.Dapper.Tests` | Sqlite execute + dialect SQL asserts |
 | `BuildingBlocks.Telemetry.Tests` | `AddTelemetry` / `IntegrateMediator` / `IntegrateMcp` |
 | `BuildingBlocks.Aspire.Hosting.SigNoz.Tests` | AppHost integration |

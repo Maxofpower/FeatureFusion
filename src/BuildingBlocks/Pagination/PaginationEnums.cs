@@ -21,16 +21,20 @@ public enum PageDirection
 }
 
 /// <summary>
-/// Seek-predicate null placement for <c>string</c> (and other reference) slots.
-/// Does <strong>not</strong> emit SQL <c>NULLS FIRST/LAST</c>. Nullable value types
-/// (<c>int?</c>, <c>DateTime?</c>, …) are rejected at <see cref="SortKey{T}"/> construction.
+/// Null placement for <c>string</c> (and other reference) sort slots.
+/// Drives the seek predicate and, where supported, SQL <c>ORDER BY … NULLS FIRST/LAST</c>
+/// (Dapper: PostgreSQL and Sqlite; EF: same providers when the host registers
+/// <c>AddBuildingBlocksPagination</c> + <c>UseBuildingBlocksPagination</c>).
+/// SQL Server does not emit <c>NULLS</c> (no portable index-friendly syntax).
+/// Nullable value types (<c>int?</c>, <c>DateTime?</c>, …) are rejected at
+/// <see cref="SortKey{T}"/> construction.
 /// </summary>
 public enum NullOrder
 {
-	/// <summary>Nulls after non-nulls when seeking greater-than (default).</summary>
+	/// <summary>Nulls after non-nulls (default).</summary>
 	Last = 0,
 
-	/// <summary>Nulls before non-nulls when seeking greater-than.</summary>
+	/// <summary>Nulls before non-nulls.</summary>
 	First = 1
 }
 

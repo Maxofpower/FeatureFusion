@@ -72,15 +72,17 @@ internal static class CursorSeek
 		Expression nullCmp;
 		if (nulls == NullOrder.Last)
 		{
-			nullCmp = greater
-				? Expression.AndAlso(Expression.Not(leftNull), rightNull)
-				: Expression.AndAlso(leftNull, Expression.Not(rightNull));
-		}
-		else
-		{
+			// Null is largest: row > cursor includes null rows when cursor is non-null.
 			nullCmp = greater
 				? Expression.AndAlso(leftNull, Expression.Not(rightNull))
 				: Expression.AndAlso(Expression.Not(leftNull), rightNull);
+		}
+		else
+		{
+			// Null is smallest: row > cursor includes non-null rows when cursor is null.
+			nullCmp = greater
+				? Expression.AndAlso(Expression.Not(leftNull), rightNull)
+				: Expression.AndAlso(leftNull, Expression.Not(rightNull));
 		}
 
 		return Expression.OrElse(nonNullCmp, nullCmp);

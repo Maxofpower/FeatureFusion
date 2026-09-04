@@ -2,6 +2,10 @@
 
 ASP.NET Core **Idempotency-Key** for MVC and Minimal API. Host-owned `IDistributedCache`, optional Redis lock, opt-in request fingerprint, RFC 9457 ProblemDetails on conflicts, optional ActivitySource.
 
+[![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Idempotency.svg)](https://www.nuget.org/packages/BuildingBlocks.Idempotency)
+[![.NET](https://img.shields.io/badge/.NET-8%20%7C%209%20%7C%2010-512BD4)](https://dotnet.microsoft.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Requires **.NET 8**, **.NET 9**, or **.NET 10**.
 
 ## Install

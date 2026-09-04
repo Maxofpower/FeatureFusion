@@ -36,6 +36,7 @@ Release tags (must match the project `<Version>`): `mediator-v*`, `mcp-v*`, `ide
 
 - **One** packable project: `Pagination.EntityFrameworkCore`. Core IR and Dapper are `IsPackable=false`.
 - Keep EF layout: `Extensions/` (public API), `Query/Internal/`, `Infrastructure/Internal/`.
+- Npgsql NULLS: `AddBuildingBlocksPagination` + `UseBuildingBlocksPagination` (tagged command interceptor `BuildingBlocks.Pagination:First|Last`, not `AsyncLocal`). Do not CASE-wrap `OrderBy`. `HasKeysetIndex(sortKey, NullOrder)` is optional Npgsql index metadata; the one-argument overload does not write it.
 - Core stays dependency-free of ORMs. Map host enums to prebuilt `SortKey`s; do not parse property-name strings.
 - Add/adjust tests for supported and unsupported rows ([PAGINATION_TEST_MATRIX.md](docs/building-blocks/PAGINATION_TEST_MATRIX.md)).
 - Public API changes: update `PublicAPI.Shipped.txt` / XML docs.

@@ -261,6 +261,13 @@ namespace FeatureFusion.Infrastructure.Migrations
                         .IsDescending(true, false)
                         .HasDatabaseName("IX_products_price_id_desc");
 
+                    b.HasIndex(new[] { "Name", "Price", "Id" }, "IX_Product_Name_Price_Id_AAA")
+                        .HasDatabaseName("IX_products_name_price_id");
+
+                    b.HasIndex(new[] { "Name", "Price", "Id" }, "IX_Product_Name_Price_Id_DDD")
+                        .IsDescending(true, true, true)
+                        .HasDatabaseName("IX_products_name_price_id_desc");
+
                     b.ToTable("products", (string)null);
                 });
 

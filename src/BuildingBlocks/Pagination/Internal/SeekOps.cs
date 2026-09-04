@@ -28,4 +28,23 @@ internal static class SeekOps
 
 		return true;
 	}
+
+	/// <summary>
+	/// True when every slot is a non-nullable value type (no <c>string</c> / reference nullables).
+	/// Used by EF Npgsql row comparison for any slot count. Postgres tuple comparison with SQL NULL
+	/// is not equivalent to <see cref="NullOrder"/> seek logic.
+	/// </summary>
+	public static bool TupleSlotsNonNull<T>(SortKey<T> key)
+	{
+		for (var i = 0; i < key.Slots.Count; i++)
+		{
+			var type = key.Slots[i].DeclaredType;
+			if (!type.IsValueType || Nullable.GetUnderlyingType(type) is not null)
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
 }

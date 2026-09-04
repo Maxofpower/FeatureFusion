@@ -66,40 +66,72 @@ public sealed class MutationNullCancelEfTests
 	[Fact]
 	public async Task Nullable_String_Forward_And_Backward_Last_And_First()
 	{
-		await using var db = await SeedLabelsAsync();
+		await using var db = await SeedLabelsAsync(useNullsInterceptor: true);
 		var key = SortKey.For<LabelRow>().By(x => x.Label).ThenByUnique(x => x.Id);
 
-		// Sqlite ASC places NULL first. NullOrder is seek-predicate only (no NULLS FIRST/LAST).
+		// With UseBuildingBlocksPagination, Sqlite ORDER BY honors Nulls.
 		var lastFwd = await db.Labels.ToCursorPageAsync(
 			new CursorRequest(null, 10), key, new PaginationOptions { Nulls = NullOrder.Last });
 		var firstFwd = await db.Labels.ToCursorPageAsync(
 			new CursorRequest(null, 10), key, new PaginationOptions { Nulls = NullOrder.First });
-		Assert.Equal(new[] { 2, 3, 1, 4 }, lastFwd.Items.Select(r => r.Id));
-		Assert.Equal(lastFwd.Items.Select(r => r.Id), firstFwd.Items.Select(r => r.Id));
-		Assert.Null(lastFwd.Items[0].Label);
-		Assert.Equal("", lastFwd.Items[1].Label);
+		Assert.Equal(new[] { 3, 1, 4, 2 }, lastFwd.Items.Select(r => r.Id));
+		Assert.Equal(new[] { 2, 3, 1, 4 }, firstFwd.Items.Select(r => r.Id));
+		Assert.Equal("", lastFwd.Items[0].Label);
+		Assert.Null(lastFwd.Items[^1].Label);
+		Assert.Null(firstFwd.Items[0].Label);
 
 		var lastBack = await db.Labels.ToCursorPageAsync(
 			new CursorRequest(null, 10, PageDirection.Backward), key, new PaginationOptions { Nulls = NullOrder.Last });
 		Assert.Equal(lastFwd.Items.Select(r => r.Id), lastBack.Items.Select(r => r.Id));
 
-		var afterNull = await db.Labels.ToCursorPageAsync(
+		var afterEmpty = await db.Labels.ToCursorPageAsync(
 			new CursorRequest(null, 1), key, new PaginationOptions { Nulls = NullOrder.Last });
-		Assert.Equal(2, afterNull.Items[0].Id);
+		Assert.Equal(3, afterEmpty.Items[0].Id);
 
 		var lastSeek = await db.Labels.ToCursorPageAsync(
-			new CursorRequest(afterNull.Next, 10), key, new PaginationOptions { Nulls = NullOrder.Last });
-		Assert.Equal(new[] { 3, 1, 4 }, lastSeek.Items.Select(r => r.Id));
+			new CursorRequest(afterEmpty.Next, 10), key, new PaginationOptions { Nulls = NullOrder.Last });
+		Assert.Equal(new[] { 1, 4, 2 }, lastSeek.Items.Select(r => r.Id));
 
+		var afterNull = await db.Labels.ToCursorPageAsync(
+			new CursorRequest(null, 1), key, new PaginationOptions { Nulls = NullOrder.First });
+		Assert.Equal(2, afterNull.Items[0].Id);
 		var firstSeek = await db.Labels.ToCursorPageAsync(
 			new CursorRequest(afterNull.Next, 10), key, new PaginationOptions { Nulls = NullOrder.First });
-		Assert.Empty(firstSeek.Items);
+		Assert.Equal(new[] { 3, 1, 4 }, firstSeek.Items.Select(r => r.Id));
 
 		var paged = await db.Labels.ToCursorPageAsync(
 			new CursorRequest(null, 2), key, new PaginationOptions { Nulls = NullOrder.Last });
 		var next = await db.Labels.ToCursorPageAsync(
 			new CursorRequest(paged.Next, 2), key, new PaginationOptions { Nulls = NullOrder.Last });
 		Assert.Empty(paged.Items.Select(r => r.Id).Intersect(next.Items.Select(r => r.Id)));
+	}
+
+	[Fact]
+	public async Task Nullable_String_OrderBy_Emits_Nulls_Last_In_Sql()
+	{
+		await using var db = await SeedLabelsAsync(useNullsInterceptor: true);
+		var key = SortKey.For<LabelRow>().By(x => x.Label).ThenByUnique(x => x.Id);
+		var sql = EntityFrameworkCursorExtensions.DebugQueryString(
+			db.Labels.AsQueryable(), key, walkBackward: false, take: 10, NullOrder.Last);
+		// Tag encodes NullOrder for the interceptor (BuildingBlocks.Pagination:Last).
+		Assert.Contains("BuildingBlocks.Pagination:Last", sql, StringComparison.Ordinal);
+
+		var capture = new CaptureSqlInterceptor();
+		await using var wired = await SeedLabelsAsync(useNullsInterceptor: true, extra: capture);
+		await wired.Labels.ToCursorPageAsync(
+			new CursorRequest(null, 10), key, new PaginationOptions { Nulls = NullOrder.Last });
+		Assert.Contains(capture.Commands, c => c.Contains("NULLS LAST", StringComparison.OrdinalIgnoreCase));
+	}
+
+	[Fact]
+	public async Task Nullable_String_Without_Interceptor_Keeps_Provider_Order()
+	{
+		await using var db = await SeedLabelsAsync(useNullsInterceptor: false);
+		var key = SortKey.For<LabelRow>().By(x => x.Label).ThenByUnique(x => x.Id);
+		var page = await db.Labels.ToCursorPageAsync(
+			new CursorRequest(null, 10), key, new PaginationOptions { Nulls = NullOrder.Last });
+		// Sqlite default ASC: NULL first even when Nulls = Last (seek-only without interceptor).
+		Assert.Equal(new[] { 2, 3, 1, 4 }, page.Items.Select(r => r.Id));
 	}
 
 	[Fact]
@@ -162,12 +194,24 @@ public sealed class MutationNullCancelEfTests
 		return db;
 	}
 
-	private static async Task<LabelContext> SeedLabelsAsync()
+	private static async Task<LabelContext> SeedLabelsAsync(
+		bool useNullsInterceptor,
+		DbCommandInterceptor? extra = null)
 	{
 		var connection = new SqliteConnection("Data Source=:memory:");
 		await connection.OpenAsync();
-		var options = new DbContextOptionsBuilder<LabelContext>().UseSqlite(connection).Options;
-		var db = new LabelContext(options);
+		var builder = new DbContextOptionsBuilder<LabelContext>().UseSqlite(connection);
+		if (useNullsInterceptor)
+		{
+			builder.UseBuildingBlocksPagination();
+		}
+
+		if (extra is not null)
+		{
+			builder.AddInterceptors(extra);
+		}
+
+		var db = new LabelContext(builder.Options);
 		await db.Database.EnsureCreatedAsync();
 		db.Labels.AddRange(
 			new LabelRow { Id = 1, Label = "alpha" },
@@ -195,6 +239,30 @@ public sealed class LabelContext : DbContext
 	{
 		modelBuilder.Entity<LabelRow>().HasKey(r => r.Id);
 		modelBuilder.Entity<LabelRow>().Property(r => r.Id).ValueGeneratedNever();
+	}
+}
+
+file sealed class CaptureSqlInterceptor : DbCommandInterceptor
+{
+	public List<string> Commands { get; } = [];
+
+	public override InterceptionResult<DbDataReader> ReaderExecuting(
+		DbCommand command,
+		CommandEventData eventData,
+		InterceptionResult<DbDataReader> result)
+	{
+		Commands.Add(command.CommandText);
+		return base.ReaderExecuting(command, eventData, result);
+	}
+
+	public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+		DbCommand command,
+		CommandEventData eventData,
+		InterceptionResult<DbDataReader> result,
+		CancellationToken cancellationToken = default)
+	{
+		Commands.Add(command.CommandText);
+		return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
 	}
 }
 

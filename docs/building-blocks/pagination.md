@@ -1,6 +1,6 @@
 # BuildingBlocks.Pagination
 
-Typed keyset (cursor) pagination. **One NuGet:** `BuildingBlocks.Pagination.EntityFrameworkCore` (IR + EF Core adapter). Dapper is an in-repo project, not a package.
+Typed keyset (cursor) pagination. **One NuGet:** `BuildingBlocks.Pagination.EntityFrameworkCore` **1.1.0** (IR + EF Core adapter). Dapper is an in-repo project, not a package.
 
 See ADR [0003](../adr/0003-pagination-keyset.md), the [test matrix](PAGINATION_TEST_MATRIX.md), and [`PACKAGE_README.md`](../../src/BuildingBlocks/Pagination.EntityFrameworkCore/PACKAGE_README.md).
 
@@ -24,22 +24,28 @@ var key = SortKey.For<Product>()
 
 Map a host enum with `SortKeyRegistry<TEnum, TEntity>` — do not parse `"Price"` into a property. An unregistered enum throws `InvalidOperationException` (not `InvalidCursor`).
 
-**Sort the stored scalar.** Enums encode as their numeric underlying value. Value objects: `p => p.Money.Amount`, not `p => p.Money`. Nullable value types (`int?`, `DateTime?`, nullable enums) are rejected (`NullableSortUnsupported`); coalesce in the model. `NullOrder` does not emit `NULLS FIRST/LAST`.
+**Sort the stored scalar.** Enums encode as their numeric underlying value. Value objects: `p => p.Money.Amount`, not `p => p.Money`. Nullable value types (`int?`, `DateTime?`, nullable enums) are rejected (`NullableSortUnsupported`); coalesce in the model. On PostgreSQL/Sqlite, `NullOrder` drives seek and `ORDER BY … NULLS FIRST/LAST` when the host calls `AddBuildingBlocksPagination` + `UseBuildingBlocksPagination` (Dapper always emits NULLS on those dialects). SQL Server does not emit `NULLS`.
 
 ## EF Core
 
 ```csharp
+builder.Services.AddBuildingBlocksPagination();
+// when configuring DbContext:
+options.UseBuildingBlocksPagination();
+
 var page = await db.Products
     .AsNoTracking()
     .TagWith("products.list")
     .ToCursorPageAsync(new CursorRequest(cursor, 20), key);
 ```
 
-Source layout matches EF Core packages: `Extensions/` (public API), `Query/Internal/` (OrderBy + seek), `Infrastructure/Internal/` (DbContext / shadow).
+Source layout matches EF Core packages: `Extensions/` (public API), `Query/Internal/` (OrderBy + seek), `Infrastructure/Internal/` (DbContext / NULLS interceptor / soft Npgsql `HasNullSortOrder`). `ToCursorPageAsync` tags queries `BuildingBlocks.Pagination:First|Last` so the NULLS interceptor can rewrite `ORDER BY` without `AsyncLocal`.
 
 Host `OrderBy` is **replaced** by the sort key, not merged. There is no `IEnumerable` overload.
 
-Optional `PaginationOptions.Hint` defaults to `None` (no extra SQL or transaction). `QueryHint.ReadUncommitted` is SQL Server **session isolation** (`READ UNCOMMITTED`), not table-hint `WITH (NOLOCK)`. EF begins one `ReadUncommitted` transaction around COUNT (if requested) and PAGE when there is no ambient transaction, then restores `READ COMMITTED` on the still-open connection; an ambient transaction is ignored (no nest). PostgreSQL and Sqlite no-op. Dapper uses a `SET TRANSACTION ISOLATION LEVEL` prefix, then restores `READ COMMITTED` on the open connection. Host `AsNoTracking` / `TagWith` / Dapper `WITH (NOLOCK)` still work when `Hint` is omitted. Prefer the `Select` overload so DTOs are projected in SQL. `HasKeysetIndex(sortKey)` creates the matching composite index (add a DESC variant when the first column is descending).
+On **Npgsql**, uniform non-nullable multi-column keys of **any width** use SQL row comparison (`(a, b, …) >`); mixed ASC/DESC and `string` slots stay on the OR form. Prefer matching composite indexes via `HasKeysetIndex` (add a DESC variant and optional `NullOrder` when the NULLS placement is not the column's ASC/DESC default).
+
+Optional `PaginationOptions.Hint` defaults to `None` (no extra SQL or transaction). `QueryHint.ReadUncommitted` is SQL Server **session isolation** (`READ UNCOMMITTED`), not table-hint `WITH (NOLOCK)`. EF begins one `ReadUncommitted` transaction around COUNT (if requested) and PAGE when there is no ambient transaction, then restores `READ COMMITTED` on the still-open connection; an ambient transaction is ignored (no nest). PostgreSQL and Sqlite no-op. Dapper uses a `SET TRANSACTION ISOLATION LEVEL` prefix, then restores `READ COMMITTED` on the open connection. Host `AsNoTracking` / `TagWith` / Dapper `WITH (NOLOCK)` still work when `Hint` is omitted. Prefer the `Select` overload so DTOs are projected in SQL. `HasKeysetIndex(sortKey)` creates the matching composite index (add a DESC variant when the first column is descending). `HasKeysetIndex(sortKey, NullOrder)` optionally calls Npgsql `HasNullSortOrder`; the one-argument form does not.
 
 Set `SigningKey` on public HTTP APIs so clients cannot forge `Walk` or key values.
 
@@ -70,7 +76,7 @@ GET /api/v2/products-page?limit=20&sortBy=Price&sortDirection=Ascending&cursor=<
 GET /api/v2/products-page?limit=20&sortBy=Price&sortDirection=Ascending&cursor=<PreviousCursor>
 ```
 
-Empty cursor + `pageDirection=Backward` starts at the last page (`GET /api/v2/products-page?limit=20&pageDirection=Backward`). `sortBy`: `Id` · `Name` · `Price` · `CreatedAt` (each composite key ends with unique `Id`). `sortDirection`: `Ascending` · `Descending`.
+Empty cursor + `pageDirection=Backward` starts at the last page (`GET /api/v2/products-page?limit=20&pageDirection=Backward`). `sortBy`: `Id` · `Name` · `Price` · `CreatedAt` · `NameThenPrice` (each composite key ends with unique `Id`). `sortDirection`: `Ascending` · `Descending`.
 
 ![First page, next cursor, previous cursor, last page via pageDirection=Backward.](../medium/images/04b-cursor-flow.png)
 

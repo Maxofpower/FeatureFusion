@@ -17,8 +17,10 @@ public sealed class PaginationOptions
 	public byte[]? SigningKey { get; set; }
 
 	/// <summary>
-	/// Seek-side null placement for reference types (default last). Does not change
-	/// <c>ORDER BY</c> nulls. Nullable value-type slots are rejected.
+	/// Null placement for reference-type sort slots (default last). Applies to the seek
+	/// predicate and to <c>ORDER BY … NULLS FIRST/LAST</c> on PostgreSQL and Sqlite
+	/// (EF requires <c>AddBuildingBlocksPagination</c> + <c>UseBuildingBlocksPagination</c>).
+	/// Nullable value-type slots are rejected.
 	/// </summary>
 	public NullOrder Nulls { get; set; } = NullOrder.Last;
 

@@ -53,7 +53,8 @@ public static class DapperCursorExtensions
 					.ConfigureAwait(false);
 			}
 
-			var command = SeekSql.Build(sql, sortKey, values, walkBackward, request.Limit + 1, dialect, param);
+			var command = SeekSql.Build(
+				sql, sortKey, values, walkBackward, request.Limit + 1, dialect, param, options.Nulls);
 			var pageSql = QueryHintSql.Apply(options.Hint, dialect, command.Sql);
 			var fetched = (await connection.QueryAsync<T>(
 					new CommandDefinition(pageSql, command.Parameters, cancellationToken: cancellationToken))
@@ -130,7 +131,8 @@ public static class DapperCursorExtensions
 		HostSql.EnsureFilterOnly(sql);
 		sortKey.EnsureNoShadow();
 		sortKey.EnsureSqlIdentifiers();
-		var built = SeekSql.Build(sql, sortKey, values, walkBackward, take, dialect, param: null).Sql;
+		var built = SeekSql.Build(
+			sql, sortKey, values, walkBackward, take, dialect, param: null, options?.Nulls ?? NullOrder.Last).Sql;
 		return QueryHintSql.Apply(options?.Hint ?? QueryHint.None, dialect, built);
 	}
 }

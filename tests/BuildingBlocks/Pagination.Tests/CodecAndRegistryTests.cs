@@ -1,3 +1,4 @@
+using BuildingBlocks.Pagination;
 using BuildingBlocks.Pagination.TestSupport;
 using Xunit;
 
@@ -83,6 +84,82 @@ public sealed class CodecTests
 			() => CursorCodec.Decode(bad, CatalogSeed.ById, PaginationOptions.Default));
 		Assert.Equal(PaginationErrorCode.InvalidCursor, ex.Code);
 		Assert.NotNull(ex.InnerException);
+	}
+	[Fact]
+	public void Codec_Roundtrip_Three_And_Four_Column_Keys()
+	{
+		var options = PaginationOptions.Default;
+		var three = CursorCodec.Encode(
+			CatalogSeed.ByPriceCreatedAt,
+			[15d, CatalogSeed.T0.AddDays(2), 2],
+			PageDirection.Forward,
+			options);
+		var threeDecoded = CursorCodec.Decode(three, CatalogSeed.ByPriceCreatedAt, options);
+		Assert.Equal(3, threeDecoded.Values.Length);
+		Assert.Equal(15d, threeDecoded.Values[0]);
+		Assert.Equal(2, Convert.ToInt32(threeDecoded.Values[2]));
+
+		var four = CursorCodec.Encode(
+			CatalogSeed.ByNamePriceCreatedAt,
+			["Item-A", 10d, CatalogSeed.T0.AddDays(1), 1],
+			PageDirection.Backward,
+			options);
+		var fourDecoded = CursorCodec.Decode(four, CatalogSeed.ByNamePriceCreatedAt, options);
+		Assert.Equal(PageDirection.Backward, fourDecoded.Walk);
+		Assert.Equal(4, fourDecoded.Values.Length);
+		Assert.Equal("Item-A", fourDecoded.Values[0]);
+	}
+
+	[Fact]
+	public void Codec_Roundtrip_Nine_Column_Key()
+	{
+		var first = CatalogSeed.Items[0];
+		var encoded = CursorCodec.Encode(
+			CatalogSeed.ByNineValueTypes,
+			[first.Price, first.CreatedAt, first.LongId, first.Kind, first.ExternalId, first.VendorId, first.Flag, first.Rank, first.Id],
+			PageDirection.Forward,
+			PaginationOptions.Default);
+		var decoded = CursorCodec.Decode(encoded, CatalogSeed.ByNineValueTypes, PaginationOptions.Default);
+		Assert.Equal(9, decoded.Values.Length);
+		Assert.Equal(first.Id, Convert.ToInt32(decoded.Values[8]));
+		Assert.Equal(first.Flag, Convert.ToByte(decoded.Values[6]));
+	}
+}
+
+public sealed class SeekOpsTests
+{
+	[Fact]
+	public void TupleEligible_True_For_Uniform_Directions()
+	{
+		Assert.True(SeekOps.TupleEligible(CatalogSeed.ByPrice, walkBackward: false));
+		Assert.True(SeekOps.TupleEligible(CatalogSeed.ByPriceCreatedAt, walkBackward: false));
+		Assert.True(SeekOps.TupleEligible(
+			SortKey.For<CatalogItem>().ByDescending(x => x.Price).ThenByUniqueDescending(x => x.Id),
+			walkBackward: false));
+	}
+
+	[Fact]
+	public void TupleEligible_False_For_Mixed_Directions()
+	{
+		// Price DESC + Id ASC (lab PriceDesc pattern) is mixed — not a single row comparison.
+		Assert.False(SeekOps.TupleEligible(CatalogSeed.ByPriceDesc, walkBackward: false));
+		var mixed = SortKey.For<CatalogItem>()
+			.ByDescending(x => x.Price)
+			.ThenBy(x => x.CreatedAt)
+			.ThenByUnique(x => x.Id);
+		Assert.False(SeekOps.TupleEligible(mixed, walkBackward: false));
+	}
+
+	[Fact]
+	public void TupleSlotsNonNull_Matrix()
+	{
+		Assert.True(SeekOps.TupleSlotsNonNull(CatalogSeed.ByPrice));
+		Assert.True(SeekOps.TupleSlotsNonNull(CatalogSeed.ByPriceCreatedAt));
+		Assert.False(SeekOps.TupleSlotsNonNull(CatalogSeed.ByName));
+		Assert.False(SeekOps.TupleSlotsNonNull(CatalogSeed.ByNamePriceCreatedAt));
+		Assert.True(SeekOps.TupleSlotsNonNull(CatalogSeed.ByNineValueTypes));
+		Assert.Equal(9, CatalogSeed.ByNineValueTypes.Slots.Count);
+		Assert.True(SeekOps.TupleEligible(CatalogSeed.ByNineValueTypes, walkBackward: false));
 	}
 }
 

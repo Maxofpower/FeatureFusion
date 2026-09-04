@@ -74,7 +74,7 @@ Do **not** extract: Scenario DSL, one-off test gates, fixed-permit rate limiters
 
 ## Package / versioning (current)
 
-- Each packable project owns `<Version>` in its `.csproj` (e.g. `BuildingBlocks.Mcp` `1.0.0`).
+- Each packable project owns `<Version>` in its `.csproj` (e.g. `BuildingBlocks.Pagination.EntityFrameworkCore` `1.1.0`, `BuildingBlocks.Mcp` `1.0.0`).
 - Release tags are package-prefixed (`mcp-v*`, `mediator-v*`, `telemetry-v*`, …) and must match `<Version>`.
 - Per-package GitHub Actions: `*-yml` CI + `*-release.yml` pack / Trusted Publishing to nuget.org (`idempotency.yml` / `idempotency-release.yml` for this package).
 - IntegrationTests / Exp 1–18 are **not** in CI (local Aspire/Docker).

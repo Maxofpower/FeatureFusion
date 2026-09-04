@@ -3,9 +3,13 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using BuildingBlocks.Pagination.EntityFrameworkCore;
+using FeatureFusion.Infrastructure.Context;
+using FeatureFusion.Infrastructure.Pagination;
 using FluentAssertions;
 using IntegrationTests.Aspire;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace IntegrationTests.Api;
 
@@ -21,9 +25,11 @@ public sealed class FeatureFusionApiTests
 	};
 
 	private readonly HttpClient _client;
+	private readonly AspireFixture _fixture;
 
 	public FeatureFusionApiTests(AspireFixture fixture)
 	{
+		_fixture = fixture;
 		_client = fixture.CreateClient(new WebApplicationFactoryClientOptions
 		{
 			AllowAutoRedirect = false
@@ -136,6 +142,8 @@ public sealed class FeatureFusionApiTests
 	[InlineData("Price", "Descending")]
 	[InlineData("CreatedAt", "Ascending")]
 	[InlineData("CreatedAt", "Descending")]
+	[InlineData("NameThenPrice", "Ascending")]
+	[InlineData("NameThenPrice", "Descending")]
 	public async Task Product_Products_First_Page_Each_Sort_Field(string sortBy, string sortDirection)
 	{
 		var page = await GetProductsAsync(limit: 5, sortBy: sortBy, sortDirection: sortDirection);
@@ -156,6 +164,43 @@ public sealed class FeatureFusionApiTests
 		dapper.Items.Select(i => i.Id).Should().Equal(ef.Items.Select(i => i.Id));
 		dapper.HasMore.Should().BeTrue();
 		dapper.TotalCount.Should().BeGreaterThan(5);
+	}
+
+	[Fact]
+	public async Task Product_Products_NameThenPrice_Next_Page_No_Overlap()
+	{
+		var first = await GetProductsAsync(limit: 5, sortBy: "NameThenPrice", sortDirection: "Ascending");
+		first.NextCursor.Should().NotBeNullOrWhiteSpace();
+
+		var second = await GetProductsAsync(
+			limit: 5,
+			cursor: first.NextCursor,
+			sortBy: "NameThenPrice",
+			sortDirection: "Ascending");
+
+		second.Items.Should().HaveCount(5);
+		second.Items.Select(i => i.Id).Should().NotIntersectWith(first.Items.Select(i => i.Id));
+		second.HasPrevious.Should().BeTrue();
+	}
+
+	[Fact]
+	public async Task Product_Products_Price_Next_Page_Ef_Seek_Uses_Row_Comparison()
+	{
+		var first = await GetProductsAsync(limit: 5, sortBy: "Price", sortDirection: "Ascending");
+		first.NextCursor.Should().NotBeNullOrWhiteSpace();
+
+		using var scope = _fixture.Services.CreateScope();
+		var db = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
+		var boundary = first.Items[^1];
+		var sql = EntityFrameworkCursorExtensions.DebugSeekQueryString(
+			db.Product.AsQueryable(),
+			ProductSortKeys.PriceAsc,
+			[boundary.Price, boundary.Id],
+			walkBackward: false);
+
+		sql.Should().NotContain(" OR ", because: "Npgsql should emit a row comparison for Price+Id ASC");
+		sql.Should().ContainEquivalentOf("Price");
+		sql.Should().ContainEquivalentOf("Id");
 	}
 
 	[Fact]

@@ -49,5 +49,9 @@ class ProductEntityTypeConfiguration
 			.HasDatabaseName("IX_products_name_id");
 		builder.HasKeysetIndex(ProductSortKeys.NameDesc)
 			.HasDatabaseName("IX_products_name_id_desc");
+		builder.HasKeysetIndex(ProductSortKeys.NameThenPriceAsc)
+			.HasDatabaseName("IX_products_name_price_id");
+		builder.HasKeysetIndex(ProductSortKeys.NameThenPriceDesc)
+			.HasDatabaseName("IX_products_name_price_id_desc");
 	}
 }

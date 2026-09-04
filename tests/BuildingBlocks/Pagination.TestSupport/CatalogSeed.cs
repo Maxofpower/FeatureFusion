@@ -24,6 +24,32 @@ public static class CatalogSeed
 	public static SortKey<CatalogItem> ByCreatedDescId { get; } =
 		SortKey.For<CatalogItem>().ByDescending(x => x.CreatedAt, sql: "CreatedAt").ThenByUnique(x => x.Id, sql: "Id");
 
+	public static SortKey<CatalogItem> ByPriceCreatedAt { get; } =
+		SortKey.For<CatalogItem>()
+			.By(x => x.Price, sql: "Price")
+			.ThenBy(x => x.CreatedAt, sql: "CreatedAt")
+			.ThenByUnique(x => x.Id, sql: "Id");
+
+	public static SortKey<CatalogItem> ByNamePriceCreatedAt { get; } =
+		SortKey.For<CatalogItem>()
+			.By(x => x.Name, sql: "Name")
+			.ThenBy(x => x.Price, sql: "Price")
+			.ThenBy(x => x.CreatedAt, sql: "CreatedAt")
+			.ThenByUnique(x => x.Id, sql: "Id");
+
+	/// <summary>Nine non-nullable value-type slots (Postgres row comparison + codec).</summary>
+	public static SortKey<CatalogItem> ByNineValueTypes { get; } =
+		SortKey.For<CatalogItem>()
+			.By(x => x.Price, sql: "Price")
+			.ThenBy(x => x.CreatedAt, sql: "CreatedAt")
+			.ThenBy(x => x.LongId, sql: "LongId")
+			.ThenBy(x => x.Kind, sql: "Kind")
+			.ThenBy(x => x.ExternalId, sql: "ExternalId")
+			.ThenBy(x => x.VendorId, sql: "VendorId")
+			.ThenBy(x => x.Flag, sql: "Flag")
+			.ThenBy(x => x.Rank, sql: "Rank")
+			.ThenByUnique(x => x.Id, sql: "Id");
+
 	public static SortKeyRegistry<ItemSortField, CatalogItem> Registry { get; } = new SortKeyRegistry<ItemSortField, CatalogItem>()
 		.Add(ItemSortField.Id, ById)
 		.Add(ItemSortField.Name, ByName)
@@ -71,6 +97,8 @@ public static class CatalogSeed
 				LongId = 1000 + i,
 				OptionalAt = i % 5 == 0 ? null : T0.AddHours(i),
 				VendorId = (i % 3) + 1,
+				Flag = (byte)(i % 3),
+				Rank = (short)(i * 10),
 				Vendor = new Vendor { Id = (i % 3) + 1, Name = "Vendor-" + (char)('X' + (i % 3)) }
 			});
 		}

@@ -2,7 +2,7 @@
 
 In-repo **project only** — not a NuGet package. FeatureFusion showcases it at `POST /api/v2/Product/products-dapper`.
 
-Uses the Pagination IR project (`IsPackable=false`). Hosts that want NuGet pagination should use **BuildingBlocks.Pagination.EntityFrameworkCore**.
+Uses the Pagination IR project (`IsPackable=false`). Hosts that want NuGet pagination should use **BuildingBlocks.Pagination.EntityFrameworkCore** (1.1.0: Npgsql row comparison of any width, `NULLS FIRST/LAST` on PG/Sqlite).
 
 ## Usage (lab / local project reference)
 

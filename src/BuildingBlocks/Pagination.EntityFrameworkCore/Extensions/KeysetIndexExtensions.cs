@@ -1,4 +1,5 @@
 using BuildingBlocks.Pagination;
+using BuildingBlocks.Pagination.EntityFrameworkCore.Infrastructure.Internal;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -26,6 +27,31 @@ public static class KeysetIndexExtensions
 		this EntityTypeBuilder<TEntity> builder,
 		SortKey<TEntity> sortKey)
 		where TEntity : class
+		=> CreateKeysetIndex(builder, sortKey, nulls: null);
+
+	/// <summary>
+	/// Same as <see cref="HasKeysetIndex{TEntity}(EntityTypeBuilder{TEntity}, SortKey{TEntity})"/>,
+	/// and when the Npgsql provider is present, calls <c>HasNullSortOrder</c> so index NULLS
+	/// placement matches <paramref name="nulls"/>. Pass this overload only when you want that
+	/// metadata; the one-argument form does not change existing index null-sort annotations.
+	/// Npgsql omits NULLS from DDL when they match the column's ASC/DESC default.
+	/// </summary>
+	/// <typeparam name="TEntity">Entity type.</typeparam>
+	/// <param name="builder">Entity builder.</param>
+	/// <param name="sortKey">Prebuilt sort key.</param>
+	/// <param name="nulls">Null placement to store on the Npgsql index metadata.</param>
+	public static IndexBuilder HasKeysetIndex<TEntity>(
+		this EntityTypeBuilder<TEntity> builder,
+		SortKey<TEntity> sortKey,
+		NullOrder nulls)
+		where TEntity : class
+		=> CreateKeysetIndex(builder, sortKey, nulls);
+
+	private static IndexBuilder CreateKeysetIndex<TEntity>(
+		EntityTypeBuilder<TEntity> builder,
+		SortKey<TEntity> sortKey,
+		NullOrder? nulls)
+		where TEntity : class
 	{
 		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(sortKey);
@@ -46,6 +72,11 @@ public static class KeysetIndexExtensions
 		if (descending.Any(static d => d))
 		{
 			index.IsDescending(descending);
+		}
+
+		if (nulls is { } order)
+		{
+			NpgsqlIndexNullSort.TryApply(index, sortKey.Slots.Count, order);
 		}
 
 		return index;
