@@ -386,7 +386,7 @@ app.MapPost("/orders", CreateAsync).WithIdempotency(useLock: true);
 
 - Package README: [`src/BuildingBlocks/Idempotency/PACKAGE_README.md`](src/BuildingBlocks/Idempotency/PACKAGE_README.md) · agent notes: [`AGENTS.md`](src/BuildingBlocks/Idempotency/AGENTS.md)
 - Docs: [`docs/building-blocks/idempotency.md`](docs/building-blocks/idempotency.md)
-- Lab: MVC `POST /api/v2/Order/order`, Minimal API smoke `POST /api/v2/idempotency-smoke`. Provenance: Experiments **3**, **4**, **12** ([catalog](tests/Lab/IntegrationTests/Experiments/README.md)).
+- Lab: Minimal API `POST /api/v1/Order/order` (WithIdempotency), smoke `POST /api/v1/idempotency-smoke`. Provenance: Experiments **3**, **4**, **12** ([catalog](tests/Lab/IntegrationTests/Experiments/README.md)).
 
 ---
 
@@ -451,7 +451,7 @@ dotnet run -c Release --project benchmarks/BuildingBlocks/Pagination.EntityFrame
 
 - Package README: [`Pagination.EntityFrameworkCore`](src/BuildingBlocks/Pagination.EntityFrameworkCore/PACKAGE_README.md) (includes the table)
 - Docs: [`docs/building-blocks/pagination.md`](docs/building-blocks/pagination.md) · ADR [`0003`](docs/adr/0003-pagination-keyset.md) · [test matrix](docs/building-blocks/PAGINATION_TEST_MATRIX.md)
-- Lab: FeatureFusion PostgreSQL catalog — `GET /api/v2/products-page` (Minimal API EF; POST kept) · `POST /api/v2/Product/products` (MVC EF) · `POST /api/v2/Product/products-dapper` (Dapper **project** showcase) · MCP `products.list` — same `GetProductsQuery`. See [Pagination showcase](#pagination-showcase).
+- Lab: FeatureFusion PostgreSQL catalog — `GET /api/v1/products-page` (Minimal API EF; POST kept) · `POST /api/v1/Product/products` (Minimal API EF) · `POST /api/v1/Product/products-dapper` (Dapper **project** showcase) · MCP `products.list` — same `GetProductsQuery`. See [Pagination showcase](#pagination-showcase).
 - Catalog: `docs/linkedin-posts.md` → `cursor-pagination`
 
 ---
@@ -718,12 +718,12 @@ Install the packages above in your own hosts, **or** clone this repo and run **F
 | Telemetry | **`BuildingBlocks.Telemetry`** in ServiceDefaults; **`BuildingBlocks.Aspire.Hosting.SigNoz`** on AppHost |
 | Event bus | RabbitMQ + transactional outbox/inbox, DLQ, dedup hooks |
 | Aspire lab | AppHost orchestration for Postgres, Redis, RabbitMQ, Memcached, SigNoz |
-| HTTP idempotency | **`BuildingBlocks.Idempotency` 1.0.1** — MVC + Minimal API, 2xx envelope replay, System.Text.Json, optional Redis lock (`POST /api/v2/Order/order`) |
+| HTTP idempotency | **`BuildingBlocks.Idempotency` 1.0.1** — MVC + Minimal API, 2xx envelope replay, System.Text.Json, optional Redis lock (`POST /api/v1/Order/order`) |
 | Feature flags (demo) | ASP.NET Core Feature Management + custom filters (claims / VIP) |
 | API surface | Versioned controllers + Minimal APIs, FluentValidation patterns |
 | Gateway | YARP reverse proxy + Memcached distributed rate limiting |
 | Caching | Redis / Memcached / memory managers + middleware demos |
-| Pagination | **`BuildingBlocks.Pagination.EntityFrameworkCore`** — PostgreSQL product catalog via `GET /api/v2/products-page` (same query on MVC, Dapper, MCP); Dapper is in-repo only |
+| Pagination | **`BuildingBlocks.Pagination.EntityFrameworkCore`** — PostgreSQL product catalog via `GET /api/v1/products-page` (same query on Product/products, Dapper, MCP); Dapper is in-repo only |
 | Design patterns | Mediator, Decorator, CoR, Strategy, and more — see below |
 
 Also in the lab: app/DB initializers, middleware dynamic caching, Aspire AppHost integration tests, and performance-minded practices (OTel hooks, resilience).
@@ -736,22 +736,22 @@ One `GetProductsQuery` drives:
 
 | Surface | Endpoint |
 |---------|----------|
-| Minimal API (EF) | **`GET /api/v2/products-page`** (POST kept for compatibility) |
-| MVC (EF) | `POST /api/v2/Product/products` |
-| Dapper | `POST /api/v2/Product/products-dapper` |
+| Minimal API (EF) | **`GET /api/v1/products-page`** (POST kept for compatibility) |
+| Minimal API (EF) | `POST /api/v1/Product/products` |
+| Dapper | `POST /api/v1/Product/products-dapper` |
 | MCP | `products.list` |
 
 What that path demonstrates: typed `SortKey` / `SortKeyRegistry`, composite keyset order (Price + Id, Name + Id, CreatedAt + Id), unique Id tie-breaker, forward and backward cursors, first-page `TotalCount`, `CancellationToken`, `HasKeysetIndex`, EF Core SQL projection, and the in-repo Dapper adapter. Query names are case-insensitive (`limit` / `Limit`). `sortBy`: `Id` · `Name` · `Price` · `CreatedAt`. `sortDirection`: `Ascending` · `Descending`. Empty cursor + `pageDirection=Backward` is the last page. **Cursors are opaque** — pass `NextCursor` / `PreviousCursor` back unchanged; do not construct them. FeatureFusion is PostgreSQL: `QueryHint` stays `None`.
 
 ```http
-GET /api/v2/products-page?limit=20&sortBy=Price&sortDirection=Ascending
+GET /api/v1/products-page?limit=20&sortBy=Price&sortDirection=Ascending
 ```
 
 Response includes `items`, `hasMore`, `nextCursor`, `previousCursor`, `hasPrevious`, and `totalCount` on this first page. Then:
 
 ```http
-GET /api/v2/products-page?limit=20&sortBy=Price&sortDirection=Ascending&cursor=<NextCursor>
-GET /api/v2/products-page?limit=20&sortBy=Price&sortDirection=Ascending&cursor=<PreviousCursor>
+GET /api/v1/products-page?limit=20&sortBy=Price&sortDirection=Ascending&cursor=<NextCursor>
+GET /api/v1/products-page?limit=20&sortBy=Price&sortDirection=Ascending&cursor=<PreviousCursor>
 ```
 
 Swagger: `http://localhost:5141/swagger`. Details: [`docs/building-blocks/pagination.md`](docs/building-blocks/pagination.md) · [NuGet](https://www.nuget.org/packages/BuildingBlocks.Pagination.EntityFrameworkCore).
@@ -803,9 +803,11 @@ flowchart LR
 ## Repository layout
 
 ```text
-FeatureFusion.sln                   # .NET only
+FeatureFusion.sln                   # canonical solution — open from the repo root
 src/                                # C# only
   BuildingBlocks/
+    Domain/                         # in-repo (not packed)
+    Domain.EntityFrameworkCore/     # in-repo (not packed)
     Mediator/                       # CQRS Send + pipeline NuGet
     Mediator.Analyzers/
     Mcp/                            # [McpTool] / MapTool → MCP tools NuGet
@@ -816,7 +818,7 @@ src/                                # C# only
     Telemetry/                      # Config-driven OpenTelemetry NuGet
     Aspire.Hosting.SigNoz/          # AddSigNoz() Aspire hosting NuGet
   Lab/
-    FeatureFusion/                  # Web API showcase (Features/, Infrastructure/, Controllers, Minimal APIs)
+    FeatureFusion/                  # Web API showcase (Domain/, Features/, Infrastructure/, Minimal APIs)
     FeatureFusion.ApiGateway/       # YARP + Memcached rate limiter
     FeatureFusion.AppHost/          # Aspire AppHost (+ SigNoz stack)
     FeatureFusion.ServiceDefaults/
@@ -824,6 +826,7 @@ src/                                # C# only
 web/                                # reserved Next.js showcase (README only; not in the .sln)
 tests/
   BuildingBlocks/
+    Domain.Tests/
     Mediator.Tests/
     Mediator.Analyzers.Tests/
     Mcp.Tests/
@@ -939,18 +942,18 @@ docker compose up -d
 
 ### Feature management filters
 
-Conditional features via Microsoft.FeatureManagement and custom filters (e.g. VIP claims). Versioned controllers and Minimal APIs under `/api/v1|v2/...`.
+Conditional features via Microsoft.FeatureManagement and custom filters (e.g. VIP claims). Single Asp.Versioning version under `/api/v1/...`. Feature filter preview: `GET /api/v1/lab/feature-filter-preview`.
 
 ### HTTP idempotency (BuildingBlocks.Idempotency)
 
-REST idempotency with `IDistributedCache` status tracking, MVC `[Idempotent]` / Minimal API `WithIdempotency`, optional Redis lock, and **System.Text.Json** cache/body serialization (`POST /api/v2/Order/order`, smoke `POST /api/v2/idempotency-smoke`). Package **1.0.1**. See [BuildingBlocks.Idempotency](#buildingblocksidempotency).
+REST idempotency with `IDistributedCache` status tracking, Minimal API `WithIdempotency`, optional Redis lock, and **System.Text.Json** cache/body serialization (`POST /api/v1/Order/order`, smoke `POST /api/v1/idempotency-smoke`). Package **1.0.1** still supports MVC `[Idempotent]`. See [BuildingBlocks.Idempotency](#buildingblocksidempotency).
 
 - [Idempotency with CQRS](https://www.linkedin.com/feed/update/urn:li:activity:7303686809891356676/)
 - [IdempotentFusion project](https://www.linkedin.com/feed/update/urn:li:activity:7309149985307029504/) (historical Lab name)
 
 ### API versioning & validation
 
-Controllers + Minimal API groups; FluentValidation via controllers, generic endpoint filters, and `WithValidation` / `MapPostWithValidation`.
+Single Asp.Versioning version (`1.0`, URL `/api/v1/...`). Minimal API groups; FluentValidation via generic endpoint filters and `WithValidation` / `MapPostWithValidation`.
 
 ### Caching, middleware & pagination
 
@@ -958,7 +961,7 @@ Redis / Memcached / memory managers, feature-flagged recommendation cache middle
 
 ### Generic bidirectional cursor (keyset) pagination
 
-See [Pagination showcase](#pagination-showcase) for the FeatureFusion catalog (`GET /api/v2/products-page`). Package API, QueryHint, and SQLite probe numbers: [`PACKAGE_README`](src/BuildingBlocks/Pagination.EntityFrameworkCore/PACKAGE_README.md).
+See [Pagination showcase](#pagination-showcase) for the FeatureFusion catalog (`GET /api/v1/products-page`). Package API, QueryHint, and SQLite probe numbers: [`PACKAGE_README`](src/BuildingBlocks/Pagination.EntityFrameworkCore/PACKAGE_README.md).
 
 - Indexes: `(Price, Id)`, `(CreatedAt, Id)`, `(Name, Id)` on `products` (ASC and DESC variants)
 - LinkedIn: [Reusable Cursor (keyset) Pagination](https://www.linkedin.com/feed/update/urn:li:activity:7325068550614708225/)
@@ -977,7 +980,7 @@ See [Pagination showcase](#pagination-showcase) for the FeatureFusion catalog (`
 | **Factory** | Resilience / connection helpers; gateway Memcached factory |
 | **Repository / DbContext** | EF Core `CatalogDbContext` + feature handlers |
 | **Unit of work** | `ResilientTransaction` spanning business write + outbox |
-| **Strategy** | Feature filters & validation styles (controller vs Minimal API) |
+| **Strategy** | Feature filters & validation styles (endpoint filter vs ValidationBehavior) |
 | **Template method** | `BaseValidator.PostInitialize` |
 | **Keyset pagination** | `BuildingBlocks.Pagination.EntityFrameworkCore` — typed bidirectional cursors |
 | **Chain of Responsibility** | Feature toggle rule evaluation; mediator pipeline chain |

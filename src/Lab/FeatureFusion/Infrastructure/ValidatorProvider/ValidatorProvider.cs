@@ -27,14 +27,23 @@ using System.Reflection;
 		/// </summary>
 		/// <typeparam name="TModel">The model type.</typeparam>
 		/// <returns>The corresponding validator.</returns>
-		public IValidator GetValidator<TModel>() => GetValidatorForType(typeof(TModel));
+		public IValidator? GetValidator<TModel>() => GetValidatorForType(typeof(TModel));
 
 		/// <summary>
 		/// Gets a validator for a given model type.
 		/// </summary>
 		/// <param name="modelType">The model type.</param>
 		/// <returns>The corresponding validator.</returns>
-		public IValidator GetValidatorForType(Type modelType) => _validatorCache.GetOrAdd(modelType, LocateValidatorForType);
+		public IValidator? GetValidatorForType(Type modelType)
+		{
+			if (_validatorCache.TryGetValue(modelType, out var cached))
+				return cached;
+
+			var located = LocateValidatorForType(modelType);
+			if (located is not null)
+				_validatorCache[modelType] = located;
+			return located;
+		}
 
 		/// <summary>
 		/// Finds a validator for the given model type.
@@ -42,7 +51,7 @@ using System.Reflection;
 		/// <param name="modelType">The model type.</param>
 		/// <returns>The validator or <c>null</c> if none found.</returns>
 		/// <exception cref="InvalidOperationException">Thrown if multiple validators exist for the same type.</exception>
-		private IValidator LocateValidatorForType(Type modelType)
+		private IValidator? LocateValidatorForType(Type modelType)
 		{
 			var validatorType = CreateValidatorTypeForModel(modelType);
 

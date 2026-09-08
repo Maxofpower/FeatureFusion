@@ -54,7 +54,7 @@ public sealed class AsyncTraceCorrelationExperimentTests
 	[Fact]
 	public async Task Http_order_outbox_consumer_trace_correlation_is_characterized()
 	{
-		_fixture.ProcessedEvents.Clear();
+		await _fixture.ResetLabObservationAsync();
 
 		var startedUtc = DateTimeOffset.UtcNow;
 		using var capture = new InProcessActivityCapture();

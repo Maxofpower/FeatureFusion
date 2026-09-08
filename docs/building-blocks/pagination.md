@@ -56,7 +56,7 @@ Set `SigningKey` on public HTTP APIs so clients cannot forge `Walk` or key value
 
 ## Dapper (repo project only)
 
-FeatureFusion `POST /api/v2/Product/products-dapper` (same catalog as `GET /api/v2/products-page`). Not published to NuGet. Host SQL must not contain `ORDER BY` / `OFFSET` / `LIMIT`.
+FeatureFusion `POST /api/v1/Product/products-dapper` (same catalog as `GET /api/v1/products-page`). Not published to NuGet. Host SQL must not contain `ORDER BY` / `OFFSET` / `LIMIT`.
 
 ## Cursors
 
@@ -64,30 +64,30 @@ FeatureFusion `POST /api/v2/Product/products-dapper` (same catalog as `GET /api/
 
 ## Runnable showcase (FeatureFusion)
 
-FeatureFusion is the integration lab: a PostgreSQL `products` catalog (~1000 seeded rows) using **one** `GetProductsQuery` / `ProductService` on MVC, Minimal API, Dapper, and MCP.
+FeatureFusion is the integration lab: a PostgreSQL `products` catalog (~1000 seeded rows) using **one** `GetProductsQuery` / `ProductService` on Minimal API (`GET`/`POST /api/v1/products-page`, `POST /api/v1/Product/products`), Dapper (`products-dapper`), and MCP `products.list`. Storefront OFFSET listing is a separate slice: `GET /api/v1/catalog/products` / MCP `catalog.products.list`.
 
 Primary HTTP surface:
 
 ```http
-GET /api/v2/products-page?limit=20&sortBy=Price&sortDirection=Ascending
+GET /api/v1/products-page?limit=20&sortBy=Price&sortDirection=Ascending
 ```
 
 First page returns `items`, `hasMore`, `nextCursor`, `previousCursor`, `hasPrevious`, and `totalCount`. Cursors are **opaque** — pass `nextCursor` or `previousCursor` back unchanged.
 
 ```http
-GET /api/v2/products-page?limit=20&sortBy=Price&sortDirection=Ascending&cursor=<NextCursor>
-GET /api/v2/products-page?limit=20&sortBy=Price&sortDirection=Ascending&cursor=<PreviousCursor>
+GET /api/v1/products-page?limit=20&sortBy=Price&sortDirection=Ascending&cursor=<NextCursor>
+GET /api/v1/products-page?limit=20&sortBy=Price&sortDirection=Ascending&cursor=<PreviousCursor>
 ```
 
-Empty cursor + `pageDirection=Backward` starts at the last page (`GET /api/v2/products-page?limit=20&pageDirection=Backward`). `sortBy`: `Id` · `Name` · `Price` · `CreatedAt` · `NameThenPrice` (each composite key ends with unique `Id`). `sortDirection`: `Ascending` · `Descending`.
+Empty cursor + `pageDirection=Backward` starts at the last page (`GET /api/v1/products-page?limit=20&pageDirection=Backward`). `sortBy`: `Id` · `Name` · `Price` · `CreatedAt` · `NameThenPrice` (each composite key ends with unique `Id`). `sortDirection`: `Ascending` · `Descending`.
 
 ![First page, next cursor, previous cursor, last page via pageDirection=Backward.](../medium/images/04b-cursor-flow.png)
 
 Same query on:
 
-- `POST /api/v2/products-page` — Minimal API (compatibility)
-- `POST /api/v2/Product/products` — MVC EF (`AsNoTracking`, `TagWith("products.list")`, SQL `Select` to `ProductDto`)
-- `POST /api/v2/Product/products-dapper` — Dapper adapter (in-repo, not packed)
+- `POST /api/v1/products-page` — Minimal API (compatibility)
+- `POST /api/v1/Product/products` — Minimal API EF (`AsNoTracking`, `TagWith("products.list")`, SQL `Select` to `ProductDto`)
+- `POST /api/v1/Product/products-dapper` — Dapper adapter (in-repo, not packed)
 - MCP `products.list`
 
 `HasKeysetIndex` on the Price, Name, and CreatedAt keys (ASC and DESC). Id-only sorts use the primary key. PostgreSQL — **`QueryHint` stays `None`**. Do not set `QueryHint.ReadUncommitted` in this lab (that option is SQL Server session isolation, not a FeatureFusion demo).

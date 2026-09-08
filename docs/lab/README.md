@@ -27,9 +27,13 @@ Cursor / Claude / MAF prototype (optional)
         ▼
 FeatureFusion (WAF in tests / AppHost in local)
   ├── BuildingBlocks.Mcp          → tools catalog + invoker
-  ├── BuildingBlocks.Mediator     → Send + pipeline
+  ├── BuildingBlocks.Mediator     → Send + ValidationBehavior + handlers
   ├── BuildingBlocks.Idempotency  → HTTP Idempotency-Key (Redis)
-  ├── BuildingBlocks.Pagination.* → products.list / products-page
+  ├── BuildingBlocks.Pagination.* → products.list / products-page **and** GET /api/v1/customers + /api/v1/orders
+  ├── Demo Commerce catalog       → GET /api/v1/catalog/* (OFFSET + PDP + related; MCP catalog.products.list / catalog.product.get)
+  ├── Demo Commerce customers     → GET /api/v1/customers* (keyset list + cart nested under customer)
+  ├── Demo Commerce writes        → POST /api/v1/Order/order (CreateOrder) + POST /api/v1/customers/{id}/checkout
+  ├── Demo Commerce orders reads  → GET /api/v1/orders* (keyset list + detail)
   ├── BuildingBlocks.Telemetry    → OTel (IntegrateMediator / IntegrateMcp / EventBus source)
   └── Lab EventBus (not packed)   → outbox → RabbitMQ → inbox → handlers
         ▲
@@ -91,14 +95,20 @@ Do **not** extract: Scenario DSL, one-off test gates, fixed-permit rate limiters
 
 | Tool | Kind | Notes |
 |------|------|-------|
-| `orders.create` | Command | Confirmation + MCP memory idempotency |
-| `products.list` | Query | Keyset pagination |
+| `catalog.products.list` | Query | Storefront OFFSET listing (same as HTTP `/api/v1/catalog/products`) |
+| `catalog.product.get` | Query | PDP by slug |
+| `products.list` | Query | Pagination **lab** keyset (not storefront OFFSET) |
+| `customers.list` / `customers.get` | Query | Same handlers as HTTP |
+| `orders.list` / `orders.get` | Query | Same handlers as HTTP |
+| `orders.create` | Command | Confirmation + MCP memory idempotency; Admission on dispatcher |
+| `orders.checkout` | Command | Cart → tax/shipping/payment → CreateOrder |
 | `demo.echo` | Command | `Idempotent = false` smoke |
 | `lab.ping` | Query | Minimal API → MCP |
 
 ## Related
 
 - [Experiments catalog](../../tests/Lab/IntegrationTests/Experiments/README.md)
+- [Capability admission (Defer-before-Send)](capability-admission.md)
 - [AGENTS.md](../../AGENTS.md)
 - [BuildingBlocks getting started](../building-blocks/getting-started.md)
 - [LinkedIn / Medium catalog](../linkedin-posts.md)

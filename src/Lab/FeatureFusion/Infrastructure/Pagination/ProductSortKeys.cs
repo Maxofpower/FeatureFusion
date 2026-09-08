@@ -1,5 +1,5 @@
 using BuildingBlocks.Pagination;
-using FeatureFusion.Domain.Entities;
+using FeatureFusion.Domain.Catalog;
 using FeatureFusion.Features.Products.Queries;
 using SortDirection = FeatureFusion.Features.Products.Queries.SortDirection;
 
@@ -12,40 +12,40 @@ namespace FeatureFusion.Infrastructure.Pagination;
 public static class ProductSortKeys
 {
 	public static readonly SortKey<Product> IdAsc =
-		SortKey.For<Product>().ThenByUnique(p => p.Id, sql: "Id");
+		SortKey.For<Product>().ThenByUnique(p => (int)p.Id, sql: "Id");
 
 	public static readonly SortKey<Product> IdDesc =
-		SortKey.For<Product>().ThenByUniqueDescending(p => p.Id, sql: "Id");
+		SortKey.For<Product>().ThenByUniqueDescending(p => (int)p.Id, sql: "Id");
 
 	public static readonly SortKey<Product> NameAsc =
-		SortKey.For<Product>().By(p => p.Name, sql: "Name").ThenByUnique(p => p.Id, sql: "Id");
+		SortKey.For<Product>().By(p => p.Name, sql: "Name").ThenByUnique(p => (int)p.Id, sql: "Id");
 
 	public static readonly SortKey<Product> NameDesc =
-		SortKey.For<Product>().ByDescending(p => p.Name, sql: "Name").ThenByUnique(p => p.Id, sql: "Id");
+		SortKey.For<Product>().ByDescending(p => p.Name, sql: "Name").ThenByUnique(p => (int)p.Id, sql: "Id");
 
 	public static readonly SortKey<Product> PriceAsc =
-		SortKey.For<Product>().By(p => p.Price, sql: "Price").ThenByUnique(p => p.Id, sql: "Id");
+		SortKey.For<Product>().By(p => p.Price, sql: "Price").ThenByUnique(p => (int)p.Id, sql: "Id");
 
 	public static readonly SortKey<Product> PriceDesc =
-		SortKey.For<Product>().ByDescending(p => p.Price, sql: "Price").ThenByUnique(p => p.Id, sql: "Id");
+		SortKey.For<Product>().ByDescending(p => p.Price, sql: "Price").ThenByUnique(p => (int)p.Id, sql: "Id");
 
 	public static readonly SortKey<Product> CreatedAtAsc =
-		SortKey.For<Product>().By(p => p.CreatedAt, sql: "CreatedAt").ThenByUnique(p => p.Id, sql: "Id");
+		SortKey.For<Product>().By(p => p.CreatedAt, sql: "CreatedAt").ThenByUnique(p => (int)p.Id, sql: "Id");
 
 	public static readonly SortKey<Product> CreatedAtDesc =
-		SortKey.For<Product>().ByDescending(p => p.CreatedAt, sql: "CreatedAt").ThenByUnique(p => p.Id, sql: "Id");
+		SortKey.For<Product>().ByDescending(p => p.CreatedAt, sql: "CreatedAt").ThenByUnique(p => (int)p.Id, sql: "Id");
 
 	public static readonly SortKey<Product> NameThenPriceAsc =
 		SortKey.For<Product>()
 			.By(p => p.Name, sql: "Name")
 			.ThenBy(p => p.Price, sql: "Price")
-			.ThenByUnique(p => p.Id, sql: "Id");
+			.ThenByUnique(p => (int)p.Id, sql: "Id");
 
 	public static readonly SortKey<Product> NameThenPriceDesc =
 		SortKey.For<Product>()
 			.ByDescending(p => p.Name, sql: "Name")
 			.ThenByDescending(p => p.Price, sql: "Price")
-			.ThenByUniqueDescending(p => p.Id, sql: "Id");
+			.ThenByUniqueDescending(p => (int)p.Id, sql: "Id");
 
 	public static readonly SortKeyRegistry<ProductSortField, Product> Ascending = new SortKeyRegistry<ProductSortField, Product>()
 		.Add(ProductSortField.Id, IdAsc)

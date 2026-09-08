@@ -11,7 +11,7 @@ public class ValidationFilter<TModel> : IEndpointFilter
 	{
 		_validatorProvider = validatorProvider;
 	}
-	public async ValueTask<object> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+	public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
 	{
 		// Find the validator for the request model
 		var validator = _validatorProvider.GetValidator<TModel>();

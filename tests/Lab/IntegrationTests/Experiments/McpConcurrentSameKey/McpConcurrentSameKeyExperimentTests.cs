@@ -57,7 +57,7 @@ public sealed class McpConcurrentSameKeyExperimentTests
 	[Fact]
 	public async Task Concurrent_same_key_mcp_write_produces_exactly_one_business_operation()
 	{
-		_fixture.ProcessedEvents.Clear();
+		await _fixture.ResetLabObservationAsync();
 
 		var startedUtc = DateTimeOffset.UtcNow;
 		using var capture = new InProcessActivityCapture();

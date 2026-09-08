@@ -104,12 +104,12 @@ This is research infrastructure only — not Exp 15 and not a BuildingBlock.
 
 **COMPLETE — BuildingBlocks.Idempotency 1.0.1** (extraction evidence from 1.0.0; packaging/STJ polish in 1.0.1)
 
-Reusable implementation: [`src/BuildingBlocks/Idempotency`](../../../../src/BuildingBlocks/Idempotency). Lab hosts the package on `POST /api/v2/Order/order`; these three experiments are the **evidence / provenance trail**, not unfinished extraction work. Package unit tests live under `tests/BuildingBlocks/Idempotency.Tests`. MCP `orders.create` idempotency (Exp 6) is a separate in-memory store and is **not** part of this BuildingBlock.
+Reusable implementation: [`src/BuildingBlocks/Idempotency`](../../../../src/BuildingBlocks/Idempotency). Lab hosts the package on `POST /api/v1/Order/order`; these three experiments are the **evidence / provenance trail**, not unfinished extraction work. Package unit tests live under `tests/BuildingBlocks/Idempotency.Tests`. MCP `orders.create` idempotency (Exp 6) is a separate in-memory store and is **not** part of this BuildingBlock.
 
 ### Experiment 1 — HTTP pagination cursor abuse
 
-- **Hypothesis / problem:** A deterministic “careless” client walking `GET /api/v2/products-page` produces observable cursor semantics (replay, stale reuse, tamper, malformed cursor) without claiming full pagination correctness.
-- **Surface:** HTTP `GET /api/v2/products-page` → Mediator `GetProductsQuery` → PostgreSQL.
+- **Hypothesis / problem:** A deterministic “careless” client walking `GET /api/v1/products-page` produces observable cursor semantics (replay, stale reuse, tamper, malformed cursor) without claiming full pagination correctness.
+- **Surface:** HTTP `GET /api/v1/products-page` → Mediator `GetProductsQuery` → PostgreSQL.
 - **Primary behavior:** Clean walk yields 56 unique IDs across 8 pages; replay is stable; unsigned tamper shifts seek window; malformed cursor returns HTTP 400 before Mediator/Npgsql.
 - **Limitation / non-goal:** Not a pagination correctness or performance suite. Host pagination signing key is not configured in the lab.
 
@@ -124,7 +124,7 @@ Reusable implementation: [`src/BuildingBlocks/Idempotency`](../../../../src/Buil
 
 - **Role:** Originally characterized Lab HTTP idempotency; now **regression / provenance** that extracted `BuildingBlocks.Idempotency` preserves the intended miss/hit workflow (fingerprint **off**, Lab default).
 - **Workstream:** COMPLETE — BuildingBlocks.Idempotency 1.0.1 (extraction proof set).
-- **Hypothesis / problem:** Package filter (Redis `IDistributedCache`) separates cache replay from production execution on `POST /api/v2/Order/order`.
+- **Hypothesis / problem:** Package filter (Redis `IDistributedCache`) separates cache replay from production execution on `POST /api/v1/Order/order`.
 - **Surface:** HTTP order create → `[Idempotent(useLock: true)]` → `CreateOrderCommandHandler` (Mediator + catalog SaveChanges + outbox insert on miss).
 - **Primary behavior:** Miss runs production (Mediator + Npgsql); hit replays with `X-Idempotent-Response`; same key + different body keeps original order (body not part of key when fingerprint off); new key runs production again. Replay body casing reflects package System.Text.Json cache serialization (PascalCase by default).
 - **Limitation / non-goal:** Does not cover MCP `orders.create` (Exp 6). Does not assert async handler delivery (Exp 5). Does not prove concurrency lock races (Exp 4) or opt-in fingerprinting (Exp 12).
@@ -162,7 +162,7 @@ Reusable implementation: [`src/BuildingBlocks/Idempotency`](../../../../src/Buil
 ### Experiment 8 — HTTP order outbox lifecycle fingerprint
 
 - **Hypothesis / problem:** Exp 5 proves eventual handler delivery but not `outbox_messages` persistence. Does a cache-miss HTTP order insert one outbox row, does `OutBoxWorker` mark it processed after publish, and does idempotent replay avoid a second row?
-- **Surface:** `POST /api/v2/Order/order` (miss) → `CreateOrderCommandHandler` → `IntegrationEventService` → transactional `outbox_messages` → `OutBoxWorker` → `PublishDirect` → RabbitMQ → inbox → handler.
+- **Surface:** `POST /api/v1/Order/order` (miss) → `CreateOrderCommandHandler` → `IntegrationEventService` → transactional `outbox_messages` → `OutBoxWorker` → `PublishDirect` → RabbitMQ → inbox → handler.
 - **Observed behavior:** One outbox row per order (`Id == IntegrationEvent.Id` ≠ `OrderId`); worker sets `Status=Processed` with `ProcessedAt`/`CompletedAt` after `PublishDirect`; one handler observation correlated by `IntegrationEvent.Id`; idempotent replay returns cached HTTP with no Mediator/Npgsql and no additional outbox row; new idempotency key creates a separate order and outbox row (control).
 - **Evidence:** `CatalogDbContext.OutboxMessages` queries (production persistence); `ProcessedEvents` (test decorator); optional `inbox_messages` correlation; Mediator/Npgsql spans on miss vs replay.
 - **Limitation / non-goal:** Does not claim exactly-once RabbitMQ delivery or crash consistency if the worker fails between publish and mark-processed. May observe the row already processed immediately after HTTP if the worker poll wins the race (`ProcessedAt==null` is the worker’s pending selector). Does not enable `EnableDeduplication=true`. Does not re-prove consumer duplicate suppression (Exp 7).
@@ -222,7 +222,7 @@ Reusable implementation: [`src/BuildingBlocks/Idempotency`](../../../../src/Buil
 - **Role:** Closes the lease-expiry gap deferred by Exp 4 / package docs: what happens when the first same-key request stays in `Processing` longer than `ProcessingTtl`.
 - **Workstream:** COMPLETE — BuildingBlocks.Idempotency 1.0.1 (lease-overlap characterization; unchanged in STJ packaging polish).
 - **Hypothesis / problem:** After the Processing lease expires, a second client with the same `Idempotency-Key` may run production while the first handler is still in flight → duplicate orders/outbox.
-- **Surface:** HTTP `POST /api/v2/Order/order` → `BuildingBlocks.Idempotency` (`useLock: true`) → Mediator `CreateOrderCommand` → outbox. Test host only: short `ProcessingTtl` via `PostConfigure` + test-only gated handler wrapper (production handler unchanged).
+- **Surface:** HTTP `POST /api/v1/Order/order` → `BuildingBlocks.Idempotency` (`useLock: true`) → Mediator `CreateOrderCommand` → outbox. Test host only: short `ProcessingTtl` via `PostConfigure` + test-only gated handler wrapper (production handler unchanged).
 - **Primary behavior (characterized by this experiment):** Probe while first held → HTTP 409; after lease expiry → second request executes production; both complete with distinct `orderId`s and outbox rows when the packaged lease tradeoff admits overlap.
 - **Limitation / non-goal:** Does not add lease renewal or change Lab/package `ProcessingTtl` defaults. Does not re-prove Exp 3/4/12. Gate is test observation infrastructure only.
 
@@ -246,7 +246,7 @@ Reusable implementation: [`src/BuildingBlocks/Idempotency`](../../../../src/Buil
 
 - **Role:** Characterizes whether W3C trace context crosses the async messaging boundary, or whether only business ids remain correlatable.
 - **Hypothesis / problem:** After HTTP order create → outbox → RabbitMQ → consumer, does `EventBus` `ProcessMessage` share the originating TraceId / parent / Activity links, or start a separate trace?
-- **Surface:** `POST /api/v2/Order/order` (Lab `traceparent` like Exp 8) → Mediator → outbox → `OutBoxWorker` → `PublishDirect` → consumer `ProcessMessage`.
+- **Surface:** `POST /api/v1/Order/order` (Lab `traceparent` like Exp 8) → Mediator → outbox → `OutBoxWorker` → `PublishDirect` → consumer `ProcessMessage`.
 - **Observed production instrumentation:** No `traceparent` on RabbitMQ headers; `OutBoxWorker`/`PublishDirect` emit no spans; `ProcessMessage` starts a root `EventBus` Activity tagged with `message.id`. Correlation across the boundary is via `IntegrationEvent.Id` / `OrderId`.
 - **Limitation / non-goal:** Does not add propagation or change Telemetry/EventBus. Documents the gap if separate consumer traces are observed.
 
@@ -377,7 +377,7 @@ These are intentionally avoided. Fourteen numbered experiments share a **convent
 - **Gateway / rate limiting:** YARP + Memcached tests live in `FeatureFusion.ApiGateway.Tests`, not the Aspire `IntegrationTests` experiment host.
 - **Inbox deduplication:** Experiment 7 exercises duplicate delivery with `EnableDeduplication=false` (inbox completion). **Exp 17** exercises `EnableDeduplication=true` / `processed_messages`.
 - **Recommendation cache middleware, feature-flag paths, SigNoz/OTLP in tests:** Present in the lab app but not covered by Experiments 1–18.
-- **Test isolation:** `[Collection(AspireCollection.Name)]` with `DisableTestParallelization = true`. Experiments that use `ProcessedEvents` should clear or scope observations (Exp 5 clears at start).
+- **Test isolation:** `[Collection(AspireCollection.Name)]` with `DisableTestParallelization = true`. Write/EventBus experiments call `AspireFixture.ResetLabObservationAsync()` (disarm lab crash faults, drain leftover OrderCreated outbox, clear `ProcessedEvents` / journal). `ProcessedEvents` is a thread-safe list. MCP tool-span matching is scoped to the invocation start time.
 - **Minor artifact inconsistency:** Exp 2 captures `startedUtc` at artifact build time; others capture at test start. JSON property casing differs (anonymous camelCase vs record PascalCase).
 
 ---

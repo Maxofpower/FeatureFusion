@@ -58,7 +58,7 @@ public sealed class McpAgentKeyRegenerationExperimentTests
 	[Fact]
 	public async Task Agent_regenerated_idempotency_keys_amplify_mcp_writes_and_downstream_work()
 	{
-		_fixture.ProcessedEvents.Clear();
+		await _fixture.ResetLabObservationAsync();
 
 		var startedUtc = DateTimeOffset.UtcNow;
 		using var capture = new InProcessActivityCapture();
@@ -121,7 +121,11 @@ public sealed class McpAgentKeyRegenerationExperimentTests
 
 		var processedByOrder = distinctOrderIds.ToDictionary(
 			id => id,
-			id => _fixture.ProcessedEvents.Count(e => e.OrderId == id));
+			id => _fixture.ProcessedEvents
+				.Where(e => e.OrderId == id)
+				.Select(e => e.Id)
+				.Distinct()
+				.Count());
 
 		// AspireFixture.ProcessedEvents is collection-scoped. Clear() drops prior list entries but
 		// OutBoxWorker / RabbitMQ may still deliver OrderCreated events from earlier experiments
@@ -220,14 +224,13 @@ public sealed class McpAgentKeyRegenerationExperimentTests
 			outboxByOrder[orderId].Should().Be(1,
 				"each production order should persist exactly one outbox row. OrderId={0}", orderId);
 			processedByOrder[orderId].Should().Be(1,
-				"each production order should be observed once by ProcessedEvents. OrderId={0}", orderId);
+				"each production order should have exactly one OrderCreated IntegrationEvent.Id observed. OrderId={0}", orderId);
 		}
 
-		ownedProcessedEvents.Should().HaveCount(3,
-			"exactly three handler observations for this experiment's OrderIds (global ProcessedEvents.Count can include late deliveries from earlier suite tests). Owned={0}; foreign={1}; global={2}",
+		ownedProcessedEvents.Select(e => e.OrderId).Distinct().Should().HaveCount(3,
+			"exactly three orders observed by handlers (duplicate consumes of the same IntegrationEvent.Id are at-least-once). OwnedEvents={0}; foreign={1}",
 			ownedProcessedEvents.Count,
-			foreignProcessedEventCount,
-			_fixture.ProcessedEvents.Count);
+			foreignProcessedEventCount);
 		processedByOrder[missK1.OrderId].Should().Be(1,
 			"K1 replay and later regenerated-key writes must not duplicate handler work for the first order");
 	}
@@ -250,6 +253,7 @@ public sealed class McpAgentKeyRegenerationExperimentTests
 		};
 
 		var clock = Stopwatch.StartNew();
+		var invokedUtc = DateTime.UtcNow;
 		var result = await mcp.CallToolAsync(ToolName, args);
 		clock.Stop();
 
@@ -257,10 +261,7 @@ public sealed class McpAgentKeyRegenerationExperimentTests
 		var errorText = isError ? McpToolResults.Truncate(McpToolResults.GetText(result)) : null;
 		var order = !isError ? McpToolResults.TryParseOrder(result, JsonOptions) : null;
 
-		var toolSpan = capture.All.FirstOrDefault(s =>
-			s.DisplayName == "mcp.tool"
-			&& HasToolTag(s, ToolName)
-			&& seenToolTraces.Add(s.TraceId));
+		var toolSpan = McpToolSpans.TakeNew(capture.All, ToolName, seenToolTraces, invokedUtc);
 
 		var toolTrace = toolSpan?.TraceId;
 		var related = toolTrace is null
@@ -284,9 +285,6 @@ public sealed class McpAgentKeyRegenerationExperimentTests
 		calls.Add(call);
 		return call;
 	}
-
-	private static bool HasToolTag(CapturedActivity span, string toolName) =>
-		span.Tags.TryGetValue("mcp.tool.name", out var name) && name == toolName;
 
 	private sealed record AgentKeyRegenerationCall(
 		int RequestNumber,

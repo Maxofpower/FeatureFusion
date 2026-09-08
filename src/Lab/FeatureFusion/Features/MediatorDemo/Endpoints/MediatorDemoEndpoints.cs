@@ -1,7 +1,7 @@
-using Asp.Versioning;
 using BuildingBlocks.Mediator;
 using FeatureFusion.Features.MediatorDemo.Commands;
 using FeatureFusion.Features.MediatorDemo.Queries;
+using FeatureFusion.Infrastructure.Extensions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FeatureFusion.Features.MediatorDemo.Endpoints;
@@ -14,22 +14,16 @@ public static class MediatorDemoEndpoints
 {
 	public static RouteGroupBuilder MapMediatorDemoEndpoints(this IEndpointRouteBuilder app)
 	{
-		var v2 = new ApiVersion(2, 0);
-		var apiVersionSet = app.NewApiVersionSet()
-			.HasApiVersion(v2)
-			.ReportApiVersions()
-			.Build();
+		var apiVersionSet = app.CreateLabApiVersionSet();
 
 		var api = app.MapGroup("api/v{version:apiVersion}/mediator-demo")
 			.WithApiVersionSet(apiVersionSet)
-			.MapToApiVersion(v2)
+			.MapToApiVersion(ApiVersioningExtensions.Current)
 			.WithTags("MediatorDemo");
 
-		// EchoCommandValidator (FluentValidation) runs via ValidationBehavior in the mediator pipeline.
-		// Empty/too-long Message → ValidationException → ValidationExceptionHandler → 400 ValidationProblemDetails.
 		api.MapPost("/echo", EchoAsync)
 			.WithName("MediatorDemoEcho")
-			.WithSummary("Send EchoCommand through BuildingBlocks.Mediator (FluentValidation via ValidationBehavior). Use message=__throw__ to force a handler fault (500).")
+			.WithSummary("Echo a message through the mediator pipeline. Use message=__throw__ to force a handler fault (500).")
 			.Accepts<EchoCommand>("application/json")
 			.Produces<EchoResponse>(StatusCodes.Status200OK)
 			.ProducesValidationProblem()
@@ -38,7 +32,7 @@ public static class MediatorDemoEndpoints
 
 		api.MapGet("/status", StatusAsync)
 			.WithName("MediatorDemoStatus")
-			.WithSummary("Send GetEchoStatusQuery through BuildingBlocks.Mediator")
+			.WithSummary("Mediator query sample: echo pipeline status.")
 			.Produces<EchoStatusResponse>(StatusCodes.Status200OK);
 
 		return api;
@@ -50,9 +44,7 @@ public static class MediatorDemoEndpoints
 		CancellationToken cancellationToken)
 	{
 		var result = await sender.Send(command, cancellationToken).ConfigureAwait(false);
-		return result.Match(
-			onSuccess: value => Results.Ok(value),
-			onFailure: (error, statusCode) => Results.Problem(detail: error, statusCode: statusCode));
+		return result.ToApiResult();
 	}
 
 	private static async Task<IResult> StatusAsync(
@@ -60,8 +52,6 @@ public static class MediatorDemoEndpoints
 		CancellationToken cancellationToken)
 	{
 		var result = await sender.Send(new GetEchoStatusQuery(), cancellationToken).ConfigureAwait(false);
-		return result.Match(
-			onSuccess: value => Results.Ok(value),
-			onFailure: (error, statusCode) => Results.Problem(detail: error, statusCode: statusCode));
+		return result.ToApiResult();
 	}
 }

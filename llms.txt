@@ -22,6 +22,8 @@
 | BuildingBlocks.Pagination.EntityFrameworkCore | 1.1.0 | [nuget.org](https://www.nuget.org/packages/BuildingBlocks.Pagination.EntityFrameworkCore/1.1.0) | [pagination-v*](https://github.com/Maxofpower/FeatureFusion/releases?q=pagination-v) |
 | BuildingBlocks.Telemetry | 1.0.2 | [nuget.org](https://www.nuget.org/packages/BuildingBlocks.Telemetry/1.0.2) | [telemetry-v*](https://github.com/Maxofpower/FeatureFusion/releases?q=telemetry-v) |
 | BuildingBlocks.Aspire.Hosting.SigNoz | 1.0.0 | [nuget.org](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz/1.0.0) | [signoz-v*](https://github.com/Maxofpower/FeatureFusion/releases?q=signoz-v) |
+| BuildingBlocks.Domain | 1.0.0 (in-repo; not published yet) | `src/BuildingBlocks/Domain` | — |
+| BuildingBlocks.Domain.EntityFrameworkCore | 1.0.0 (in-repo; not published yet) | `src/BuildingBlocks/Domain.EntityFrameworkCore` | — |
 
 **Highlights:** Pagination **1.1.0** — any-width Npgsql row comparison, `NULLS FIRST/LAST` interceptor, `HasKeysetIndex` + `NullOrder`. Idempotency **1.0.1** — package icon, System.Text.Json only (no Newtonsoft).
 
@@ -44,6 +46,8 @@
 - [Mcp AGENTS](https://github.com/Maxofpower/FeatureFusion/blob/main/src/BuildingBlocks/Mcp/AGENTS.md)
 - [Telemetry AGENTS](https://github.com/Maxofpower/FeatureFusion/blob/main/src/BuildingBlocks/Telemetry/AGENTS.md)
 - [Aspire.Hosting.SigNoz AGENTS](https://github.com/Maxofpower/FeatureFusion/blob/main/src/BuildingBlocks/Aspire.Hosting.SigNoz/AGENTS.md)
+- [Domain AGENTS](https://github.com/Maxofpower/FeatureFusion/blob/main/src/BuildingBlocks/Domain/AGENTS.md) (in-repo; not packed)
+- [Domain.EntityFrameworkCore AGENTS](https://github.com/Maxofpower/FeatureFusion/blob/main/src/BuildingBlocks/Domain.EntityFrameworkCore/AGENTS.md) (in-repo; not packed)
 
 ## Guides
 

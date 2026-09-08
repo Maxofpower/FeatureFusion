@@ -1,63 +1,81 @@
-using Asp.Versioning;
 using BuildingBlocks.Mediator;
-using FeatureFusion.Controllers.V2;
 using FeatureFusion.Dtos;
 using FeatureFusion.Dtos.Validator;
 using FeatureFusion.Features.Products.Queries;
 using FeatureFusion.Infrastructure.CursorPagination;
+using FeatureFusion.Infrastructure.Extensions;
+using FeatureFusion.Services.ProductService;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FeatureFusion.Features.Products.Endpoints;
 
 /// <summary>
-/// Minimal API surface for keyset pagination (same <see cref="GetProductsQuery"/> as
-/// <c>POST /api/v2/Product/products</c> and MCP <c>products.list</c>).
+/// Pagination lab keyset surface (same <see cref="GetProductsQuery"/> as
+/// <c>POST /api/v1/Product/products</c> and MCP <c>products.list</c>).
+/// Distinct from Demo Commerce storefront <c>GET /api/v1/catalog/products</c>.
 /// </summary>
 public static class ProductPaginationEndpoints
 {
 	private const string CatalogDescription =
-		"Keyset (cursor) pagination over the PostgreSQL product catalog via BuildingBlocks.Pagination. " +
+		"Pagination lab: keyset (cursor) paging over products. " +
+		"Not the Demo Commerce storefront (GET /api/v1/catalog/products). " +
 		"Query: limit (1–100, default 20), sortBy (Id | Name | Price | CreatedAt), " +
 		"sortDirection (Ascending | Descending), optional opaque cursor, optional pageDirection (Forward | Backward). " +
-		"Cursors are opaque — send NextCursor or PreviousCursor back unchanged; do not construct cursor contents. " +
-		"Empty cursor + Forward (default) is the first page (includes TotalCount). " +
-		"Empty cursor + pageDirection=Backward is the last page. " +
-		"Same GetProductsQuery as POST /api/v2/Product/products (MVC EF), POST /api/v2/Product/products-dapper, and MCP products.list.";
+		"Empty cursor + Forward is the first page (includes TotalCount). " +
+		"Same query as POST /api/v1/Product/products and POST /api/v1/Product/products-dapper.";
 
-	public static RouteGroupBuilder MapProductPaginationEndpoints(this IEndpointRouteBuilder app)
+	public static IEndpointRouteBuilder MapProductPaginationEndpoints(this IEndpointRouteBuilder app)
 	{
-		var v2 = new ApiVersion(2, 0);
-		var apiVersionSet = app.NewApiVersionSet()
-			.HasApiVersion(v2)
-			.ReportApiVersions()
-			.Build();
+		var apiVersionSet = app.CreateLabApiVersionSet();
+		var v1 = ApiVersioningExtensions.Current;
 
-		var api = app.MapGroup("api/v{version:apiVersion}")
+		var root = app.MapGroup("api/v{version:apiVersion}")
 			.WithApiVersionSet(apiVersionSet)
-			.MapToApiVersion(v2)
+			.MapToApiVersion(v1)
 			.WithTags("Products");
 
-		api.MapGet("/products-page", ListAsync)
+		root.MapGet("/products-page", ListEfAsync)
 			.WithName("GetProductsPage")
-			.WithSummary("GET catalog page (keyset / cursor). Same GetProductsQuery as MVC, Dapper, and MCP.")
+			.WithSummary("GET products page (keyset / cursor). Pagination lab, not storefront catalog.")
 			.WithDescription(CatalogDescription)
 			.Produces<PagedResult<ProductDto>>(StatusCodes.Status200OK)
 			.ProducesValidationProblem()
 			.ProducesProblem(StatusCodes.Status500InternalServerError);
 
-		api.MapPost("/products-page", ListAsync)
+		root.MapPost("/products-page", ListEfAsync)
 			.WithName("ProductsPage")
-			.WithSummary("POST catalog page (same query as GET /api/v2/products-page; kept for compatibility).")
+			.WithSummary("POST products page (same query as GET /api/v1/products-page).")
 			.WithDescription(CatalogDescription)
 			.Produces<PagedResult<ProductDto>>(StatusCodes.Status200OK)
 			.ProducesValidationProblem()
 			.ProducesProblem(StatusCodes.Status500InternalServerError);
 
-		return api;
+		var product = app.MapGroup("api/v{version:apiVersion}/Product")
+			.WithApiVersionSet(apiVersionSet)
+			.MapToApiVersion(v1)
+			.WithTags("Products");
+
+		product.MapPost("/products", ListEfAsync)
+			.WithName("PostProductProducts")
+			.WithSummary("Pagination lab: keyset page (same GetProductsQuery as GET /api/v1/products-page).")
+			.WithDescription(CatalogDescription)
+			.Produces<PagedResult<ProductDto>>(StatusCodes.Status200OK)
+			.ProducesValidationProblem()
+			.ProducesProblem(StatusCodes.Status500InternalServerError);
+
+		product.MapPost("/products-dapper", ListDapperAsync)
+			.WithName("PostProductProductsDapper")
+			.WithSummary("Pagination lab: same products table via Dapper (EF is the main list path).")
+			.WithDescription(CatalogDescription)
+			.Produces<PagedResult<ProductDto>>(StatusCodes.Status200OK)
+			.ProducesValidationProblem()
+			.ProducesProblem(StatusCodes.Status500InternalServerError);
+
+		return app;
 	}
 
-	private static async Task<Results<Ok<PagedResult<ProductDto>>, BadRequest<ValidationProblemDetails>, ProblemHttpResult>> ListAsync(
+	private static async Task<Results<Ok<PagedResult<ProductDto>>, BadRequest<ValidationProblemDetails>, ProblemHttpResult>> ListEfAsync(
 		GetProductsCommandValidator validator,
 		ISender sender,
 		CancellationToken cancellationToken,
@@ -67,7 +85,48 @@ public static class ProductPaginationEndpoints
 		[FromQuery] SortDirection sortDirection = SortDirection.Ascending,
 		[FromQuery] PageDirection pageDirection = PageDirection.Forward)
 	{
-		var query = new GetProductsQuery
+		var query = BuildQuery(limit, cursor, sortBy, sortDirection, pageDirection);
+		var validationResult = await validator.ValidateWithResultAsync(query).ConfigureAwait(false);
+		if (validationResult.HasErrors())
+			return TypedResults.BadRequest(validationResult.ProblemDetails);
+
+		var result = await sender.Send(query, cancellationToken).ConfigureAwait(false);
+		return result.ToHttpResult();
+	}
+
+	private static async Task<Results<Ok<PagedResult<ProductDto>>, BadRequest<ValidationProblemDetails>, ProblemHttpResult>> ListDapperAsync(
+		GetProductsCommandValidator validator,
+		IProductService products,
+		CancellationToken cancellationToken,
+		[FromQuery] int limit = 20,
+		[FromQuery] string cursor = "",
+		[FromQuery] ProductSortField sortBy = ProductSortField.Id,
+		[FromQuery] SortDirection sortDirection = SortDirection.Ascending,
+		[FromQuery] PageDirection pageDirection = PageDirection.Forward)
+	{
+		var query = BuildQuery(limit, cursor, sortBy, sortDirection, pageDirection);
+		var validationResult = await validator.ValidateWithResultAsync(query).ConfigureAwait(false);
+		if (validationResult.HasErrors())
+			return TypedResults.BadRequest(validationResult.ProblemDetails);
+
+		var result = await products.GetProductsViaDapperAsync(
+			query.Limit,
+			query.SortBy,
+			query.SortDirection,
+			query.Cursor,
+			(BuildingBlocks.Pagination.PageDirection)query.PageDirection,
+			cancellationToken).ConfigureAwait(false);
+
+		return result.ToHttpResult();
+	}
+
+	private static GetProductsQuery BuildQuery(
+		int limit,
+		string? cursor,
+		ProductSortField sortBy,
+		SortDirection sortDirection,
+		PageDirection pageDirection) =>
+		new()
 		{
 			Limit = limit,
 			Cursor = cursor ?? string.Empty,
@@ -75,14 +134,4 @@ public static class ProductPaginationEndpoints
 			SortDirection = sortDirection,
 			PageDirection = pageDirection
 		};
-
-		var validationResult = await validator.ValidateWithResultAsync(query).ConfigureAwait(false);
-		if (validationResult.HasErrors())
-		{
-			return TypedResults.BadRequest(validationResult.ProblemDetails);
-		}
-
-		var result = await sender.Send(query, cancellationToken).ConfigureAwait(false);
-		return result.ToHttpResult();
-	}
 }

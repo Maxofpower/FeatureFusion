@@ -11,6 +11,7 @@ public sealed record CapturedActivity(
 	string? ParentSpanId,
 	string Source,
 	string DisplayName,
+	DateTime StartTimeUtc,
 	TimeSpan Duration,
 	IReadOnlyDictionary<string, string> Tags,
 	IReadOnlyList<ActivityLinkSnapshot> Links)
@@ -36,6 +37,7 @@ public sealed record CapturedActivity(
 			activity.ParentSpanId == default ? null : activity.ParentSpanId.ToHexString(),
 			activity.Source.Name,
 			activity.DisplayName,
+			activity.StartTimeUtc,
 			activity.Duration,
 			tags,
 			links);

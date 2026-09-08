@@ -87,7 +87,7 @@ public sealed class CacheVsProductionExperimentTests
 				HttpOrderCreate.IdempotencyHeader,
 				HttpOrderCreate.CachedResponseHeader,
 				Cache: "Redis IDistributedCache (BuildingBlocks.Idempotency IdempotentAttributeFilter, useLock: true)",
-				Production: "OrderController.CreateOrder → ISender.Send(CreateOrderCommand) → catalog SaveChanges + outbox"),
+				Production: "OrderEndpoints.CreateOrder → ISender.Send(CreateOrderCommand) → catalog SaveChanges + outbox"),
 			Calls: calls,
 			Observations: new CacheVsProductionObservations(
 				MissHttpStatus: miss.HttpStatus,

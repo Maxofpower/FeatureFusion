@@ -9,13 +9,13 @@ namespace FeatureFusion.Infrastructure.ValidationProvider
 		/// </summary>
 		/// <typeparam name="TModel">The type of the model to validate.</typeparam>
 		/// <returns>An instance of <see cref="IValidator"/> for the specified model type.</returns>
-		IValidator GetValidator<TModel>();
+		IValidator? GetValidator<TModel>();
 
 		/// <summary>
 		/// Retrieves a validator for the specified model type.
 		/// </summary>
 		/// <param name="modelType">The type of the model to validate.</param>
 		/// <returns>An instance of <see cref="IValidator"/> for the specified model type.</returns>
-		IValidator GetValidatorForType(Type type);
+		IValidator? GetValidatorForType(Type type);
 	}
 }

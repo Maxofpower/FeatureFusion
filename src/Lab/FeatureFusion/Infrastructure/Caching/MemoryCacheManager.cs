@@ -73,9 +73,9 @@ namespace FeatureFusion.Infrastructure.Caching
 		/// </summary>
 		/// <param name="key">Key of cached item</param>
 		/// <param name="data">Value for caching</param>
-		private void Set(CacheKey key, object data)
+		private void Set(CacheKey key, object? data)
 		{
-			if ((key?.CacheTime ?? 0) <= 0 || data == null)
+			if (key.CacheTime <= 0 || data == null)
 				return;
 
 			_memoryCache.Set(key.Key, data, PrepareEntryOptions(key));
@@ -108,12 +108,12 @@ namespace FeatureFusion.Infrastructure.Caching
 		/// A task that represents the asynchronous operation
 		/// The task result contains the cached value associated with the specified key
 		/// </returns>
-		public async Task<T> GetAsync<T>(CacheKey key, Func<Task<T>> acquire)
+		public async Task<T?> GetAsync<T>(CacheKey key, Func<Task<T>> acquire)
 		{
-			if ((key?.CacheTime ?? 0) <= 0)
+			if (key.CacheTime <= 0)
 				return await acquire();
 
-			if (_memoryCache.TryGetValue(key.Key, out T result))
+			if (_memoryCache.TryGetValue(key.Key, out T? result))
 			{
 				Console.WriteLine($"==> Cache hit for key: {key.Key}");
 				return result;
@@ -139,19 +139,19 @@ namespace FeatureFusion.Infrastructure.Caching
 		/// A task that represents the asynchronous operation
 		/// The task result contains the cached value associated with the specified key
 		/// </returns>
-		public Task<T> TryGetAsync<T>(CacheKey key)
+		public Task<T?> TryGetAsync<T>(CacheKey key)
 		{
-			if ((key?.CacheTime ?? 0) <= 0)
-				return Task.FromResult<T>(default); // Return null for invalid cache time
+			if (key.CacheTime <= 0)
+				return Task.FromResult<T?>(default);
 
-			if (_memoryCache.TryGetValue(key.Key, out T result))
+			if (_memoryCache.TryGetValue(key.Key, out T? result))
 			{
 				Console.WriteLine($"==> Cache hit for key: {key.Key}");
 				return Task.FromResult(result);
 			}
 			Console.WriteLine($"==> Cache miss for key: {key.Key}. Loading data...");
 
-			return Task.FromResult<T>(default);
+			return Task.FromResult<T?>(default);
 		}
 
 		/// <summary>
@@ -164,9 +164,9 @@ namespace FeatureFusion.Infrastructure.Caching
 		/// A task that represents the asynchronous operation
 		/// The task result contains the cached value associated with the specified key
 		/// </returns>
-		public async Task<T> GetAsync<T>(CacheKey key, Func<T> acquire)
+		public async Task<T?> GetAsync<T>(CacheKey key, Func<T> acquire)
 		{
-			if ((key?.CacheTime ?? 0) <= 0)
+			if (key.CacheTime <= 0)
 				return acquire();
 
 			var result = _memoryCache.GetOrCreate(key.Key, entry =>
@@ -190,12 +190,12 @@ namespace FeatureFusion.Infrastructure.Caching
 		/// <param name="key">Cache key</param>
 		/// <param name="acquire">Function to load item if it's not in the cache yet</param>
 		/// <returns>The cached value associated with the specified key</returns>
-		public T Get<T>(CacheKey key, Func<T> acquire)
+		public T? Get<T>(CacheKey key, Func<T> acquire)
 		{
-			if ((key?.CacheTime ?? 0) <= 0)
+			if (key.CacheTime <= 0)
 				return acquire();
 
-			if (_memoryCache.TryGetValue(key.Key, out T result))
+			if (_memoryCache.TryGetValue(key.Key, out T? result))
 			{
 				Console.WriteLine($" ==> Cache hit for key: {key.Key}");
 				return result;
@@ -219,7 +219,7 @@ namespace FeatureFusion.Infrastructure.Caching
 		/// <param name="key">Key of cached item</param>
 		/// <param name="data">Value for caching</param>
 		/// <returns>A task that represents the asynchronous operation</returns>
-		public Task SetAsync(CacheKey key, object data)
+		public Task SetAsync(CacheKey key, object? data)
 		{
 			Set(key, data);
 

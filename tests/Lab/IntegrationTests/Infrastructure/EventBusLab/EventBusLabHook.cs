@@ -53,6 +53,7 @@ public sealed class EventBusLabHook : IEventBusLabHook
 /// <summary>Deterministic Lab fault switches. Default: all off.</summary>
 public sealed class EventBusLabFaultController
 {
+	private readonly object _gate = new();
 	private Guid? _crashOnceForMessageId;
 	private Guid? _crashOnceForOrderId;
 	private string? _crashOnceForEventType;
@@ -60,56 +61,75 @@ public sealed class EventBusLabFaultController
 
 	public void Clear()
 	{
-		_crashOnceForMessageId = null;
-		_crashOnceForOrderId = null;
-		_crashOnceForEventType = null;
-		_crashArmedCount = 0;
+		lock (_gate)
+		{
+			_crashOnceForMessageId = null;
+			_crashOnceForOrderId = null;
+			_crashOnceForEventType = null;
+			_crashArmedCount = 0;
+		}
 	}
 
 	/// <summary>Arm point-B crash for the next matching outbox publish (by message id).</summary>
 	public void ArmCrashAfterPublishOnce(Guid messageId)
 	{
-		Clear();
-		_crashOnceForMessageId = messageId;
-		_crashArmedCount = 1;
+		lock (_gate)
+		{
+			_crashOnceForMessageId = messageId;
+			_crashOnceForOrderId = null;
+			_crashOnceForEventType = null;
+			_crashArmedCount = 1;
+		}
 	}
 
 	/// <summary>Arm point-B crash for the first publish whose payload OrderId matches.</summary>
 	public void ArmCrashAfterPublishOnceForOrderId(Guid orderId)
 	{
-		Clear();
-		_crashOnceForOrderId = orderId;
-		_crashArmedCount = 1;
+		lock (_gate)
+		{
+			_crashOnceForMessageId = null;
+			_crashOnceForOrderId = orderId;
+			_crashOnceForEventType = null;
+			_crashArmedCount = 1;
+		}
 	}
 
 	/// <summary>
 	/// Arm point-B crash for the next publish of <paramref name="eventType"/>
 	/// (e.g. <c>OrderCreatedIntegrationEvent</c>). Safe to call before OrderId is known.
+	/// Call only after draining leftover outbox so a prior test cannot consume the one-shot.
 	/// </summary>
 	public void ArmCrashAfterPublishOnceForEventType(string eventType)
 	{
-		Clear();
-		_crashOnceForEventType = eventType;
-		_crashArmedCount = 1;
+		lock (_gate)
+		{
+			_crashOnceForMessageId = null;
+			_crashOnceForOrderId = null;
+			_crashOnceForEventType = eventType;
+			_crashArmedCount = 1;
+		}
 	}
 
 	internal bool ShouldSimulateCrashAfterPublish(Guid messageId, string eventType, Guid? orderId)
 	{
-		if (_crashArmedCount <= 0)
-			return false;
+		lock (_gate)
+		{
+			if (_crashArmedCount <= 0)
+				return false;
 
-		var match = (_crashOnceForMessageId is { } mid && mid == messageId)
-			|| (_crashOnceForOrderId is { } oid && orderId == oid)
-			|| (_crashOnceForEventType is { } et
-				&& string.Equals(et, eventType, StringComparison.Ordinal));
+			var match = (_crashOnceForMessageId is { } mid && mid == messageId)
+				|| (_crashOnceForOrderId is { } oid && orderId == oid)
+				|| (_crashOnceForEventType is { } et
+					&& string.Equals(et, eventType, StringComparison.Ordinal));
 
-		if (!match)
-			return false;
+			if (!match)
+				return false;
 
-		_crashArmedCount = 0;
-		_crashOnceForMessageId = null;
-		_crashOnceForOrderId = null;
-		_crashOnceForEventType = null;
-		return true;
+			_crashArmedCount = 0;
+			_crashOnceForMessageId = null;
+			_crashOnceForOrderId = null;
+			_crashOnceForEventType = null;
+			return true;
+		}
 	}
 }

@@ -18,7 +18,7 @@ namespace IntegrationTests.Experiments.OutboxLifecycle;
 
 /// <summary>
 /// Experiment 8: HTTP order create → transactional outbox row lifecycle fingerprint.
-/// Hypothesis: a cache-miss <c>POST /api/v2/Order/order</c> inserts one
+/// Hypothesis: a cache-miss <c>POST /api/v1/Order/order</c> inserts one
 /// <c>outbox_messages</c> row (<c>Status=Pending</c>, <c>ProcessedAt=null</c>);
 /// the real <c>OutBoxWorker</c> publishes via <c>PublishDirect</c> then marks the row
 /// processed (<c>Status=Processed</c>, <c>ProcessedAt</c>/<c>CompletedAt</c> set);
@@ -63,7 +63,7 @@ public sealed class OutboxLifecycleExperimentTests
 	[Fact]
 	public async Task Http_order_create_fingerprints_outbox_lifecycle_and_replay_does_not_add_rows()
 	{
-		_fixture.ProcessedEvents.Clear();
+		await _fixture.ResetLabObservationAsync();
 
 		var startedUtc = DateTimeOffset.UtcNow;
 		using var capture = new InProcessActivityCapture();
@@ -141,15 +141,10 @@ public sealed class OutboxLifecycleExperimentTests
 			idempotencyKey: baselineKey,
 			quantity: Quantity);
 
-		var replayCompletedUtc = replay.CompletedUtc;
+		await Task.Delay(ReplayObservationWindow);
 
-		await Wait.UntilAsync(
-			() =>
-			{
-				var count = _fixture.ProcessedEvents.Count(e => e.OrderId == baseline.OrderId);
-				return count == 1 && DateTimeOffset.UtcNow - replayCompletedUtc >= ReplayObservationWindow;
-			},
-			TimeSpan.FromSeconds(20));
+		_fixture.ProcessedEvents.Count(e => e.OrderId == baseline.OrderId).Should().Be(1,
+			"HTTP idempotent replay must not deliver another OrderCreated handler observation");
 
 		var outboxAfterReplay = await OrderOutboxObserver.FindByOrderIdAsync(_services, baseline.OrderId);
 		outboxObservations.Add(ToSnapshot(outboxAfterReplay[0], "AfterIdempotentReplay"));

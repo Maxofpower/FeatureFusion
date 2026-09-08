@@ -1,6 +1,7 @@
 using BuildingBlocks.Pagination;
 using BuildingBlocks.Pagination.Dapper;
 using BuildingBlocks.Pagination.EntityFrameworkCore;
+using FeatureFusion.Domain.Catalog;
 using FeatureFusion.Domain.Entities;
 using FeatureFusion.Dtos;
 using FeatureFusion.Features.Products.Queries;
@@ -68,7 +69,7 @@ namespace FeatureFusion.Services.ProductService
 					{
 						var products = await GenerateSampleData();
 						return products;
-					});
+					}) ?? productPromotion;
 				}
 				else
 				{
@@ -78,7 +79,7 @@ namespace FeatureFusion.Services.ProductService
 						// Static data representing products and their manufacturer promotions
 						var products = await GenerateSampleData();
 						return products;
-					});
+					}) ?? productPromotion;
 				}
 				// i return result here for debug purpose , for production appInitilizer there is no need to return data
 
@@ -98,9 +99,11 @@ namespace FeatureFusion.Services.ProductService
 
 				// Static data representing products and their manufacturer promotions
 				var products =
-				new List<Product>{new Product { Id=1, Name = "Laptop", Published = true, Deleted = false, VisibleIndividually = true },
-					new Product { Id=2,Name = "Phone", Published = true, Deleted = false, VisibleIndividually = true },
-						new Product { Id=3, Name = "Headphones", Published = false, Deleted = false, VisibleIndividually = true }
+				new List<Product>
+				{
+					Product.CreateDemo("Laptop", published: true, id: 1),
+					Product.CreateDemo("Phone", published: true, id: 2),
+					Product.CreateDemo("Headphones", published: false, id: 3)
 				};
 
 				var productManufacturers = new List<ProductManufacturer>
@@ -112,12 +115,12 @@ namespace FeatureFusion.Services.ProductService
 
 				// Filtering and projecting product promotions based on the static data
 				var query = from p in products
-							join pm in productManufacturers on p.Id equals pm.ProductId
+							join pm in productManufacturers on p.Id.Value equals pm.ProductId
 							where p.Published && !p.Deleted && p.VisibleIndividually &&
 								  pm.IsFeaturedProduct
 							select new ProductPromotionDto
 							{
-								ProductId = p.Id,
+								ProductId = p.Id.Value,
 								Name = p.Name,
 								ManufacturerId = pm.ManufacturerId,
 								IsFeatured = pm.IsFeaturedProduct
@@ -137,9 +140,9 @@ namespace FeatureFusion.Services.ProductService
 			// Static data representing products and their manufacturer promotions
 			var products = new List<Product>
 					{
-					new Product {  Name = "Laptop", Published = true, Deleted = false, VisibleIndividually = true },
-					new Product {  Name = "Phone", Published = true, Deleted = false, VisibleIndividually = true },
-					new Product {  Name = "Headphones", Published = false, Deleted = false, VisibleIndividually = true }
+					Product.CreateDemo("Laptop", published: true),
+					Product.CreateDemo("Phone", published: true),
+					Product.CreateDemo("Headphones", published: false)
 					};
 
 			var productManufacturers = new List<ProductManufacturer>
@@ -151,12 +154,12 @@ namespace FeatureFusion.Services.ProductService
 
 			// Filtering and projecting product promotions based on the static data
 			IList<ProductPromotionDto> query = (from p in products
-												join pm in productManufacturers on p.Id equals pm.ProductId
+												join pm in productManufacturers on p.Id.Value equals pm.ProductId
 												where p.Published && !p.Deleted && p.VisibleIndividually &&
 													  pm.IsFeaturedProduct
 												select new ProductPromotionDto
 												{
-													ProductId = p.Id,
+													ProductId = p.Id.Value,
 													Name = p.Name,
 													ManufacturerId = pm.ManufacturerId,
 													IsFeatured = pm.IsFeaturedProduct
@@ -182,7 +185,7 @@ namespace FeatureFusion.Services.ProductService
 					.ToCursorPageAsync(
 					new CursorRequest(cursor, limit, pageDirection),
 					sortKey,
-					p => new ProductDto(p.Id, p.Name, p.Price, p.FullDescription, p.CreatedAt),
+					p => new ProductDto((int)p.Id, p.Name, p.Price, p.FullDescription, p.CreatedAt),
 					new PaginationOptions { IncludeTotalCount = firstPage },
 					cancellationToken);
 
@@ -223,7 +226,8 @@ namespace FeatureFusion.Services.ProductService
 
 				const string sql = """
 					-- Isolation/hints stay in host SQL (PostgreSQL: session, not SQL Server NOLOCK).
-					SELECT "Id", "Name", "Price", "FullDescription", "CreatedAt", "Published", "Deleted", "VisibleIndividually"
+					SELECT "Id", "Name", "Sku", "Slug", "Price", "StockQuantity", "BrandId", "CategoryId",
+					       "ShortDescription", "FullDescription", "CreatedAt", "Published", "Deleted", "VisibleIndividually"
 					FROM products
 					""";
 

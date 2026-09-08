@@ -203,10 +203,10 @@ Development only (`http://localhost:5141/mcp`):
 
 | Tool | Style | HTTP analogue |
 |------|--------|----------------|
-| `demo.echo` | Scan + `ISender`, `Idempotent = false` | `POST /api/v2/mediator-demo/echo` |
-| `orders.create` | Scan + `ISender`, idempotent + confirmation | `POST /api/v2/order` |
+| `demo.echo` | Scan + `ISender`, `Idempotent = false` | `POST /api/v1/mediator-demo/echo` |
+| `orders.create` | Scan + `ISender`, idempotent + confirmation | `POST /api/v1/Order/order` |
 | `products.list` | Scan + `ISender` (query) | products query |
-| `lab.ping` | `[McpTool]` + `.WithMcp(app)` on `LabPing` | `GET /api/v2/lab-ping` |
+| `lab.ping` | `[McpTool]` + `.WithMcp(app)` on `LabPing` | `GET /api/v1/lab-ping` |
 
 Production (`docker-compose` sets `ASPNETCORE_ENVIRONMENT=Production`) does not register or map MCP.
 

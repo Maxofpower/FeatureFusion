@@ -2,6 +2,8 @@
 
 Public **.NET lab** plus extracted MIT **BuildingBlocks**. The application is the laboratory. A package is a reusable result that earned a boundary.
 
+Open **`FeatureFusion.sln`** from the repository root. It is the single authoritative solution (Domain projects included). Do not recreate an inner `src/src.sln`.
+
 Do not treat FeatureFusion as a framework. Install a BuildingBlock only when it solves a problem the host actually has.
 
 ## Lab vs package
@@ -10,7 +12,7 @@ Do not treat FeatureFusion as a framework. Install a BuildingBlock only when it 
 |------|------------|------------|
 | **Lab** | Runnable API + Aspire AppHost (`src/Lab/`) | This file + [docs/lab](docs/lab/README.md) + root README |
 | **Packable BuildingBlock** | NuGet on nuget.org | `src/BuildingBlocks/<Name>/AGENTS.md` + `PACKAGE_README.md` |
-| **In-repo sibling** | Pagination IR / Dapper — not packed | `Pagination/AGENTS.md`, `Pagination.Dapper/AGENTS.md` |
+| **In-repo sibling** | Pagination IR / Dapper; Domain + Domain.EF (not packed yet) | `Pagination/AGENTS.md`, `Pagination.Dapper/AGENTS.md`, [Domain](src/BuildingBlocks/Domain/AGENTS.md), [Domain.EF](src/BuildingBlocks/Domain.EntityFrameworkCore/AGENTS.md) |
 | **Lab-only** | EventBus, YARP rate limit, feature flags | Code + [linkedin catalog](docs/linkedin-posts.md) — no package `AGENTS.md` |
 
 **Lab charter (evidence families, extraction rules, roadmap):** [docs/lab/README.md](docs/lab/README.md). Behavioral experiment catalog: [Experiments README](tests/Lab/IntegrationTests/Experiments/README.md) (Exp 1–18 + MAF prototype).
@@ -27,6 +29,8 @@ Do not treat FeatureFusion as a framework. Install a BuildingBlock only when it 
 | `BuildingBlocks.Aspire.Hosting.SigNoz` | Local AppHost SigNoz only (net10) | [SigNoz](src/BuildingBlocks/Aspire.Hosting.SigNoz/AGENTS.md) |
 
 Pagination IR (`BuildingBlocks.Pagination`) is bundled into the EF Core nupkg. Do not pack it. Dapper pagination is a lab project.
+
+**In-repo (not nuget.org):** `BuildingBlocks.Domain` and `BuildingBlocks.Domain.EntityFrameworkCore` — project-reference only. Do not pack or publish them.
 
 ## Human docs
 

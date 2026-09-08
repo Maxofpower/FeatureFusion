@@ -35,7 +35,7 @@ internal static class MigrateDbContextExtensions
 		using var scope = services.CreateScope();
 		var scopeServices = scope.ServiceProvider;
 		var logger = scopeServices.GetRequiredService<ILogger<TContext>>();
-		var context = scopeServices.GetService<TContext>();
+		var context = scopeServices.GetRequiredService<TContext>();
 
 		using var activity = ActivitySource.StartActivity($"Migration operation {typeof(TContext).Name}");
 
@@ -69,7 +69,7 @@ internal static class MigrateDbContextExtensions
 		}
 		catch (Exception ex)
 		{
-			activity.SetExceptionTags(ex);
+			activity?.SetExceptionTags(ex);
 
 			throw;
 		}

@@ -22,7 +22,7 @@ public class AuthService : IAuthService
 
 	public string GenerateJwtToken(string username, bool isVip)
 	{
-		var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
+		var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]!);
 		var claims = new List<Claim>
 		{
 			new Claim(JwtRegisteredClaimNames.Sub, username),

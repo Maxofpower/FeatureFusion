@@ -70,8 +70,14 @@ public sealed class IdempotencyGate
 				if (request.Body.CanSeek)
 					request.Body.Position = 0;
 
+				// Copy to memory so fingerprint works for Minimal API (pipe-backed bodies)
+				// as well as MVC, then rewind the request stream for model binding.
+				await using var buffered = new MemoryStream();
+				await request.Body.CopyToAsync(buffered, cancellationToken).ConfigureAwait(false);
+				buffered.Position = 0;
+
 				requestFingerprint = await IdempotencyFingerprint
-					.ComputeAsync(request.Method, request.Path.Value ?? string.Empty, request.Body, cancellationToken)
+					.ComputeAsync(request.Method, request.Path.Value ?? string.Empty, buffered, cancellationToken)
 					.ConfigureAwait(false);
 
 				if (request.Body.CanSeek)

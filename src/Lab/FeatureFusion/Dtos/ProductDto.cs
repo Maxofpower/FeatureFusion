@@ -4,6 +4,6 @@
 	int Id,
 	string Name,
 	decimal Price,
-	string Description,
+	string? Description,
 	DateTime CreatedAt);
 }

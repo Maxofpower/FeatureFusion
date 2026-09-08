@@ -54,7 +54,6 @@ public sealed class FeatureFusionApiTests
 
 	[Theory]
 	[InlineData("/api/v1/Auth/login")]
-	[InlineData("/api/v2/Auth/login")]
 	public async Task Auth_Login_Returns_Jwt(string path)
 	{
 		using var content = JsonContent.Create(new { username = "vipuser", password = "vippassword" });
@@ -67,10 +66,10 @@ public sealed class FeatureFusionApiTests
 	}
 
 	[Fact]
-	public async Task Greeting_V1_With_Vip_Jwt_Returns_Custom_Greeting()
+	public async Task Feature_Filter_Preview_With_Vip_Jwt_Enables_CustomGreeting()
 	{
 		var token = await LoginAsync("/api/v1/Auth/login");
-		using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/Greeting/custom-greeting");
+		using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/lab/feature-filter-preview");
 		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
 		var response = await _client.SendAsync(request);
@@ -80,15 +79,24 @@ public sealed class FeatureFusionApiTests
 	}
 
 	[Fact]
-	public async Task Greeting_V2_Controller_Accepts_Fullname_Header()
+	public async Task Feature_Filter_Preview_Anonymous_Returns_Anonymous_Message()
 	{
-		using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v2/Greeting/custom-greeting");
+		var response = await _client.GetAsync("/api/v1/lab/feature-filter-preview");
+
+		response.StatusCode.Should().Be(HttpStatusCode.OK);
+		(await response.Content.ReadAsStringAsync()).Should().Contain("Anonymous");
+	}
+
+	[Fact]
+	public async Task Minimal_Custom_Greeting_Validation_Demo_Accepts_Fullname_Header()
+	{
+		using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/minimal-custom-greeting");
 		request.Headers.TryAddWithoutValidation("Fullname", "Mohammad");
 
 		var response = await _client.SendAsync(request);
 
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
-		(await response.Content.ReadAsStringAsync()).Should().Contain("user");
+		(await response.Content.ReadAsStringAsync()).Should().Contain("Mohammad");
 	}
 
 	[Fact]
@@ -204,7 +212,7 @@ public sealed class FeatureFusionApiTests
 	}
 
 	[Fact]
-	public async Task Product_Products_MinimalApi_Get_First_Page_Matches_Controller()
+	public async Task Product_Products_MinimalApi_Get_First_Page_Matches_Product_Products_Post()
 	{
 		var controller = await GetProductsAsync(limit: 5, sortBy: "Price", sortDirection: "Descending");
 		var minimal = await GetProductsMinimalAsync(limit: 5, sortBy: "Price", sortDirection: "Descending");
@@ -288,24 +296,24 @@ public sealed class FeatureFusionApiTests
 	public async Task Product_Products_MinimalApi_Invalid_Cursor_Returns_BadRequest()
 	{
 		var get = await _client.GetAsync(
-			"/api/v2/products-page?Limit=5&Cursor=not-a-valid-cursor");
+			"/api/v1/products-page?Limit=5&Cursor=not-a-valid-cursor");
 		get.StatusCode.Should().Be(HttpStatusCode.BadRequest, await get.Content.ReadAsStringAsync());
 
 		var post = await _client.PostAsync(
-			"/api/v2/products-page?Limit=5&Cursor=not-a-valid-cursor",
+			"/api/v1/products-page?Limit=5&Cursor=not-a-valid-cursor",
 			content: null);
 		post.StatusCode.Should().Be(HttpStatusCode.BadRequest, await post.Content.ReadAsStringAsync());
 	}
 
 	[Fact]
-	public async Task Swagger_V2_Documents_Get_Products_Page()
+	public async Task Swagger_V1_Documents_Get_Products_Page()
 	{
-		var response = await _client.GetAsync("/swagger/v2/swagger.json");
+		var response = await _client.GetAsync("/swagger/v1/swagger.json");
 		response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
 
 		using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
 		doc.RootElement.TryGetProperty("paths", out var paths).Should().BeTrue();
-		paths.TryGetProperty("/api/v2/products-page", out var productsPage).Should().BeTrue();
+		paths.TryGetProperty("/api/v1/products-page", out var productsPage).Should().BeTrue();
 		productsPage.TryGetProperty("get", out var get).Should().BeTrue();
 		productsPage.TryGetProperty("post", out _).Should().BeTrue();
 
@@ -329,7 +337,7 @@ public sealed class FeatureFusionApiTests
 	public async Task Product_Products_Invalid_Cursor_Returns_BadRequest()
 	{
 		var response = await _client.PostAsync(
-			"/api/v2/Product/products?Limit=5&Cursor=not-a-valid-cursor",
+			"/api/v1/Product/products?Limit=5&Cursor=not-a-valid-cursor",
 			content: null);
 
 		response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -338,7 +346,7 @@ public sealed class FeatureFusionApiTests
 	[Fact]
 	public async Task Order_Create_With_Idempotency_Key_Succeeds()
 	{
-		using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v2/Order/order");
+		using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/Order/order");
 		request.Headers.TryAddWithoutValidation("Idempotency-Key", System.Ulid.NewUlid().ToString());
 		request.Content = new StringContent(
 			"""{"productId":1,"quantity":1,"customerId":1}""",
@@ -354,33 +362,22 @@ public sealed class FeatureFusionApiTests
 	[Fact]
 	public async Task Minimal_Product_Promotion_Returns_Ok()
 	{
-		var response = await _client.GetAsync("/api/v2/product-promotion");
+		var response = await _client.GetAsync("/api/v1/product-promotion");
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 	}
 
 	[Fact]
 	public async Task Minimal_Product_Recommendation_Returns_Ok()
 	{
-		var response = await _client.GetAsync("/api/v2/product-recommendation");
+		var response = await _client.GetAsync("/api/v1/product-recommendation");
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 		(await response.Content.ReadAsStringAsync()).Should().Contain("product");
 	}
 
-	[Fact]
-	public async Task Minimal_Custom_Greeting_Accepts_Fullname_Header()
-	{
-		using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v2/minimal-custom-greeting");
-		request.Headers.TryAddWithoutValidation("Fullname", "Mohammad");
-
-		var response = await _client.SendAsync(request);
-
-		response.StatusCode.Should().Be(HttpStatusCode.OK);
-	}
-
 	[Theory]
-	[InlineData("/api/v2/person-endpointfilter")]
-	[InlineData("/api/v2/person-builderextension")]
-	[InlineData("/api/v2/person-genericendpoint")]
+	[InlineData("/api/v1/person-endpointfilter")]
+	[InlineData("/api/v1/person-builderextension")]
+	[InlineData("/api/v1/person-genericendpoint")]
 	public async Task Minimal_Person_Endpoints_Bind_AsParameters_From_Query(string path)
 	{
 		var response = await _client.PostAsync($"{path}?Name=Mohammad&Age=30", content: null);
@@ -395,7 +392,7 @@ public sealed class FeatureFusionApiTests
 		string sortBy = "Id",
 		string sortDirection = "Ascending")
 	{
-		var url = $"/api/v2/Product/products?Limit={limit}&SortBy={sortBy}&SortDirection={sortDirection}";
+		var url = $"/api/v1/Product/products?Limit={limit}&SortBy={sortBy}&SortDirection={sortDirection}";
 		if (!string.IsNullOrEmpty(cursor))
 		{
 			url += $"&Cursor={Uri.EscapeDataString(cursor)}";
@@ -447,7 +444,7 @@ public sealed class FeatureFusionApiTests
 		string sortDirection,
 		string? pageDirection = null)
 	{
-		var url = $"/api/v2/products-page?limit={limit}&sortBy={sortBy}&sortDirection={sortDirection}";
+		var url = $"/api/v1/products-page?limit={limit}&sortBy={sortBy}&sortDirection={sortDirection}";
 		if (!string.IsNullOrEmpty(cursor))
 		{
 			url += $"&cursor={Uri.EscapeDataString(cursor)}";
@@ -467,7 +464,7 @@ public sealed class FeatureFusionApiTests
 		string sortBy = "Id",
 		string sortDirection = "Ascending")
 	{
-		var url = $"/api/v2/Product/products-dapper?Limit={limit}&SortBy={sortBy}&SortDirection={sortDirection}";
+		var url = $"/api/v1/Product/products-dapper?Limit={limit}&SortBy={sortBy}&SortDirection={sortDirection}";
 		if (!string.IsNullOrEmpty(cursor))
 		{
 			url += $"&Cursor={Uri.EscapeDataString(cursor)}";

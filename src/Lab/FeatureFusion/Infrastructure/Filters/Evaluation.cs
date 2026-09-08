@@ -1,11 +1,10 @@
 ﻿using Microsoft.FeatureManagement;
 
 /// <summary>
-/// Feature filter that enables greeting features for users with a VIP claim.
+/// Feature filter that enables CustomGreeting when the caller has JWT claim VIP=true.
 /// </summary>
 /// <remarks>
-/// Part of the Feature Management demos in this lab. See README and docs/linkedin-posts.md.
-/// Filter alias: <c>UseGreeting</c>.
+/// Lab Feature Management preview (GET /api/v1/lab/feature-filter-preview). Filter alias: <c>UseGreeting</c>.
 /// </remarks>
 [FilterAlias("UseGreeting")]
 public class UseGreetingFilter : IFeatureFilter

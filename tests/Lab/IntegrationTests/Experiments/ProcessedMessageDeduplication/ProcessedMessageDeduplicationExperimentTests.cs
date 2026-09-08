@@ -71,7 +71,7 @@ public sealed class ProcessedMessageDeduplicationExperimentTests : IAsyncLifetim
 	[Fact]
 	public async Task EnableDeduplication_records_processed_messages_and_suppresses_duplicate_handler_dispatch()
 	{
-		_fixture.ProcessedEvents.Clear();
+		await _fixture.ResetLabObservationAsync();
 
 		var startedUtc = DateTimeOffset.UtcNow;
 		using var capture = new InProcessActivityCapture();

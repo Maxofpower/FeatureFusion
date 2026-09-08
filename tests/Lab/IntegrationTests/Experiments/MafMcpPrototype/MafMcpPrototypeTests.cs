@@ -89,7 +89,7 @@ public sealed class MafMcpPrototypeTests
 		}
 
 		const int runCount = 3;
-		_fixture.ProcessedEvents.Clear();
+		await _fixture.ResetLabObservationAsync();
 
 		var startedUtc = DateTimeOffset.UtcNow;
 		using var capture = new InProcessActivityCapture();

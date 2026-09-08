@@ -15,7 +15,6 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit.Abstractions;
-using static FeatureFusion.Features.Orders.Commands.CreateOrderCommandHandler;
 using static IntegrationTests.Infrastructure.Telemetry.LabTrace;
 
 namespace IntegrationTests.Experiments.IdempotencyProcessingLease;
@@ -82,7 +81,7 @@ public sealed class IdempotencyProcessingLeaseExperimentTests
 	[Fact]
 	public async Task Same_key_after_ProcessingTtl_may_run_production_while_first_still_in_flight()
 	{
-		_fixture.ProcessedEvents.Clear();
+		await _fixture.ResetLabObservationAsync();
 		_gate.Reset();
 
 		var startedUtc = DateTimeOffset.UtcNow;

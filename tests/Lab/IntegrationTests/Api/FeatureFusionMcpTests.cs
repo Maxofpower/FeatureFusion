@@ -32,7 +32,19 @@ public sealed class FeatureFusionMcpTests
 		var tools = await mcp.ListToolsAsync();
 		var names = tools.Select(t => t.Name).ToArray();
 
-		names.Should().Contain(["demo.echo", "products.list", "orders.create", "lab.ping"]);
+		names.Should().Contain([
+			"demo.echo",
+			"products.list",
+			"catalog.products.list",
+			"catalog.product.get",
+			"orders.create",
+			"orders.checkout",
+			"orders.get",
+			"orders.list",
+			"customers.get",
+			"customers.list",
+			"lab.ping"
+		]);
 		names.Should().NotContain(n => n.Contains("void", StringComparison.OrdinalIgnoreCase));
 	}
 
@@ -142,6 +154,8 @@ public sealed class FeatureFusionMcpTests
 		var markdown = string.Join("\n", read.Contents.OfType<TextResourceContents>().Select(c => c.Text));
 		markdown.Should().Contain("demo.echo");
 		markdown.Should().Contain("products.list");
+		markdown.Should().Contain("catalog.products.list");
+		markdown.Should().Contain("catalog.product.get");
 		markdown.Should().Contain("orders.create");
 		markdown.Should().Contain("lab.ping");
 	}

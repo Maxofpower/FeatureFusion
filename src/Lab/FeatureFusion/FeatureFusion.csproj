@@ -2,16 +2,10 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <Nullable>disable</Nullable>
+    <Nullable>enable</Nullable>
+    <WarningsAsErrors>nullable</WarningsAsErrors>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Remove="Features\Product\**" />
-    <Content Remove="Features\Product\**" />
-    <EmbeddedResource Remove="Features\Product\**" />
-    <None Remove="Features\Product\**" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Asp.Versioning.Http" Version="8.1.0" />
@@ -25,6 +19,10 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.10">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
@@ -44,6 +42,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\BuildingBlocks\Domain\BuildingBlocks.Domain.csproj" />
+    <ProjectReference Include="..\..\BuildingBlocks\Domain.EntityFrameworkCore\BuildingBlocks.Domain.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\BuildingBlocks\Idempotency\BuildingBlocks.Idempotency.csproj" />
     <ProjectReference Include="..\..\BuildingBlocks\Mcp\BuildingBlocks.Mcp.csproj" />
     <ProjectReference Include="..\..\BuildingBlocks\Mediator\BuildingBlocks.Mediator.csproj" />

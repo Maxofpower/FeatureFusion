@@ -6,9 +6,10 @@ Formerly published as `Maxofpower/FeatureManagement`; GitHub redirects the old U
 
 ## Development
 
-1. Clone [FeatureFusion](https://github.com/Maxofpower/FeatureFusion).
+1. Clone [FeatureFusion](https://github.com/Maxofpower/FeatureFusion) and open **`FeatureFusion.sln`** (the only solution).
 2. `dotnet restore FeatureFusion.sln`
 3. Package tests (multi-TFM where applicable):
+   - `dotnet test tests/BuildingBlocks/Domain.Tests`
    - `dotnet test tests/BuildingBlocks/Mediator.Tests`
    - `dotnet test tests/BuildingBlocks/Mediator.Analyzers.Tests`
    - `dotnet test tests/BuildingBlocks/Mcp.Tests`

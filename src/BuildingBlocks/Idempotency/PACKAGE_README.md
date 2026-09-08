@@ -53,7 +53,9 @@ builder.Services.AddBuildingBlocksIdempotency(o =>
 [Idempotent(useLock: true)]
 public async Task<ActionResult<OrderResponse>> Create([FromBody] CreateOrder request) { ... }
 
-// Minimal API
+// Minimal API — call UseIdempotencyRequestBuffering() early in the pipeline so
+// EnableRequestFingerprint can rewind the body after [FromBody] binding.
+app.UseIdempotencyRequestBuffering();
 app.MapPost("/orders", CreateAsync).WithIdempotency(useLock: true);
 ```
 
