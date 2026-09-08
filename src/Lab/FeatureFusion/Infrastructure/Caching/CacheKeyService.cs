@@ -6,8 +6,6 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
-// from nopcommerce caching logic
-// https://github.com/nopSolutions/nopCommerce
 namespace FeatureFusion.Infrastructure.Caching
 {
 		/// <summary>
@@ -150,7 +148,7 @@ namespace FeatureFusion.Infrastructure.Caching
 				if (string.IsNullOrEmpty(hashAlgorithm))
 					throw new ArgumentNullException(nameof(hashAlgorithm));
 
-				var algorithm = (HashAlgorithm)CryptoConfig.CreateFromName(hashAlgorithm);
+				var algorithm = (HashAlgorithm?)CryptoConfig.CreateFromName(hashAlgorithm);
 				if (algorithm == null)
 					throw new ArgumentException("Unrecognized hash name");
 

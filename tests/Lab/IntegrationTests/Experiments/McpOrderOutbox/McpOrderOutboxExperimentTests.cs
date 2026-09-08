@@ -63,7 +63,7 @@ public sealed class McpOrderOutboxExperimentTests
 	[Fact]
 	public async Task Mcp_confirmed_orders_create_follows_outbox_to_handler_pipeline_and_replay_skips_async_work()
 	{
-		_fixture.ProcessedEvents.Clear();
+		await _fixture.ResetLabObservationAsync();
 
 		var startedUtc = DateTimeOffset.UtcNow;
 		using var capture = new InProcessActivityCapture();
@@ -168,16 +168,11 @@ public sealed class McpOrderOutboxExperimentTests
 			idempotencyKey: baselineKey,
 			quantity: Quantity);
 
-		var replayCompletedUtc = DateTimeOffset.UtcNow;
+		await Task.Delay(ReplayObservationWindow);
 
-		await Wait.UntilAsync(
-			() =>
-			{
-				var count = _fixture.ProcessedEvents.Count(e => e.OrderId == miss.OrderId);
-				return count == processedCountBeforeReplay
-					&& DateTimeOffset.UtcNow - replayCompletedUtc >= ReplayObservationWindow;
-			},
-			TimeSpan.FromSeconds(20));
+		_fixture.ProcessedEvents.Count(e => e.OrderId == miss.OrderId).Should().Be(
+			processedCountBeforeReplay,
+			"MCP same-key replay must not deliver another OrderCreated handler observation");
 
 		var outboxAfterReplay = await FindOutboxRowsForOrderIdAsync(miss.OrderId);
 		outboxObservations.Add(ToSnapshot(outboxAfterReplay[0], "AfterMcpIdempotencyReplay"));
@@ -298,6 +293,7 @@ public sealed class McpOrderOutboxExperimentTests
 		};
 
 		var clock = Stopwatch.StartNew();
+		var invokedUtc = DateTime.UtcNow;
 		var result = await mcp.CallToolAsync(ToolName, args);
 		clock.Stop();
 		var completedUtc = DateTimeOffset.UtcNow;
@@ -306,10 +302,7 @@ public sealed class McpOrderOutboxExperimentTests
 		var errorText = isError ? McpToolResults.Truncate(McpToolResults.GetText(result)) : null;
 		var order = !isError ? McpToolResults.TryParseOrder(result, JsonOptions) : null;
 
-		var toolSpan = capture.All.FirstOrDefault(s =>
-			s.DisplayName == "mcp.tool"
-			&& HasToolTag(s, ToolName)
-			&& seenToolTraces.Add(s.TraceId));
+		var toolSpan = McpToolSpans.TakeNew(capture.All, ToolName, seenToolTraces, invokedUtc);
 
 		var toolTrace = toolSpan?.TraceId;
 		var related = toolTrace is null
@@ -430,9 +423,6 @@ public sealed class McpOrderOutboxExperimentTests
 			WorkerPending: row.WorkerPending,
 			WorkerProcessed: row.WorkerProcessed,
 			CreatedAtUtc: row.CreatedAtUtc);
-
-	private static bool HasToolTag(CapturedActivity span, string toolName) =>
-		span.Tags.TryGetValue("mcp.tool.name", out var name) && name == toolName;
 
 	private static string? GetTag(CapturedActivity activity, string key) =>
 		activity.Tags.TryGetValue(key, out var value) ? value : null;

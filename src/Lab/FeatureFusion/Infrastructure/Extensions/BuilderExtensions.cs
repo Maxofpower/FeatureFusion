@@ -1,16 +1,20 @@
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
-using Asp.Versioning.Conventions;
 using BuildingBlocks.Idempotency.DependencyInjection;
 using BuildingBlocks.Pagination.EntityFrameworkCore;
+using FeatureFusion.Features.Admission;
 using FeatureFusion.Features.Order.IntegrationEvents;
 using FeatureFusion.Features.Order.IntegrationEvents.EventHandling;
 using FeatureFusion.Features.Order.IntegrationEvents.Events;
+using FeatureFusion.Features.Payments;
+using FeatureFusion.Features.Shipping;
+using FeatureFusion.Features.Tax;
 using FeatureFusion.Infrastructure.Caching;
 using FeatureFusion.Infrastructure.Context;
+using FeatureFusion.Infrastructure.Dapper;
 using FeatureFusion.Infrastructure.Filters;
+using FeatureFusion.Infrastructure.Swagger;
 using FeatureFusion.Infrastructure.ValidationProvider;
-using FeatureFusion.Models;
 using FeatureFusion.Infrastructure.Initializers;
 using FeatureFusion.Models.Validator;
 using FeatureFusion.Services.Authentication;
@@ -32,7 +36,6 @@ using StackExchange.Redis;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
-using static FeatureFusion.Features.Orders.Commands.CreateOrderCommandHandler;
 
 namespace FeatureFusion.Infrastructure.Extensions
 {
@@ -88,9 +91,11 @@ namespace FeatureFusion.Infrastructure.Extensions
 						Title = "API",
 						Version = description.ApiVersion.ToString()
 					});
-					c.UseAllOfToExtendReferenceSchemas();
-					c.SchemaFilter<EnumSchemaFilter>();
 				}
+
+				c.UseAllOfToExtendReferenceSchemas();
+				c.SchemaFilter<EnumSchemaFilter>();
+				c.DocumentFilter<SwaggerTagDocumentFilter>();
 
 				// Add JWT Authentication to Swagger
 				c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -159,13 +164,13 @@ namespace FeatureFusion.Infrastructure.Extensions
 
 
 
-		// Generic method for API versioning
+		// Single Asp.Versioning version (1.0). Do not use VersionByNamespaceConvention.
 		public static void AddApiVersioningWithReader(this IServiceCollection services)
 		{
 			services.AddApiVersioning(options =>
 			{
-				//options.AssumeDefaultVersionWhenUnspecified = true;
 				options.DefaultApiVersion = new ApiVersion(1, 0);
+				options.AssumeDefaultVersionWhenUnspecified = true;
 				options.ReportApiVersions = true;
 				options.ApiVersionReader = ApiVersionReader.Combine(
 					new QueryStringApiVersionReader("v"),
@@ -178,17 +183,12 @@ namespace FeatureFusion.Infrastructure.Extensions
 				options.GroupNameFormat = "'v'V";
 				options.SubstituteApiVersionInUrl = true;
 			})
-			.AddMvc(
-				options =>
-				{
-					// automatically applies an api version namespace onventions
-					options.Conventions.Add(new VersionByNamespaceConvention());
-				});
-
+			.AddMvc();
 		}
 
 		public static void RegisterServices(this IServiceCollection services)
 		{
+			CatalogDapperTypeHandlers.Register();
 
 			services.AddProblemDetails();
 
@@ -209,6 +209,10 @@ namespace FeatureFusion.Infrastructure.Extensions
 
 			services.AddScoped<IIntegrationEventService, IntegrationEventService>();
 
+			services.AddScoped<IPaymentProcessor, DemoPaymentProcessor>();
+			services.AddSingleton<ITaxCalculator, DemoTaxCalculator>();
+			services.AddSingleton<IShippingPolicy, DemoShippingPolicy>();
+
 			// FluentValidation: dual-register for IValidatorProvider (non-generic)
 			// and host ValidationBehavior (closed IValidator<T>).
 			services.AddFluentValidationAutoValidation();
@@ -223,6 +227,13 @@ namespace FeatureFusion.Infrastructure.Extensions
 				})
 				.UseRedisLock()
 				.UseTelemetry();
+
+			// Application-owned capability admission (Defer-before-Send). Lab proof — not a NuGet package.
+			services.AddOptions<CapabilityAdmissionOptions>()
+				.BindConfiguration(CapabilityAdmissionOptions.SectionName);
+			services.AddSingleton(TimeProvider.System);
+			services.AddScoped<ICapabilityAdmission, CapabilityAdmissionService>();
+			services.AddScoped<ICapabilityExecutor, CreateOrderCapabilityExecutor>();
 
 			services.AddSingleton<IValidatorProvider, ValidatorProvider>();
 

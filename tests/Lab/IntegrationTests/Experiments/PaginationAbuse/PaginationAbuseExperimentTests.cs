@@ -12,7 +12,7 @@ namespace IntegrationTests.Experiments.PaginationAbuse;
 
 /// <summary>
 /// Observation experiment: a deterministic careless client against
-/// <c>GET /api/v2/products-page</c>. Not a pagination correctness suite.
+/// <c>GET /api/v1/products-page</c>. Not a pagination correctness suite.
 /// </summary>
 [Collection(AspireCollection.Name)]
 public sealed class PaginationAbuseExperimentTests

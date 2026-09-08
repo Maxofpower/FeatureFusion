@@ -5,7 +5,7 @@ public class RedisSettings
 	public class RedisOptions
 	{
 		[Required(ErrorMessage = "Redis connection string is required.")]
-		public string ConnectionString { get; set; }
+		public string ConnectionString { get; set; } = string.Empty;
 
 		public string InstanceName { get; set; } = "MyApp:";
 	}

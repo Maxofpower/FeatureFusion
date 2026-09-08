@@ -194,10 +194,13 @@ public static class IdempotencyEndpointRouteBuilderExtensions
 		return builder.AddEndpointFilter(async (context, next) =>
 		{
 			var sp = context.HttpContext.RequestServices;
+			var options = sp.GetService<IOptionsMonitor<IdempotencyOptions>>()?.CurrentValue
+				?? sp.GetService<IOptions<IdempotencyOptions>>()?.Value
+				?? new IdempotencyOptions();
 			var filter = new IdempotentEndpointFilter(
 				sp.GetRequiredService<IDistributedCache>(),
 				sp.GetRequiredService<ILoggerFactory>(),
-				sp.GetService<IOptions<IdempotencyOptions>>()?.Value ?? new IdempotencyOptions(),
+				options,
 				endpoint,
 				sp.GetService<IIdempotencyLock>(),
 				sp.GetService<IdempotencyTelemetry>());

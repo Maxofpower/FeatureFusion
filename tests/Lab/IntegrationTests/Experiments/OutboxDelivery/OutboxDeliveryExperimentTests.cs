@@ -14,7 +14,7 @@ namespace IntegrationTests.Experiments.OutboxDelivery;
 
 /// <summary>
 /// Experiment 5: HTTP order create → transactional outbox → OutBoxWorker → RabbitMQ → handler.
-/// Hypothesis: a successful cache-miss <c>POST /api/v2/Order/order</c> persists catalog/outbox
+/// Hypothesis: a successful cache-miss <c>POST /api/v1/Order/order</c> persists catalog/outbox
 /// in one transaction; <c>OutBoxWorker</c> eventually publishes <c>OrderCreatedIntegrationEvent</c>;
 /// the real consumer runs once. Replaying the same <c>Idempotency-Key</c> returns the cached HTTP
 /// body and does not produce a second integration event.
@@ -53,7 +53,7 @@ public sealed class OutboxDeliveryExperimentTests
 	[Fact]
 	public async Task Http_order_create_delivers_outbox_event_once_and_idempotent_replay_does_not_redeliver()
 	{
-		_fixture.ProcessedEvents.Clear();
+		await _fixture.ResetLabObservationAsync();
 
 		var startedUtc = DateTimeOffset.UtcNow;
 		using var capture = new InProcessActivityCapture();
@@ -112,19 +112,13 @@ public sealed class OutboxDeliveryExperimentTests
 			idempotencyKey: idempotencyKey,
 			quantity: Quantity);
 
-		var replayCompletedUtc = replay.CompletedUtc;
-
-		await Wait.UntilAsync(
-			() =>
-			{
-				var count = _fixture.ProcessedEvents.Count(e => e.OrderId == baseline.OrderId);
-				return count == 1 && DateTimeOffset.UtcNow - replayCompletedUtc >= ReplayObservationWindow;
-			},
-			TimeSpan.FromSeconds(20));
+		await Task.Delay(ReplayObservationWindow);
 
 		var eventsAfterReplay = _fixture.ProcessedEvents
 			.Where(e => e.OrderId == baseline.OrderId)
 			.ToList();
+		eventsAfterReplay.Should().ContainSingle(
+			"HTTP idempotent replay must not deliver another OrderCreated handler observation");
 
 		processedObservations.Add(new ProcessedEventObservation(
 			Phase: "AfterReplayObservationWindow",
@@ -143,7 +137,7 @@ public sealed class OutboxDeliveryExperimentTests
 				HttpOrderCreate.Path,
 				HttpOrderCreate.IdempotencyHeader,
 				HttpOrderCreate.CachedResponseHeader,
-				AsyncPath: "OrderController.CreateOrder → CreateOrderCommandHandler → IntegrationEventService.PublishThroughEventBusAsync → outbox_messages → OutBoxWorker → EventBus.PublishDirect → RabbitMQ → OrderCreatedIntegrationEventHandler",
+				AsyncPath: "OrderEndpoints.CreateOrder → CreateOrderCommandHandler → IntegrationEventService.PublishThroughEventBusAsync → outbox_messages → OutBoxWorker → EventBus.PublishDirect → RabbitMQ → OrderCreatedIntegrationEventHandler",
 				ProcessedEventsNote: "AspireFixture.ProcessedEvents is populated by TestEventHandlerDecorator wrapping the real OrderCreatedIntegrationEventHandler"),
 			Calls: calls,
 			ProcessedEventObservations: processedObservations,

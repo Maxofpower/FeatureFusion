@@ -13,7 +13,7 @@ var signoz = builder.AddSigNoz("signoz")
 builder.AddProject<Projects.FeatureFusion>("featurefusion")
 	.WithHttpEndpoint(port: 5141, name: "http")
 	.WithEndpoint(7762, targetPort: 5002, scheme: "https", name: "featurefusion-https")
-	.WithUrl("/swagger/index.html?urls.primaryName=v2", "Swagger v2")
+	.WithUrl("/swagger/index.html?urls.primaryName=v1", "Swagger v1")
 	.WithInfrastructure(infra)
 	.WithSigNozOtlpExporter(signoz);
 

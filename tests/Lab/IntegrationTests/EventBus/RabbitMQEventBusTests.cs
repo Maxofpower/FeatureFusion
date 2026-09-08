@@ -125,7 +125,7 @@ public sealed class RabbitMQEventBusTests : IAsyncLifetime
 	[Fact]
 	public async Task Processes_Published_Event_Once()
 	{
-		_fixture.ProcessedEvents.Clear();
+		await _fixture.ResetLabObservationAsync();
 		var eventBus = GetRequiredService<IEventBus>();
 		var testEvent = new OrderCreatedIntegrationEvent(Guid.NewGuid(), 100.0m);
 
@@ -169,7 +169,7 @@ public sealed class RabbitMQEventBusTests : IAsyncLifetime
 
 	private async Task TestEventProcessing<T>(Func<T> eventFactory) where T : IntegrationEvent
 	{
-		_fixture.ProcessedEvents.Clear();
+		await _fixture.ResetLabObservationAsync();
 		var testEvent = eventFactory();
 		var eventBus = GetRequiredService<IEventBus>();
 
@@ -181,7 +181,7 @@ public sealed class RabbitMQEventBusTests : IAsyncLifetime
 
 	private async Task VerifyMessageFlow(OrderCreatedIntegrationEvent testEvent, string routingKey)
 	{
-		_fixture.ProcessedEvents.Clear();
+		await _fixture.ResetLabObservationAsync();
 		await using var channel = await CreateChannelAsync();
 		var testQueue = "test_feature_fusion";
 

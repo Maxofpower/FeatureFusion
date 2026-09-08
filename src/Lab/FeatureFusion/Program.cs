@@ -1,4 +1,5 @@
 using Asp.Versioning.ApiExplorer;
+using BuildingBlocks.Idempotency.AspNetCore;
 using BuildingBlocks.Mcp;
 using BuildingBlocks.Mcp.Hosting;
 using BuildingBlocks.Mediator;
@@ -6,12 +7,21 @@ using BuildingBlocks.Mediator.DependencyInjection;
 using Enyim.Caching;
 using Enyim.Caching.Configuration;
 using EventBusRabbitMQ;
+using FeatureFusion.Features.Admission;
+using FeatureFusion.Features.Admission.Endpoints;
+using FeatureFusion.Features.Auth.Endpoints;
+using FeatureFusion.Features.Catalog;
+using FeatureFusion.Features.Carts;
+using FeatureFusion.Features.Checkout;
+using FeatureFusion.Features.Customers;
+using FeatureFusion.Features.Lab.Endpoints;
 using FeatureFusion.Features.MediatorDemo.Endpoints;
+using FeatureFusion.Features.Orders.Endpoints;
+using FeatureFusion.Features.Orders;
 using FeatureFusion.Features.Products.Endpoints;
 using FeatureFusion.Infrastructure.Behaviors;
 using FeatureFusion.Infrastructure.Exceptions;
 using FeatureFusion.Infrastructure.Extensions;
-using FeatureFusion.API.V2;
 using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.FeatureManagement;
@@ -39,6 +49,7 @@ builder.AddServiceDefaults(
 	{
 		telemetry.AddSource("DbMigrations");
 		telemetry.AddSource("BuildingBlocks.Idempotency");
+		telemetry.AddSource("FeatureFusion.Checkout");
 		telemetry.ConfigureTracing(t => t
 			.AddEntityFrameworkCoreInstrumentation()
 			.AddRedisInstrumentation());
@@ -76,7 +87,26 @@ if (builder.Environment.IsDevelopment())
 	}).UseDispatcher(async (sp, msg, ct) =>
 	{
 		await using var scope = sp.CreateAsyncScope();
-		return await scope.ServiceProvider.GetRequiredService<ISender>().Send(msg, ct);
+		var services = scope.ServiceProvider;
+		if (msg is FeatureFusion.Features.Orders.Commands.CreateOrderCommand createOrder)
+		{
+			var admission = services.GetRequiredService<FeatureFusion.Features.Admission.ICapabilityAdmission>();
+			var mcpContext = services.GetService<BuildingBlocks.Mcp.IMcpInvokeContextAccessor>();
+			var decision = await FeatureFusion.Features.Admission.OrderCreateAdmissionGate.AdmitCreateOrderAsync(
+				admission,
+				createOrder,
+				FeatureFusion.Features.Admission.OrderCreateAdmissionGate.ResolveMcpRequestKey(mcpContext),
+				ct);
+			switch (decision)
+			{
+				case FeatureFusion.Features.Admission.AdmissionDecision.Defer defer:
+					return Result<FeatureFusion.Features.Admission.AdmissionPendingResponse>.Success(defer.Pending);
+				case FeatureFusion.Features.Admission.AdmissionDecision.Deny deny:
+					return Result<FeatureFusion.Features.Admission.AdmissionPendingResponse>.Failure(deny.Error, deny.StatusCode);
+			}
+		}
+
+		return await services.GetRequiredService<ISender>().Send(msg, ct);
 	});
 }
 
@@ -164,23 +194,35 @@ void ConfigureRequestPipeline(WebApplication app)
 	// after this — it turns handled ValidationExceptions into opaque 500s in Development/tests.
 	app.UseExceptionHandler();
 
+	// Minimal API binds [FromBody] before IEndpointFilter; buffer Idempotency-Key
+	// requests so WithIdempotency fingerprinting can rewind after binding (Exp 12).
+	app.UseIdempotencyRequestBuffering();
+
 	// Cursor HTTP MCP uses http://localhost:5141/mcp. HTTPS redirection would 307 to
 	// https://localhost:7226/mcp and the MCP client hangs on the Kestrel dev cert.
 	app.UseWhen(
 		ctx => !ctx.Request.Path.StartsWithSegments("/mcp"),
 		branch => branch.UseHttpsRedirection());
+	app.UseAuthentication();
 	app.UseAuthorization();
 
-	// Map API controllers and versioned routes
-	app.MapControllers();
 	if (app.Environment.IsDevelopment())
 		app.MapBuildingBlocksMcp();
 }
 #endregion
 
-app.MapGreetingApiV2();
+app.MapLabEndpoints();
+app.MapFeatureFilterPreviewEndpoints();
+app.MapAuthEndpoints();
+app.MapOrderEndpoints();
+app.MapOrderQueryEndpoints();
+app.MapCustomerEndpoints();
+app.MapCartEndpoints();
+app.MapCheckoutEndpoints();
 app.MapMediatorDemoEndpoints();
 app.MapProductPaginationEndpoints();
+app.MapCatalogEndpoints();
+app.MapAdmissionEndpoints();
 
 #region memchached prestart up validation if enabled
 // Pre-startup validation for memcached and redis

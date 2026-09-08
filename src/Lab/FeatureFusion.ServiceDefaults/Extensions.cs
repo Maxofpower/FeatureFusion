@@ -26,12 +26,11 @@ public static class Extensions
         => builder.AddServiceDefaults(configureOptions: null, configureTelemetry);
 
     /// <summary>
-    /// Adds Aspire service defaults with dynamic Telemetry options (food-delivery style) and optional builder hooks.
+    /// Adds Aspire service defaults with callback-configured telemetry options and optional builder hooks.
     /// </summary>
     /// <param name="builder">Host builder.</param>
     /// <param name="configureOptions">
     /// Options overrides: pillars, instrumentations, OTLP endpoint/protocol/headers, sampling.
-    /// Same idea as food-delivery <c>AddCustomOpenTelemetry(Action&lt;OpenTelemetryOptions&gt;)</c>.
     /// Also bindable from <c>Telemetry</c> config / <c>OTEL_*</c> env without this callback.
     /// </param>
     /// <param name="configureTelemetry">

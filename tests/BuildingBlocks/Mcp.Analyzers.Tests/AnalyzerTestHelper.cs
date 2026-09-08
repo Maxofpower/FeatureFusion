@@ -33,7 +33,9 @@ internal static class AnalyzerTestHelper
 		var test = new CSharpAnalyzerTest<TAnalyzer, DefaultVerifier>
 		{
 			TestCode = source,
-			ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
+			// Analyzer.Testing 1.1.2 maps Net90 to Microsoft.NETCore.App.Ref 9.0.0-preview.*,
+			// which fails to extract under a shared package cache.
+			ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
 		};
 		test.TestState.Sources.Add(("McpToolAttribute.cs", StubAttribute));
 		test.ExpectedDiagnostics.AddRange(expected);

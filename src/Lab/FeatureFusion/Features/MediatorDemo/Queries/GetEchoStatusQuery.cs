@@ -18,7 +18,7 @@ public sealed class GetEchoStatusQueryHandler : IQueryHandler<GetEchoStatusQuery
 		var response = new EchoStatusResponse(
 			Status: "ready",
 			ActivitySource: "BuildingBlocks.Mediator",
-			Hint: "In Aspire Dashboard, filter traces by source BuildingBlocks.Mediator after calling POST /api/v2/mediator-demo/echo.");
+			Hint: "In Aspire Dashboard, filter traces by source BuildingBlocks.Mediator after calling POST /api/v1/mediator-demo/echo.");
 
 		return Task.FromResult(Result<EchoStatusResponse>.Success(response));
 	}

@@ -204,9 +204,9 @@ The IR (`SortKey`, `CursorCodec`, `CursorPage`) is a non-packable sibling projec
 
 Same `GetProductsQuery` on the FeatureFusion PostgreSQL catalog (do not set `QueryHint.ReadUncommitted`):
 
-- `GET /api/v2/products-page` — Minimal API (EF; POST kept)
-- `POST /api/v2/Product/products` — MVC controller (EF)
-- `POST /api/v2/Product/products-dapper` — MVC Dapper showcase (not packed)
+- `GET /api/v1/products-page` — Minimal API (EF; POST kept)
+- `POST /api/v1/Product/products` — Minimal API (EF)
+- `POST /api/v1/Product/products-dapper` — Dapper showcase (not packed)
 - MCP `products.list`
 
 First page → `NextCursor` → `PreviousCursor`: see the [pagination docs](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/pagination.md#runnable-showcase-featurefusion).

@@ -76,7 +76,7 @@ public sealed class McpToolStormRateLimitExperimentTests
 	[Fact]
 	public async Task Distinct_key_mcp_write_storm_is_bounded_by_rate_limiter_before_production()
 	{
-		_fixture.ProcessedEvents.Clear();
+		await _fixture.ResetLabObservationAsync();
 		_limiter.Reset();
 
 		var startedUtc = DateTimeOffset.UtcNow;

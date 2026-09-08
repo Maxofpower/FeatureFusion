@@ -25,6 +25,7 @@ telemetry.AddSource("BuildingBlocks.Idempotency");
 [Idempotent(useLock: true)]
 public async Task<ActionResult> Create(...) { }
 
+app.UseIdempotencyRequestBuffering(); // before endpoints — Minimal API binds before IEndpointFilter
 app.MapPost("/path", handler).WithIdempotency(useLock: true);
 ```
 
@@ -34,6 +35,7 @@ app.MapPost("/path", handler).WithIdempotency(useLock: true);
 - Cache all **2xx**; replay envelope + configurable replay header
 - Errors: ProblemDetails (`https://buildingblocks.dev/errors/idempotency/...`)
 - Fingerprint default **off** (Exp 3); on → method+path+body SHA-256 (Exp 12)
+- Minimal API + fingerprint requires `UseIdempotencyRequestBuffering()` (endpoint filters run after `[FromBody]` binding)
 - Lock only around GetOrCreate when `UseLock` (Exp 4)
 - MVC ObjectResult body and cache envelope: System.Text.Json; Minimal API `IResult`: System.Text.Json
 - Telemetry optional; no cache-key tag by default; no BuildingBlocks.Telemetry package ref

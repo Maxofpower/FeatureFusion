@@ -57,7 +57,7 @@ public sealed class DuplicateDeliveryExperimentTests : IAsyncLifetime
 	[Fact]
 	public async Task Duplicate_integration_event_delivery_is_suppressed_by_inbox_not_handler_replay()
 	{
-		_fixture.ProcessedEvents.Clear();
+		await _fixture.ResetLabObservationAsync();
 
 		var startedUtc = DateTimeOffset.UtcNow;
 		using var capture = new InProcessActivityCapture();

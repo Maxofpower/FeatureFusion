@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using EventBusRabbitMQ;
@@ -8,9 +9,12 @@ using EventBusRabbitMQ.Infrastructure.Context;
 using EventBusRabbitMQ.Infrastructure.Messaging;
 using FeatureFusion.Features.Order.IntegrationEvents.EventHandling;
 using FeatureFusion.Features.Order.IntegrationEvents.Events;
+using FeatureFusion.Infrastructure.Context;
 using IntegrationTests.EventBus;
+using IntegrationTests.Infrastructure.Collections;
 using IntegrationTests.Infrastructure.EventBusLab;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -44,7 +48,7 @@ public sealed class AspireFixture : WebApplicationFactory<Program>, IAsyncLifeti
 	private string _memcachedHost = "localhost";
 	private string _memcachedPort = "11211";
 
-	public List<OrderCreatedIntegrationEvent> ProcessedEvents { get; } = new();
+	public ThreadSafeList<OrderCreatedIntegrationEvent> ProcessedEvents { get; } = new();
 
 	/// <summary>Lab-only EventBus stage journal (Exp 19/20). Cleared by experiments as needed.</summary>
 	public EventBusLabJournal EventBusJournal { get; } = new();
@@ -125,6 +129,13 @@ public sealed class AspireFixture : WebApplicationFactory<Program>, IAsyncLifeti
 	{
 		builder.ConfigureServices(services =>
 		{
+			// Keep Exp 1–20 / API smoke on Allow. Defer is in appsettings.Development for AppHost;
+			// admission tests re-enable via PostConfigure (runs after this Configure).
+			services.Configure<FeatureFusion.Features.Admission.CapabilityAdmissionOptions>(o =>
+			{
+				o.DeferredCapabilities.Clear();
+			});
+
 			services.Configure<EventBusOptions>(options =>
 			{
 				options.EnableDeduplication = false;
@@ -264,6 +275,62 @@ public sealed class AspireFixture : WebApplicationFactory<Program>, IAsyncLifeti
 		}
 	}
 
+	/// <summary>
+	/// Disarm lab faults, drop observation logs, and wait until leftover
+	/// <c>OrderCreatedIntegrationEvent</c> outbox rows are processed.
+	/// Call at the start of EventBus/MCP write experiments so a prior test
+	/// cannot starve or crash this test's worker publish.
+	/// </summary>
+	public async Task ResetLabObservationAsync(CancellationToken cancellationToken = default)
+	{
+		EventBusFaults.Clear();
+		EventBusJournal.Clear();
+		ProcessedEvents.Clear();
+		await DrainPendingOrderCreatedOutboxAsync(TimeSpan.FromSeconds(20), cancellationToken)
+			.ConfigureAwait(false);
+		await Task.Delay(300, cancellationToken).ConfigureAwait(false);
+		await DrainPendingOrderCreatedOutboxAsync(TimeSpan.FromSeconds(20), cancellationToken)
+			.ConfigureAwait(false);
+		try
+		{
+			await ResetRabbitMQ().ConfigureAwait(false);
+		}
+		catch
+		{
+			// Topology reset is best-effort isolation; drain already cleared outbox.
+		}
+		ProcessedEvents.Clear();
+		EventBusJournal.Clear();
+	}
+
+	private async Task DrainPendingOrderCreatedOutboxAsync(
+		TimeSpan timeout,
+		CancellationToken cancellationToken)
+	{
+		var eventType = nameof(OrderCreatedIntegrationEvent);
+		var stopwatch = Stopwatch.StartNew();
+		while (stopwatch.Elapsed < timeout)
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+			await using var scope = Services.CreateAsyncScope();
+			var db = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
+			var pending = await db.OutboxMessages
+				.AsNoTracking()
+				.CountAsync(
+					m => m.EventType == eventType && m.ProcessedAt == null,
+					cancellationToken)
+				.ConfigureAwait(false);
+			if (pending == 0)
+				return;
+
+			await Task.Delay(100, cancellationToken).ConfigureAwait(false);
+		}
+
+		throw new TimeoutException(
+			"Pending OrderCreatedIntegrationEvent outbox rows did not drain within timeout. " +
+			"A previous experiment may have left the worker stuck (for example an armed lab crash fault).");
+	}
+
 	public async Task ResetRabbitMQ()
 	{
 		using var scope = Services.CreateScope();
@@ -290,11 +357,11 @@ public sealed class AspireFixture : WebApplicationFactory<Program>, IAsyncLifeti
 public sealed class TestEventHandlerDecorator : IIntegrationEventHandler
 {
 	private readonly IIntegrationEventHandler _inner;
-	private readonly List<OrderCreatedIntegrationEvent> _trackedEvents;
+	private readonly ThreadSafeList<OrderCreatedIntegrationEvent> _trackedEvents;
 
 	public TestEventHandlerDecorator(
 		IIntegrationEventHandler inner,
-		List<OrderCreatedIntegrationEvent> trackedEvents)
+		ThreadSafeList<OrderCreatedIntegrationEvent> trackedEvents)
 	{
 		_inner = inner ?? throw new ArgumentNullException(nameof(inner));
 		_trackedEvents = trackedEvents ?? throw new ArgumentNullException(nameof(trackedEvents));

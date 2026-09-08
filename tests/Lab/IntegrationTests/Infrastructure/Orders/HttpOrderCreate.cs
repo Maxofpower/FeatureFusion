@@ -11,7 +11,7 @@ namespace IntegrationTests.Infrastructure.Orders;
 /// </summary>
 public static class HttpOrderCreate
 {
-	public const string Path = "/api/v2/Order/order";
+	public const string Path = "/api/v1/Order/order";
 	public const string IdempotencyHeader = "Idempotency-Key";
 	public const string CachedResponseHeader = "X-Idempotent-Response";
 

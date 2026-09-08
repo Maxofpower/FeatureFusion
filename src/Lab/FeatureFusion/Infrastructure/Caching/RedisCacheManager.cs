@@ -22,7 +22,7 @@ namespace FeatureFusion.Infrastructure.Caching
 		{
 
 			var database = await _connectionWrapper.GetDatabaseAsync();
-			string redisKey = key.ToString();
+			string redisKey = key.Key;
 
 			// Lua script: Atomically get existing value or set if missing
 			var luaScript = @"
@@ -34,11 +34,11 @@ namespace FeatureFusion.Infrastructure.Caching
             return ARGV[1]
         end";
 
-			var cachedData = (string)await database.ScriptEvaluateAsync(luaScript,
+			var cachedData = (string?)(await database.ScriptEvaluateAsync(luaScript,
 				new RedisKey[] { redisKey },
-				new RedisValue[] { JsonSerializer.Serialize(await acquire()), key.CacheTime * 60 });
+				new RedisValue[] { JsonSerializer.Serialize(await acquire()), key.CacheTime * 60 }));
 
-			return cachedData is not null ? JsonSerializer.Deserialize<T>(cachedData) : default!;
+			return cachedData is not null ? JsonSerializer.Deserialize<T>(cachedData)! : default!;
 		}
 
 		public async Task RefreshCacheAsync<T>(string key, Func<Task<T>> fetchFromDb, int cacheMinutes)

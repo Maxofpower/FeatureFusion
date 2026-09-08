@@ -95,7 +95,7 @@ public sealed class FeatureFusionTraceEvidenceTests
 
 			HttpMethod.Get,
 
-			$"/api/v2/products-page?limit={pageSize}&sortBy=Id&sortDirection=Ascending");
+			$"/api/v1/products-page?limit={pageSize}&sortBy=Id&sortDirection=Ascending");
 
 		request.Headers.TryAddWithoutValidation("traceparent", FormatTraceParent(traceId, spanId));
 
@@ -149,11 +149,11 @@ public sealed class FeatureFusionTraceEvidenceTests
 
 			s => s.DisplayName.Contains("products-page", StringComparison.OrdinalIgnoreCase)
 
-				|| HasTag(s, "url.path", "/api/v2/products-page")
+				|| HasTag(s, "url.path", "/api/v1/products-page")
 
 				|| HasTagContaining(s, "http.route", "products-page"),
 
-			"incoming HTTP span should identify /api/v2/products-page. Spans: {0}",
+			"incoming HTTP span should identify /api/v1/products-page. Spans: {0}",
 
 			Describe(spans));
 

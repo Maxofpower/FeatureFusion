@@ -11,7 +11,7 @@ namespace IntegrationTests.Experiments.PaginationAbuse;
 /// </summary>
 internal sealed class CarelessPaginationClient
 {
-	internal const string Path = "/api/v2/products-page";
+	internal const string Path = "/api/v1/products-page";
 	internal const string SortBy = "Id";
 	internal const string SortDirection = "Ascending";
 	internal const string PageDirection = "Forward";

@@ -7,7 +7,7 @@ namespace FeatureFusion.Dtos
 		[JsonPropertyName("product_id")]
 		public int ProductId { get; init; }
 		[JsonPropertyName("product_name")]
-		public string Name { get; init; }
+		public string Name { get; init; } = string.Empty;
 		[JsonPropertyName("manufacturer_id")]
 		public int ManufacturerId { get; init; }
 		[JsonPropertyName("is_featured")]

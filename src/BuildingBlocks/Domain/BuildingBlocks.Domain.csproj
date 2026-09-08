@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <WarningsAsErrors>CS1591</WarningsAsErrors>
+    <RootNamespace>BuildingBlocks.Domain</RootNamespace>
+
+    <IsPackable>false</IsPackable>
+    <PackageId>BuildingBlocks.Domain</PackageId>
+    <Title>BuildingBlocks.Domain</Title>
+    <Version>1.0.0</Version>
+    <Authors>Mohammad Hasan Hosseini</Authors>
+    <Company>Mohammad Hasan Hosseini</Company>
+    <Copyright>Copyright (c) 2026 Mohammad Hasan Hosseini</Copyright>
+    <Description>Focused DDD primitives for .NET: Entity, AggregateRoot, ValueObject, Identity/AggregateId/EntityId, IBusinessRule, DomainException. No ORM, mediator, or event-bus coupling — host maps persistence (see Domain.EntityFrameworkCore).</Description>
+    <PackageTags>ddd;domain;entity;aggregate;value-object;identity;strongly-typed-id;business-rule;net8;net9;net10</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/Maxofpower/FeatureFusion</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Maxofpower/FeatureFusion</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>PACKAGE_README.md</PackageReadmeFile>
+    <PackageReleaseNotes>1.0.0: Initial Entity, AggregateRoot, ValueObject, Identity, IBusinessRule.</PackageReleaseNotes>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="PACKAGE_README.md" Pack="true" PackagePath="\" />
+    <None Include="AGENTS.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="BuildingBlocks.Domain.Tests" />
+  </ItemGroup>
+
+</Project>

@@ -3,9 +3,9 @@
 public class ValidationResult
 {
 	public bool IsValid { get; }
-	public ValidationProblemDetails ProblemDetails { get; }
+	public ValidationProblemDetails? ProblemDetails { get; }
 
-	private ValidationResult(bool isValid, ValidationProblemDetails problemDetails = null)
+	private ValidationResult(bool isValid, ValidationProblemDetails? problemDetails = null)
 	{
 		IsValid = isValid;
 		ProblemDetails = problemDetails;

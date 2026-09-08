@@ -2,7 +2,7 @@
 
 Reserved **Next.js** project root for a FeatureFusion frontend showcase. This folder is **not** in `FeatureFusion.sln` (the solution stays .NET-only).
 
-The lab API, Aspire AppHost, and BuildingBlocks packages live under `src/`. This directory is the place to add a TypeScript UI later that calls the same HTTP surfaces (for example `GET /api/v2/products-page` keyset pagination).
+The lab API, Aspire AppHost, and BuildingBlocks packages live under `src/`. This directory is the place to add a TypeScript UI later that calls the Demo Commerce HTTP surfaces (`GET /api/v1/catalog/*`, `/api/v1/customers/{id}/cart`, checkout, `/api/v1/orders`) and the pagination-lab keyset route (`GET /api/v1/products-page`).
 
 ## Status
 

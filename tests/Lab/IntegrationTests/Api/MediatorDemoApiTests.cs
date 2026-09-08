@@ -37,7 +37,7 @@ public sealed class MediatorDemoApiTests
 	public async Task Echo_Valid_Returns_Ok()
 	{
 		var response = await _client.PostAsJsonAsync(
-			"/api/v2/mediator-demo/echo",
+			"/api/v1/mediator-demo/echo",
 			new { message = "hello-mediator" });
 
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -51,7 +51,7 @@ public sealed class MediatorDemoApiTests
 	public async Task Echo_Empty_Message_Returns_ValidationProblem()
 	{
 		var response = await _client.PostAsJsonAsync(
-			"/api/v2/mediator-demo/echo",
+			"/api/v1/mediator-demo/echo",
 			new { message = "" });
 
 		response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -67,7 +67,7 @@ public sealed class MediatorDemoApiTests
 	public async Task Echo_Message_Too_Long_Returns_ValidationProblem()
 	{
 		var response = await _client.PostAsJsonAsync(
-			"/api/v2/mediator-demo/echo",
+			"/api/v1/mediator-demo/echo",
 			new { message = new string('x', 201) });
 
 		response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -81,7 +81,7 @@ public sealed class MediatorDemoApiTests
 	public async Task Echo_FaultTrigger_Returns_ServerError()
 	{
 		var response = await _client.PostAsJsonAsync(
-			"/api/v2/mediator-demo/echo",
+			"/api/v1/mediator-demo/echo",
 			new { message = EchoCommand.FaultTrigger });
 
 		// Unhandled handler exception after validation — default exception middleware (not ValidationExceptionHandler).
@@ -92,7 +92,7 @@ public sealed class MediatorDemoApiTests
 	public async Task Echo_Malformed_Json_DoesNotSucceed()
 	{
 		using var content = new StringContent("{ not-json", Encoding.UTF8, "application/json");
-		var response = await _client.PostAsync("/api/v2/mediator-demo/echo", content);
+		var response = await _client.PostAsync("/api/v1/mediator-demo/echo", content);
 
 		// JSON input formatter faults are not FluentValidation — status is host-dependent (400 or 500).
 		response.StatusCode.Should().BeOneOf(HttpStatusCode.BadRequest, HttpStatusCode.InternalServerError);
@@ -101,7 +101,7 @@ public sealed class MediatorDemoApiTests
 	[Fact]
 	public async Task Status_Returns_Ok_With_ActivitySource_Hint()
 	{
-		var response = await _client.GetAsync("/api/v2/mediator-demo/status");
+		var response = await _client.GetAsync("/api/v1/mediator-demo/status");
 
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 		var payload = await response.Content.ReadFromJsonAsync<EchoStatusResponse>(JsonOptions);

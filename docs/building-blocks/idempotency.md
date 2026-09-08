@@ -39,7 +39,8 @@ builder.Services.AddBuildingBlocksIdempotency(o =>
 [Idempotent(useLock: true)]
 public async Task<ActionResult<OrderResponse>> Create([FromBody] CreateOrder request) { ... }
 
-// Minimal API
+// Minimal API — UseIdempotencyRequestBuffering() early so fingerprint can rewind after binding
+app.UseIdempotencyRequestBuffering();
 app.MapPost("/orders", CreateAsync).WithIdempotency(useLock: true);
 ```
 
@@ -60,9 +61,9 @@ Full tables (TTL, options, ProblemDetails `type` URIs): [PACKAGE_README](../../s
 
 | Surface | Path |
 |---------|------|
-| MVC (locked) | `POST /api/v2/Order/order` — `[Idempotent(useLock: true)]` |
-| Minimal API smoke | `POST /api/v2/idempotency-smoke` — `.WithIdempotency(useLock: true)` |
-| DI | `AddBuildingBlocksIdempotency` → `.UseRedisLock().UseTelemetry()`; OTel `AddSource("BuildingBlocks.Idempotency")` |
+| Minimal API (locked) | `POST /api/v1/Order/order` — `.WithIdempotency(useLock: true)` |
+| Minimal API smoke | `POST /api/v1/idempotency-smoke` — `.WithIdempotency(useLock: true)` |
+| DI | `AddBuildingBlocksIdempotency` → `.UseRedisLock().UseTelemetry()`; OTel `AddSource("BuildingBlocks.Idempotency")`; `UseIdempotencyRequestBuffering()` for Minimal API fingerprint |
 
 Behavioral provenance (regression gates): Experiments **3** (cache vs production), **4** (concurrency / lock), **12** (fingerprint) — [Experiments README](../../tests/Lab/IntegrationTests/Experiments/README.md). Exp **15** documents ProcessingTtl lease overlap.
 

@@ -1,4 +1,4 @@
-﻿using FeatureFusion.Domain.Entities;
+using FeatureFusion.Domain.Catalog;
 using FeatureFusion.Dtos;
 
 namespace FeatureFusion.Infrastructure.Extensions
@@ -6,7 +6,7 @@ namespace FeatureFusion.Infrastructure.Extensions
 	public static class ProductExtensions
 	{
 		public static ProductDto ToDto(this Product product) => new(
-			product.Id,
+			product.Id.Value,
 			product.Name,
 			product.Price,
 			product.FullDescription,

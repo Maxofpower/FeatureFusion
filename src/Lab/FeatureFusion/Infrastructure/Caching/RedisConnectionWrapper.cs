@@ -10,7 +10,7 @@ namespace FeatureFusion.Infrastructure.Caching
 		#region Fields
 
 		protected readonly SemaphoreSlim _connectionLock = new(1, 1);
-		protected volatile IConnectionMultiplexer _connection;
+		protected volatile IConnectionMultiplexer? _connection;
 		protected readonly RedisCacheOptions _options;
 
 		#endregion
@@ -39,7 +39,7 @@ namespace FeatureFusion.Infrastructure.Caching
 				if (_options.ConfigurationOptions is not null)
 					connection = await ConnectionMultiplexer.ConnectAsync(_options.ConfigurationOptions);
 				else
-					connection = await ConnectionMultiplexer.ConnectAsync(_options.Configuration);
+					connection = await ConnectionMultiplexer.ConnectAsync(_options.Configuration!);
 			}
 			else
 			{
@@ -61,7 +61,7 @@ namespace FeatureFusion.Infrastructure.Caching
 			IConnectionMultiplexer connection;
 
 			if (_options.ConnectionMultiplexerFactory is null)
-				connection = _options.ConfigurationOptions is not null ? ConnectionMultiplexer.Connect(_options.ConfigurationOptions) : ConnectionMultiplexer.Connect(_options.Configuration);
+				connection = _options.ConfigurationOptions is not null ? ConnectionMultiplexer.Connect(_options.ConfigurationOptions) : ConnectionMultiplexer.Connect(_options.Configuration!);
 			else
 				connection = _options.ConnectionMultiplexerFactory().GetAwaiter().GetResult();
 
@@ -78,13 +78,13 @@ namespace FeatureFusion.Infrastructure.Caching
 		protected virtual async Task<IConnectionMultiplexer> GetConnectionAsync()
 		{
 			if (_connection?.IsConnected == true)
-				return _connection;
+				return _connection!;
 
 			await _connectionLock.WaitAsync();
 			try
 			{
 				if (_connection?.IsConnected == true)
-					return _connection;
+					return _connection!;
 
 				//Connection disconnected. Disposing connection...
 				_connection?.Dispose();
@@ -97,7 +97,7 @@ namespace FeatureFusion.Infrastructure.Caching
 				_connectionLock.Release();
 			}
 
-			return _connection;
+			return _connection!;
 		}
 
 		/// <summary>
@@ -107,13 +107,13 @@ namespace FeatureFusion.Infrastructure.Caching
 		protected virtual IConnectionMultiplexer GetConnection()
 		{
 			if (_connection?.IsConnected == true)
-				return _connection;
+				return _connection!;
 
 			_connectionLock.Wait();
 			try
 			{
 				if (_connection?.IsConnected == true)
-					return _connection;
+					return _connection!;
 
 				//Connection disconnected. Disposing connection...
 				_connection?.Dispose();
@@ -126,7 +126,7 @@ namespace FeatureFusion.Infrastructure.Caching
 				_connectionLock.Release();
 			}
 
-			return _connection;
+			return _connection!;
 		}
 
 		#endregion

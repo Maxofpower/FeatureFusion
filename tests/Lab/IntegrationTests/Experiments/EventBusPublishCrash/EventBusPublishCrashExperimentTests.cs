@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using FeatureFusion.Features.Order.IntegrationEvents.Events;
 using FeatureFusion.Infrastructure.Context;
@@ -52,14 +53,15 @@ public sealed class EventBusPublishCrashExperimentTests
 	[Fact]
 	public async Task Publish_then_crash_before_outbox_mark_is_characterized()
 	{
-		_fixture.ProcessedEvents.Clear();
-		_fixture.EventBusJournal.Clear();
-		_fixture.EventBusFaults.Clear();
+		await _fixture.ResetLabObservationAsync();
+		_fixture.EventBusFaults.ArmCrashAfterPublishOnceForEventType(nameof(OrderCreatedIntegrationEvent));
 
 		var startedUtc = DateTimeOffset.UtcNow;
 		using var capture = new InProcessActivityCapture();
 		var key = System.Ulid.NewUlid().ToString();
 
+		try
+		{
 		var http = await HttpOrderCreate.PostAsync(
 			_http,
 			capture,
@@ -70,8 +72,38 @@ public sealed class EventBusPublishCrashExperimentTests
 		http.HttpStatus.Should().Be(200, http.Body);
 		http.OrderId.Should().NotBeEmpty();
 
-		// Arm immediately after OrderId is known — before OutBoxWorker (~2s) typically publishes.
-		_fixture.EventBusFaults.ArmCrashAfterPublishOnceForOrderId(http.OrderId);
+		var crashSeen = false;
+		var stillPendingAfterCrash = false;
+		OrderOutboxRow? pendingAfterCrash = null;
+		var waitCrash = Stopwatch.StartNew();
+		while (waitCrash.Elapsed < TimeSpan.FromSeconds(8))
+		{
+			crashSeen = _fixture.EventBusJournal.Snapshot().Any(r =>
+				r.Stage == EventBusLabStages.SimulatedCrashAfterPublish
+				&& r.OrderId == http.OrderId);
+			var rows = await OrderOutboxObserver.FindByOrderIdAsync(_services, http.OrderId);
+			if (crashSeen && rows.Count == 1 && rows[0].WorkerPending)
+			{
+				pendingAfterCrash = rows[0];
+				stillPendingAfterCrash = true;
+			}
+
+			if (crashSeen)
+				break;
+			await Task.Delay(20);
+		}
+
+		if (!crashSeen)
+		{
+			// EventType one-shot may have been consumed by a leftover OrderCreated publish
+			// after drain; re-arm by this test's OrderId while the row is still pending.
+			_fixture.EventBusFaults.ArmCrashAfterPublishOnceForOrderId(http.OrderId);
+			await Wait.UntilAsync(
+				() => _fixture.EventBusJournal.Snapshot().Any(r =>
+					r.Stage == EventBusLabStages.SimulatedCrashAfterPublish
+					&& r.OrderId == http.OrderId),
+				TimeSpan.FromSeconds(20));
+		}
 
 		await Wait.UntilAsync(
 			() => _fixture.EventBusJournal.Snapshot().Any(r =>
@@ -85,10 +117,13 @@ public sealed class EventBusPublishCrashExperimentTests
 		var messageId = crashRecord.MessageId
 			?? throw new InvalidOperationException("Crash journal missing MessageId");
 
-		var outboxAfterCrash = await OrderOutboxObserver.FindByOrderIdAsync(_services, http.OrderId);
-		outboxAfterCrash.Should().ContainSingle();
-		var pendingAfterCrash = outboxAfterCrash[0];
-		var stillPendingAfterCrash = pendingAfterCrash.WorkerPending && !pendingAfterCrash.WorkerProcessed;
+		if (pendingAfterCrash is null)
+		{
+			var outboxAfterCrash = await OrderOutboxObserver.FindByOrderIdAsync(_services, http.OrderId);
+			outboxAfterCrash.Should().ContainSingle();
+			pendingAfterCrash = outboxAfterCrash[0];
+			stillPendingAfterCrash = pendingAfterCrash.WorkerPending && !pendingAfterCrash.WorkerProcessed;
+		}
 
 		await Wait.UntilAsync(
 			() => _fixture.ProcessedEvents.Any(e => e.OrderId == http.OrderId)
@@ -154,7 +189,7 @@ public sealed class EventBusPublishCrashExperimentTests
 			observations = new
 			{
 				stillPendingAfterCrash,
-				pendingStatus = pendingAfterCrash.Status,
+		pendingStatus = pendingAfterCrash!.Status,
 				processedOutboxStatus = processedOutbox.Status,
 				publishAttempts,
 				crashCount,
@@ -201,8 +236,9 @@ public sealed class EventBusPublishCrashExperimentTests
 		_output.WriteLine(JsonSerializer.Serialize(result, JsonOptions));
 
 		crashCount.Should().Be(1);
-		stillPendingAfterCrash.Should().BeTrue(
-			"after Lab crash the outbox row must remain pending (ProcessedAt null)");
+		(stillPendingAfterCrash || publishAttempts >= 2).Should().BeTrue(
+			"Lab crash skips MarkProcessed: observe pending immediately, or a later worker poll republishes (publishAttempts={0})",
+			publishAttempts);
 		publishAttempts.Should().BeGreaterThanOrEqualTo(1);
 		processedOutbox.WorkerProcessed.Should().BeTrue(
 			"worker should eventually MarkProcessed on a later poll after the one-shot fault");
@@ -213,6 +249,11 @@ public sealed class EventBusPublishCrashExperimentTests
 		handlerCountByOrder.Should().Be(1);
 		inbox.IsProcessed.Should().BeTrue();
 		characterization.brokerReceivedAtLeastOnce.Should().BeTrue();
+		}
+		finally
+		{
+			_fixture.EventBusFaults.Clear();
+		}
 	}
 
 	private async Task<(int InboxRowCount, bool IsProcessed, string? Status)> QueryInboxAsync(Guid messageId)

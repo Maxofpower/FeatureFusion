@@ -18,14 +18,14 @@ namespace FeatureFusion.Features.Order.IntegrationEvents
 				await ResilientTransaction.New(catalogContext).ExecuteAsync(async () =>
 				{
 					await catalogContext.SaveChangesAsync();
-					await eventBus.PublishAsync(evt, catalogContext.Database.CurrentTransaction);
+					await eventBus.PublishAsync(evt, catalogContext.Database.CurrentTransaction!);
 				});
 
 			}
 			catch (Exception ex)
 			{
 				logger.LogError(ex, "Error Publishing integration event: {IntegrationEventId} - ({@IntegrationEvent})", evt.Id, evt);
-
+				throw;
 			}
 		}
 

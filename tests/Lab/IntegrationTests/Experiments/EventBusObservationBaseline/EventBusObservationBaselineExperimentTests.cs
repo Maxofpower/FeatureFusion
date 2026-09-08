@@ -51,9 +51,7 @@ public sealed class EventBusObservationBaselineExperimentTests
 	[Fact]
 	public async Task Http_order_eventbus_lifecycle_stages_are_journaled_as_observed_vs_inferred()
 	{
-		_fixture.ProcessedEvents.Clear();
-		_fixture.EventBusJournal.Clear();
-		_fixture.EventBusFaults.Clear();
+		await _fixture.ResetLabObservationAsync();
 
 		var startedUtc = DateTimeOffset.UtcNow;
 		using var capture = new InProcessActivityCapture();

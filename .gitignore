@@ -193,9 +193,6 @@ docs/**
 !docs/lab/
 !docs/lab/**
 
-# Local-only polluted/autogen solutions
-src/src.sln
-
 # Local pack / smoke artifacts
 artifacts/
 *.nupkg

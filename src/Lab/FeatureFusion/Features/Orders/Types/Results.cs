@@ -1,7 +1,10 @@
-﻿public readonly struct Result<T>
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
+
+public readonly struct Result<T>
 {
-	private readonly T _value;
-	private readonly string _error = string.Empty;
+	private readonly T? _value;
+	private readonly string? _error;
 	private readonly int _statusCode;
 
 	[System.Text.Json.Serialization.JsonIgnore]
@@ -34,4 +37,33 @@
 		Func<T, TResult> onSuccess,
 		Func<string, int, TResult> onFailure) =>
 		IsSuccess ? onSuccess(_value!) : onFailure(_error!, _statusCode);
+}
+
+public static class ResultHttpExtensions
+{
+	public static IResult ToApiResult<T>(this Result<T> result) =>
+		result.Match(
+			onSuccess: static value => Results.Ok(value),
+			onFailure: static (error, statusCode) => Results.Problem(
+				detail: error,
+				statusCode: statusCode is >= 400 and < 600 ? statusCode : StatusCodes.Status400BadRequest));
+
+	public static Results<Ok<T>, BadRequest<ValidationProblemDetails>, ProblemHttpResult> ToHttpResult<T>(this Result<T> result)
+	{
+		return result.Match<Results<Ok<T>, BadRequest<ValidationProblemDetails>, ProblemHttpResult>>(
+			success => TypedResults.Ok(success),
+			(error, statusCode) =>
+			{
+				var errors = new Dictionary<string, string[]>
+				{
+					{ "General", new[] { error } }
+				};
+				return TypedResults.BadRequest(new ValidationProblemDetails(errors)
+				{
+					Title = "Request Error",
+					Detail = error,
+					Status = statusCode
+				});
+			});
+	}
 }
