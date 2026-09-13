@@ -4,44 +4,43 @@ services:
     ports:
       - "11211:11211"
     healthcheck:
-      test: ["CMD", "nc", "-z", "memcached", "11211"]
+      test: ["CMD", "nc", "-z", "127.0.0.1", "11211"]
       interval: 5s
       timeout: 3s
       retries: 5
 
   redis:
-    image: redis:latest
+    image: redis:8.6
     ports:
       - "6379:6379"
     command: "redis-server"
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-h", "redis", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
 
   eventbus:
-    image: rabbitmq:management
-    hostname: eventbus 
-    container_name: eventbus 
+    image: rabbitmq:4.3
+    hostname: eventbus
+    container_name: eventbus
     networks:
       default:
         aliases:
-          - rabbitmq  
-          - eventbus  
+          - rabbitmq
+          - eventbus
     ports:
       - "5672:5672"
       - "15672:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: guest  
-      RABBITMQ_DEFAULT_PASS: guest 
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
       RABBITMQ_DEFAULT_VHOST: /
-      RABBITMQ_NODENAME: rabbit@eventbus  
+      RABBITMQ_NODENAME: rabbit@eventbus
       RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-proto_dist inet_tcp"
       RABBITMQ_DEFAULT_PERMISSIONS: "guest . \".*\" \".*\""
-
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
@@ -50,26 +49,17 @@ services:
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
 
-
   postgres:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     hostname: postgres
     ports:
       - "5432:5432"
     environment:
       POSTGRES_USER: username
-      POSTGRES_PASSWORD: password 
-      POSTGRES_DB: eventstore
-      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
-      POSTGRES_INITDB_ARGS: >-
-        --username=username
-        --pwfile=<(echo "password")
-        --auth-host=scram-sha-256
-        --auth-local=scram-sha-256
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck: 
-      test: ["CMD-SHELL", "pg_isready -h localhost -U username -d eventstore"]
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: catalogdb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -U username -d catalogdb"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -87,7 +77,10 @@ services:
         condition: service_healthy
 
   featurefusion-app:
+    image: featurefusion-app
     build: .
+    ports:
+      - "5141:5004"
     depends_on:
       postgres:
         condition: service_healthy
@@ -98,19 +91,13 @@ services:
       memcached:
         condition: service_healthy
     environment:
-    - ASPNETCORE_ENVIRONMENT=Production  
-    - MEMCACHED__SERVER=memcached:11211
-    command: >
-      sh -c "
-        while ! nc -z postgres 5432; do sleep 1; done &&
-        while ! nc -z redis 6379; do sleep 1; done &&
-        while ! nc -z eventbus 5672;do sleep 1; done &&
-        while ! nc -z memcached 11211; do sleep 1; done &&
-        echo 'All dependencies ready' &&
-        dotnet FeatureFusion.dll
-      "
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__catalogdb: Host=postgres;Port=5432;Username=username;Password=password;Database=catalogdb
+      ConnectionStrings__eventbus: amqp://guest:guest@eventbus:5672/
+      Redis__ConnectionString: redis:6379
+      Memcached__Servers__0__Address: memcached
+      Memcached__Servers__0__Port: "11211"
 
 volumes:
   redis_data:
-  postgres_data:
-  rabbitmq-data:    
+  rabbitmq-data:

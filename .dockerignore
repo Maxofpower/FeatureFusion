@@ -1,0 +1,14 @@
+.git
+.vs
+**/.vs
+**/bin
+**/obj
+**/*.user
+**/*.suo
+tests
+benchmarks
+docs
+web
+node_modules
+artifacts
+*.binlog

@@ -208,7 +208,7 @@ Development only (`http://localhost:5141/mcp`):
 | `products.list` | Scan + `ISender` (query) | products query |
 | `lab.ping` | `[McpTool]` + `.WithMcp(app)` on `LabPing` | `GET /api/v1/lab-ping` |
 
-Production (`docker-compose` sets `ASPNETCORE_ENVIRONMENT=Production`) does not register or map MCP.
+Lab Compose sets `ASPNETCORE_ENVIRONMENT=Development` so MCP is registered (map at `/mcp`). A Production-environment host does not register or map MCP.
 
 Workspace root for this Cursor window is `src/`. Put this in `src/.cursor/mcp.json` (gitignored; copy locally):
 

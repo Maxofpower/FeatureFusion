@@ -45,13 +45,11 @@ internal static class InfrastructureExtensions
 		// pgAdmin is dashboard-only tooling; FeatureFusion WaitFor(catalogDb), not pgAdmin.
 		// Brief "Unhealthy" in the dashboard while the UI container boots is expected.
 		var postgres = builder.AddPostgres("postgres", userName: username, password: password)
-			.WithDataVolume("postgres_data")
 			.WithPgAdmin(container =>
 			{
 				container.WithEnvironment("PGADMIN_DEFAULT_EMAIL", "guest@admin.com");
 				container.WithEnvironment("PGADMIN_DEFAULT_PASSWORD", "guest");
 			})
-			.WithLifetime(ContainerLifetime.Persistent)
 			.WithEndpoint("tcp", endpoint =>
 			{
 				endpoint.Port = 5432;
