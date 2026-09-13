@@ -119,7 +119,9 @@ public sealed class MultiColumnEfTests(SqliteFixture fixture)
 	{
 		Assert.True(SeekOps.TupleEligible(CatalogSeed.ByNineValueTypes, walkBackward: false));
 		Assert.True(SeekOps.TupleSlotsNonNull(CatalogSeed.ByNineValueTypes));
+#pragma warning disable EF1001 // CursorSeekTuple is an internal EF adapter used by the package
 		Assert.True(CursorSeekTuple.CanUse(CatalogSeed.ByNineValueTypes, walkBackward: false));
+#pragma warning restore EF1001
 		Assert.Equal(9, CatalogSeed.ByNineValueTypes.Slots.Count);
 	}
 }

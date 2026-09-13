@@ -895,22 +895,29 @@ The SigNoz UI always shows a **login** page. Root-user env vars skip the first-r
 
 Those custom credentials are **not** shown on the Aspire resource panel (only package-default `WithUi()` creds are). Package defaults, if you call `WithUi()` with no overrides, are `admin@localhost.local` / `Admin@Signoz1`. If login fails after changing email, delete the persistent SigNoz sqlite volume and restart AppHost.
 
-### Option B — Docker Compose
+### Option B — Docker Compose (full stack)
+
+From the repository root:
 
 ```bash
 docker compose up -d --build
 ```
 
-Uses SDK / ASP.NET **10.0** images plus supporting services.
+Starts Postgres (`catalogdb`, ephemeral), Redis, RabbitMQ, Memcached, and FeatureFusion. Compose waits until those four services are **healthy** before starting the API (same idea as AppHost `WaitFor`). The API is on `http://localhost:5141`. Postgres data is not persisted; a new compose project gets an empty DB, then migrate + seed.
 
-### Option C — API only
+The FeatureFusion image still needs those four services. Do not `docker run` it alone.
+
+### Option C — API only (infra already running)
+
+Start backing services, then the API:
 
 ```bash
+docker compose up -d postgres redis eventbus memcached
 dotnet restore FeatureFusion.sln
 dotnet run --project src/Lab/FeatureFusion --launch-profile https
 ```
 
-Point connection strings in `appsettings.*.json` (or user secrets) at your local infra.
+`appsettings.Development.json` expects Postgres/Redis/Rabbit/Memcached on localhost (database name `catalogdb`). FeatureFusion does not create Postgres itself. AppHost is an alternative to Compose for the same infra.
 
 <details>
 <summary>Feature-flag greeting smoke</summary>
