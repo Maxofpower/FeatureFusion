@@ -29,6 +29,13 @@ using OpenTelemetry.Trace;
 using System.Reflection;
 using static RedisSettings;
 
+if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"))
+	&& string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")))
+{
+	Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
+	Environment.SetEnvironmentVariable("DOTNET_ENVIRONMENT", "Development");
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration
@@ -77,38 +84,35 @@ builder.Services.AddMediator(cfg =>
 	cfg.ValidateOnStartup = true;
 });
 
-if (builder.Environment.IsDevelopment())
+builder.Services.AddBuildingBlocksMcp(o =>
 {
-	builder.Services.AddBuildingBlocksMcp(o =>
+	o.ScanAssembly(Assembly.GetExecutingAssembly());
+	o.UseTelemetry(t => t.IncludeExceptionDetails = true);
+	o.UseMemoryIdempotency(TimeSpan.FromHours(1));
+}).UseDispatcher(async (sp, msg, ct) =>
+{
+	await using var scope = sp.CreateAsyncScope();
+	var services = scope.ServiceProvider;
+	if (msg is FeatureFusion.Features.Orders.Commands.CreateOrderCommand createOrder)
 	{
-		o.ScanAssembly(Assembly.GetExecutingAssembly());
-		o.UseTelemetry(t => t.IncludeExceptionDetails = true);
-		o.UseMemoryIdempotency(TimeSpan.FromHours(1));
-	}).UseDispatcher(async (sp, msg, ct) =>
-	{
-		await using var scope = sp.CreateAsyncScope();
-		var services = scope.ServiceProvider;
-		if (msg is FeatureFusion.Features.Orders.Commands.CreateOrderCommand createOrder)
+		var admission = services.GetRequiredService<FeatureFusion.Features.Admission.ICapabilityAdmission>();
+		var mcpContext = services.GetService<BuildingBlocks.Mcp.IMcpInvokeContextAccessor>();
+		var decision = await FeatureFusion.Features.Admission.OrderCreateAdmissionGate.AdmitCreateOrderAsync(
+			admission,
+			createOrder,
+			FeatureFusion.Features.Admission.OrderCreateAdmissionGate.ResolveMcpRequestKey(mcpContext),
+			ct);
+		switch (decision)
 		{
-			var admission = services.GetRequiredService<FeatureFusion.Features.Admission.ICapabilityAdmission>();
-			var mcpContext = services.GetService<BuildingBlocks.Mcp.IMcpInvokeContextAccessor>();
-			var decision = await FeatureFusion.Features.Admission.OrderCreateAdmissionGate.AdmitCreateOrderAsync(
-				admission,
-				createOrder,
-				FeatureFusion.Features.Admission.OrderCreateAdmissionGate.ResolveMcpRequestKey(mcpContext),
-				ct);
-			switch (decision)
-			{
-				case FeatureFusion.Features.Admission.AdmissionDecision.Defer defer:
-					return Result<FeatureFusion.Features.Admission.AdmissionPendingResponse>.Success(defer.Pending);
-				case FeatureFusion.Features.Admission.AdmissionDecision.Deny deny:
-					return Result<FeatureFusion.Features.Admission.AdmissionPendingResponse>.Failure(deny.Error, deny.StatusCode);
-			}
+			case FeatureFusion.Features.Admission.AdmissionDecision.Defer defer:
+				return Result<FeatureFusion.Features.Admission.AdmissionPendingResponse>.Success(defer.Pending);
+			case FeatureFusion.Features.Admission.AdmissionDecision.Deny deny:
+				return Result<FeatureFusion.Features.Admission.AdmissionPendingResponse>.Failure(deny.Error, deny.StatusCode);
 		}
+	}
 
-		return await services.GetRequiredService<ISender>().Send(msg, ct);
-	});
-}
+	return await services.GetRequiredService<ISender>().Send(msg, ct);
+});
 
 
 builder.Services.AddApiVersioningWithReader();

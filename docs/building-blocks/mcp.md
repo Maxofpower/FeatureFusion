@@ -208,7 +208,7 @@ Development only (`http://localhost:5141/mcp`):
 | `products.list` | Scan + `ISender` (query) | products query |
 | `lab.ping` | `[McpTool]` + `.WithMcp(app)` on `LabPing` | `GET /api/v1/lab-ping` |
 
-Lab Compose sets `ASPNETCORE_ENVIRONMENT=Development` so MCP is registered (map at `/mcp`). A Production-environment host does not register or map MCP.
+Lab Compose and AppHost set `ASPNETCORE_ENVIRONMENT=Development` so HTTP MCP is mapped at `/mcp`. A Production-environment host still registers MCP services (so `.WithMcp` does not crash startup) but does not map `/mcp`.
 
 Workspace root for this Cursor window is `src/`. Put this in `src/.cursor/mcp.json` (gitignored; copy locally):
 

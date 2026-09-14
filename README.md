@@ -243,6 +243,8 @@ Requires .NET 8 / 9 / 10. HTTP default: `MapBuildingBlocksMcp()` → `/mcp`. Cur
 
 After you add or rename tools, **restart the API and reload the MCP server in Cursor** (Aspire restart alone does not refresh Cursor’s cached `tools/list`).
 
+![Cursor Configure featurefusion: MCP tools from the running lab API (products.list, orders.*, demo.echo, lab.ping, customers.*, catalog.products.list).](docs/medium/images/mcp-cursor-featurefusion-tools.png)
+
 #### Quick start
 
 ```csharp
