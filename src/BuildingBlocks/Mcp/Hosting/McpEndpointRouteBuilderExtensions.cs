@@ -101,7 +101,10 @@ public static class McpEndpointRouteBuilderExtensions
 		}
 
 		var descriptor = McpMethodTool.FromMethod(method, attr, InferKindFromHttp(endpointBuilder));
-		services.GetRequiredService<McpEndpointToolRegistry>().Add(descriptor);
+		var registry = services.GetService<McpEndpointToolRegistry>();
+		if (registry is null)
+			return;
+		registry.Add(descriptor);
 	}
 
 	private static McpToolKind InferKindFromHttp(EndpointBuilder endpointBuilder)

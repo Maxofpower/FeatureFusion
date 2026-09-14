@@ -4,6 +4,7 @@ using BuildingBlocks.Mcp.Catalog;
 using BuildingBlocks.Mcp.Hosting;
 using BuildingBlocks.Mcp.Invocation;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -130,6 +131,17 @@ public sealed class CatalogAndInvokerTests
 			CancellationToken.None);
 		Assert.True(result.IsSuccess);
 		Assert.Equal("pong:Ada", result.Value);
+	}
+
+	[Fact]
+	public async Task WithMcp_Without_AddBuildingBlocksMcp_Does_Not_Fail_Host_Start()
+	{
+		var builder = WebApplication.CreateSlimBuilder();
+		builder.WebHost.UseUrls("http://127.0.0.1:0");
+		await using var app = builder.Build();
+		app.MapGet("/named-ping", WithMcpNamedPing).WithMcp(app, "tests.withmcp-no-add", "Named ping");
+		await app.StartAsync();
+		await app.StopAsync();
 	}
 
 	[Fact]
