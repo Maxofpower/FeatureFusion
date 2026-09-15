@@ -15,6 +15,7 @@ import {
     Settings2,
     SquareTerminal,
     Users,
+    ShoppingCart ,
 } from "lucide-react"
 
 
@@ -43,10 +44,20 @@ const data = {
             url: APP_ROUTES.HOME,
             icon: LayoutDashboard,
         },
-         {
+        {
             name: "Catalog",
-            url: APP_ROUTES.CATALOG,
+            url: "#",
             icon: BookOpen,
+        },
+        {
+            name: "Orders",
+            url: "#",
+            icon: ShoppingCart,
+        },
+        {
+            name: "Customers",
+            url: "#",
+            icon: Users,
         },
     ],
 }
@@ -64,6 +75,7 @@ export function AppSidebar({ pathname, ...props }: SidebarProps) {
                                 </div>
                                 <div className="grid flex-1 text-left text-sm leading-tight">
                                     <p className="truncate font-medium">Feature Fusion</p>
+                                    <p className="truncate text-xs font-light">Lab</p>
                                 </div>
                             </Link>
                         </SidebarMenuButton>
