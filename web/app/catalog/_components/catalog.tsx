@@ -1,28 +1,37 @@
 'use client'
 
+import { Suspense } from "react"
 import { Card } from "@/components/ui/card"
 import { Catalog } from "@/models"
 import { BookOpen } from "lucide-react"
+import { CatalogFilters } from "./catalog-filters"
+
+interface Filters {
+    page: string
+    pageSize: string
+    sortBy: string
+    sortDirection: string
+}
 
 interface Props {
     catalogs: Catalog
+    currentFilters: Filters
 }
 
 export const CatalogPage = (props: Props) => {
-
-
-    console.log(props.catalogs)
-
-
     return (
         <div className="bg-background">
             <main className=" px-4 py-8 sm:px-6 lg:px-8 flex flex-col gap-4">
                 <div className="flex justify-between items-start gap-4">
-                    <div className="flex-col items-center">
-                        <p className="font-semibold text-foreground">Catalog</p>
-                        <p className="text-sm text-muted-foreground">Browse our catalog</p>
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight text-foreground">Catalog</h1>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                            Discover our curated collection of products. Use filters to refine by page, sort order, and direction.
+                        </p>
                     </div>
-
+                    <Suspense>
+                        <CatalogFilters currentFilters={props.currentFilters} />
+                    </Suspense>
                 </div>
                 <div className="grid gap-x-5 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
                     {props.catalogs.items.map((product) => (

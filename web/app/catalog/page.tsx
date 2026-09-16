@@ -2,14 +2,40 @@ import { fetcher } from "@/lib/fetcher"
 import type { Catalog } from "@/models"
 import { CatalogPage } from "./_components/catalog"
 
-export default async function Catalog() {
+interface Props {
+  searchParams: Promise<{
+    page?: string
+    pageSize?: string
+    sortBy?: string
+    sortDirection?: string
+  }>
+}
 
-    const getCatalogs = await fetcher<Catalog>("/catalog/products?page=1&pageSize=24")
-    console.log(getCatalogs)
+export default async function Catalog({ searchParams }: Props) {
+  const params = await searchParams
 
-    if(!getCatalogs.success || getCatalogs.data === undefined) {
-        return <div>Error: {getCatalogs.message}</div>
-    }
+  const page = params.page ?? "1"
+  const pageSize = params.pageSize ?? "24"
+  const sortBy = params.sortBy ?? "Id"
+  const sortDirection = params.sortDirection ?? "Ascending"
 
-    return <CatalogPage catalogs={getCatalogs.data} />
+  const query = new URLSearchParams({
+    page,
+    pageSize,
+    sortBy,
+    sortDirection,
+  })
+
+  const getCatalogs = await fetcher<Catalog>(`/catalog/products?${query}`)
+
+  if (!getCatalogs.success || getCatalogs.data === undefined) {
+    return <div>Error: {getCatalogs.message}</div>
+  }
+
+  return (
+    <CatalogPage
+      catalogs={getCatalogs.data}
+      currentFilters={{ page, pageSize, sortBy, sortDirection }}
+    />
+  )
 }
