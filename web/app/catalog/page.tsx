@@ -6,8 +6,6 @@ interface Props {
   searchParams: Promise<{
     page?: string
     pageSize?: string
-    sortBy?: string
-    sortDirection?: string
   }>
 }
 
@@ -16,14 +14,10 @@ export default async function Catalog({ searchParams }: Props) {
 
   const page = params.page ?? "1"
   const pageSize = params.pageSize ?? "24"
-  const sortBy = params.sortBy ?? "Id"
-  const sortDirection = params.sortDirection ?? "Ascending"
 
   const query = new URLSearchParams({
     page,
     pageSize,
-    sortBy,
-    sortDirection,
   })
 
   const getCatalogs = await fetcher<Catalog>(`/catalog/products?${query}`)
@@ -35,7 +29,7 @@ export default async function Catalog({ searchParams }: Props) {
   return (
     <CatalogPage
       catalogs={getCatalogs.data}
-      currentFilters={{ page, pageSize, sortBy, sortDirection }}
+      currentFilters={{ page, pageSize }}
     />
   )
 }

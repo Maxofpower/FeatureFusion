@@ -32,8 +32,6 @@ import { FieldError } from '@/helper/field-error'
 interface Filters {
   page: string
   pageSize: string
-  sortBy: string
-  sortDirection: string
 }
 
 interface Props {
@@ -41,30 +39,11 @@ interface Props {
   totalCount: number
 }
 
-interface IFormState {
-  page: string
-  pageSize: string
-  sortBy: string
-  sortDirection: string
-}
-
-const SORT_OPTIONS = [
-  { label: 'Id', value: 'Id' },
-  { label: 'Name', value: 'Name' },
-  { label: 'Price', value: 'Price' },
-  { label: 'CreatedAt', value: 'CreatedAt' },
-]
-
-const DIRECTION_OPTIONS = [
-  { label: 'Ascending', value: 'Ascending' },
-  { label: 'Descending', value: 'Descending' },
-]
+type IFormState = Filters 
 
 const DEFAULT_FILTERS: IFormState = {
   page: '1',
   pageSize: '24',
-  sortBy: 'Id',
-  sortDirection: 'Ascending',
 }
 
 const MAX_PAGE_SIZE = 48
@@ -77,11 +56,8 @@ export const CatalogFilters = ({ currentFilters, totalCount }: Props) => {
   const initialValues: IFormState = {
     page: currentFilters.page,
     pageSize: currentFilters.pageSize,
-    sortBy: currentFilters.sortBy,
-    sortDirection: currentFilters.sortDirection,
   }
 
-  // totalCount can change between renders (new data fetched), so rebuild the schema when it does
   const validationSchema = useMemo(
     () =>
       yup.object({
@@ -104,8 +80,6 @@ export const CatalogFilters = ({ currentFilters, totalCount }: Props) => {
           .min(1, 'Must be at least 1')
           .max(MAX_PAGE_SIZE, `Must be at most ${MAX_PAGE_SIZE}`)
           .required('This field is required'),
-        sortBy: yup.string().required('This field is required'),
-        sortDirection: yup.string().required('This field is required'),
       }),
     [totalCount]
   )
@@ -114,8 +88,6 @@ export const CatalogFilters = ({ currentFilters, totalCount }: Props) => {
     const params = new URLSearchParams()
     params.set('page', values.page)
     params.set('pageSize', values.pageSize)
-    params.set('sortBy', values.sortBy)
-    params.set('sortDirection', values.sortDirection)
     router.push(`/catalog?${params.toString()}`)
     setOpen(false)
   }
@@ -129,9 +101,7 @@ export const CatalogFilters = ({ currentFilters, totalCount }: Props) => {
 
   const formErrors: FormikErrors<IFormState> = {
     page: formik.submitCount || formik.touched.page ? formik.errors.page : '',
-    pageSize: formik.submitCount || formik.touched.pageSize ? formik.errors.pageSize : '',
-    sortBy: formik.submitCount || formik.touched.sortBy ? formik.errors.sortBy : '',
-    sortDirection: formik.submitCount || formik.touched.sortDirection ? formik.errors.sortDirection : '',
+    pageSize: formik.submitCount || formik.touched.pageSize ? formik.errors.pageSize : ''
   }
 
   const handleDrawerChange = (nextOpen: boolean) => {
@@ -147,14 +117,11 @@ export const CatalogFilters = ({ currentFilters, totalCount }: Props) => {
     setOpen(false)
   }
 
-  // Re-sync form values with the URL-derived filters whenever the drawer opens
   useEffect(() => {
     if (open) {
       formik.setValues({
         page: currentFilters.page,
         pageSize: currentFilters.pageSize,
-        sortBy: currentFilters.sortBy,
-        sortDirection: currentFilters.sortDirection,
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -168,19 +135,19 @@ export const CatalogFilters = ({ currentFilters, totalCount }: Props) => {
     >
       <DrawerTrigger render={<Button variant="outline" size="sm" />}>
         <SlidersHorizontal className="size-4" />
-        Filters
+        Query Settings
       </DrawerTrigger>
       <DrawerContent>
         <form onSubmit={formik.handleSubmit} className="flex flex-col h-full">
           <DrawerHeader>
             <div className="flex items-center justify-between">
-              <DrawerTitle>Catalog Filters</DrawerTitle>
+              <DrawerTitle>Catalog Query Settings</DrawerTitle>
               <Button variant="ghost" size="sm" type="button" onClick={resetFilters}>
                 Reset
               </Button>
             </div>
             <DrawerDescription>
-              Customize pagination, sort field, and sort direction. Changes apply server-side on submit.
+              Customize pagination and page size.
             </DrawerDescription>
           </DrawerHeader>
 
@@ -220,51 +187,6 @@ export const CatalogFilters = ({ currentFilters, totalCount }: Props) => {
               <FieldError message={formErrors.pageSize} />
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-foreground">Sort By</Label>
-              <Select
-                items={SORT_OPTIONS}
-                value={formik.values.sortBy}
-                onValueChange={(value) => formik.setFieldValue('sortBy', value || 'Id')}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {SORT_OPTIONS.map((item) => (
-                      <SelectItem key={item.value} value={item.value}>
-                        {item.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-              <FieldError message={formErrors.sortBy} />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-foreground">Sort Direction</Label>
-              <Select
-                items={DIRECTION_OPTIONS}
-                value={formik.values.sortDirection}
-                onValueChange={(value) => formik.setFieldValue('sortDirection', value || 'Ascending')}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {DIRECTION_OPTIONS.map((item) => (
-                      <SelectItem key={item.value} value={item.value}>
-                        {item.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-              <FieldError message={formErrors.sortDirection} />
-            </div>
           </div>
 
           <DrawerFooter>

@@ -14,8 +14,6 @@ import {
 interface Filters {
   page: string
   pageSize: string
-  sortBy: string
-  sortDirection: string
 }
 
 interface Props {
@@ -34,8 +32,6 @@ export const CatalogPagination = ({ currentFilters, totalCount }: Props) => {
     const params = new URLSearchParams()
     params.set('page', String(targetPage))
     params.set('pageSize', currentFilters.pageSize)
-    params.set('sortBy', currentFilters.sortBy)
-    params.set('sortDirection', currentFilters.sortDirection)
     return `/catalog?${params.toString()}`
   }
 
@@ -44,8 +40,6 @@ export const CatalogPagination = ({ currentFilters, totalCount }: Props) => {
     router.push(buildHref(targetPage))
   }
 
-  // Build a compact list of page numbers with ellipses,
-  // e.g. [1, 'ellipsis', 4, 5, 6, 'ellipsis', 10]
   const getPageNumbers = (): (number | 'ellipsis')[] => {
     const delta = 1
     const range: (number | 'ellipsis')[] = []

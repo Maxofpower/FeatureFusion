@@ -10,8 +10,6 @@ import { CatalogPagination } from "./catalog-pagination"
 interface Filters {
     page: string
     pageSize: string
-    sortBy: string
-    sortDirection: string
 }
 
 interface Props {
@@ -27,7 +25,7 @@ export const CatalogPage = (props: Props) => {
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight text-foreground">Catalog</h1>
                         <p className="mt-1 text-sm text-muted-foreground">
-                            Discover our curated collection of products. Use filters to refine by page, sort order, and direction.
+                            Discover our curated collection of products. Use Query Settings to refine by page and page size.
                         </p>
                     </div>
                     <Suspense>
@@ -42,13 +40,12 @@ export const CatalogPage = (props: Props) => {
                                 props.catalogs.items.map((product) => (
                                     <article key={product.id} className="group">
                                         <div className={`relative aspect-square overflow-hidden rounded-[1.25rem]`}>
-                                            <img src={product.primaryImageUrl} alt={product.name} className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" />
-                                            <button className="absolute bottom-4 right-4 flex h-11 w-11 items-center justify-center rounded-full bg-foreground text-xl text-background opacity-0 shadow-lg transition-all group-hover:opacity-100 hover:scale-105 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary" aria-label={`Add ${product.name} to bag`}>+</button>
+                                            <img src="/image/apple.jpeg" alt={product.name} className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" />
                                         </div>
                                         <div className="mt-4 flex items-start justify-between gap-3"><div><p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{product.categoryName}</p>
                                             <h2 className="mt-1 text-lg font-medium tracking-[-0.02em]">{product.name}</h2>
                                         </div>
-                                            <p className="text-sm font-medium">{product.price}</p>
+                                            <p className="text-sm font-medium">${product.price}</p>
                                         </div>
                                         <p className="mt-2 max-w-xs text-sm leading-6 text-muted-foreground">{product.shortDescription}</p>
 
