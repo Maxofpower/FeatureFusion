@@ -46,7 +46,7 @@ const data = {
         },
         {
             name: "Catalog",
-            url: "#",
+            url: APP_ROUTES.CATALOG,
             icon: BookOpen,
         },
         {
