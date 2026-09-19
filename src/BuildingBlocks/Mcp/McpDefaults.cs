@@ -45,4 +45,22 @@ public static class McpDefaults
 	/// MCP resource URI for the enabled tool catalog.
 	/// </summary>
 	public const string CatalogResourceUri = "catalog://tools";
+
+	/// <summary>
+	/// Prefix for distributed completed-payload keys. Distinct from HTTP <c>Idempotency_*</c>.
+	/// </summary>
+	public const string IdempotencyPayloadKeyPrefix = "mcp:idemp:";
+
+	/// <summary>Suffix appended to the prefixed payload key for the in-flight lock.</summary>
+	public const string IdempotencyLockKeySuffix = ":lock";
+
+	/// <summary>
+	/// Lock key for <see cref="IMcpIdempotencyLock"/>: <c>mcp:idemp:{tool}\u001f{clientKey}:lock</c>.
+	/// </summary>
+	public static string FormatIdempotencyLockKey(string toolName, string clientIdempotencyKey)
+	{
+		ArgumentException.ThrowIfNullOrWhiteSpace(toolName);
+		ArgumentException.ThrowIfNullOrWhiteSpace(clientIdempotencyKey);
+		return IdempotencyPayloadKeyPrefix + toolName + "\u001f" + clientIdempotencyKey + IdempotencyLockKeySuffix;
+	}
 }

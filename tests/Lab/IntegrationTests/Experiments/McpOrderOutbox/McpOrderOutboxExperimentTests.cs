@@ -60,6 +60,10 @@ public sealed class McpOrderOutboxExperimentTests
 		});
 	}
 
+	/// <summary>
+	/// Exp 10: confirmed MCP <c>orders.create</c> cache miss follows outbox → handler; same-key replay does not.
+	/// Uses <c>confirmed: true</c> so elicitation is not part of this experiment (see McpMrtrConfirmation).
+	/// </summary>
 	[Fact]
 	public async Task Mcp_confirmed_orders_create_follows_outbox_to_handler_pipeline_and_replay_skips_async_work()
 	{

@@ -11,8 +11,13 @@ using Xunit;
 
 namespace BuildingBlocks.Mcp.Tests;
 
+/// <summary>
+/// In-process catalog scan and <see cref="IMcpInvoker"/> tests (no Streamable HTTP, no FeatureFusion).
+/// Wire-level 2026-07-28 MRTR lives in <see cref="ProtocolMrtrHttpTests"/>.
+/// </summary>
 public sealed class CatalogAndInvokerTests
 {
+	/// <summary>Opt-in scan: unmarked types are not tools; duplicate names fail catalog uniqueness.</summary>
 	[Fact]
 	public void Scan_Ignores_Unmarked_And_Throws_On_Duplicate_Names()
 	{
@@ -26,6 +31,7 @@ public sealed class CatalogAndInvokerTests
 		]));
 	}
 
+	/// <summary>Schema generation: required vs optional, XML descriptions, named and numeric enums.</summary>
 	[Fact]
 	public void Schema_Optional_Defaults_Enums_And_Descriptions()
 	{
@@ -55,6 +61,7 @@ public sealed class CatalogAndInvokerTests
 		Assert.Equal([0L, 1L], numeric.EnumValues);
 	}
 
+	/// <summary>Queries are not write-idempotent even if someone later passes a key in arguments.</summary>
 	[Fact]
 	public void Query_Descriptor_Is_Not_Write_Idempotent()
 	{
@@ -63,6 +70,7 @@ public sealed class CatalogAndInvokerTests
 		Assert.False(d.Idempotent);
 	}
 
+	/// <summary>Commands require an idempotency key even when <c>Idempotent</c> is left at the default.</summary>
 	[Fact]
 	public async Task Command_Without_Idempotent_Flag_Still_Requires_Key()
 	{
@@ -79,6 +87,7 @@ public sealed class CatalogAndInvokerTests
 		Assert.Equal(McpErrorCode.IdempotencyKeyRequired, missing.Error!.Code);
 	}
 
+	/// <summary>Marking a query Idempotent does not consult the store — both calls dispatch.</summary>
 	[Fact]
 	public async Task Query_Ignores_Idempotency_Store()
 	{
@@ -98,6 +107,7 @@ public sealed class CatalogAndInvokerTests
 		Assert.Equal(2, calls);
 	}
 
+	/// <summary><c>UseMemoryIdempotency</c> registers <see cref="MemoryIdempotencyStore"/> in DI.</summary>
 	[Fact]
 	public async Task UseMemoryIdempotency_Registers_Store()
 	{
@@ -115,6 +125,7 @@ public sealed class CatalogAndInvokerTests
 		Assert.IsType<MemoryIdempotencyStore>(sp.GetRequiredService<IMcpIdempotencyStore>());
 	}
 
+	/// <summary>Scan + <c>WithMcp</c> on the same name yields one catalog entry, not a duplicate.</summary>
 	[Fact]
 	public async Task WithMcp_And_Scan_Dedupe_Same_Name()
 	{
@@ -133,6 +144,7 @@ public sealed class CatalogAndInvokerTests
 		Assert.Equal("pong:Ada", result.Value);
 	}
 
+	/// <summary>Calling <c>WithMcp</c> without <c>AddBuildingBlocksMcp</c> must not throw at host start.</summary>
 	[Fact]
 	public async Task WithMcp_Without_AddBuildingBlocksMcp_Does_Not_Fail_Host_Start()
 	{
@@ -144,6 +156,7 @@ public sealed class CatalogAndInvokerTests
 		await app.StopAsync();
 	}
 
+	/// <summary>GET endpoints mapped with <c>WithMcp</c> infer <see cref="McpToolKind.Query"/> (not a write).</summary>
 	[Fact]
 	public async Task WithMcp_Named_Infers_Query_From_Get()
 	{
@@ -160,6 +173,7 @@ public sealed class CatalogAndInvokerTests
 	public static string WithMcpNamedPing([AsParameters] EndpointPingRequest request)
 		=> $"pong:{request.Name}";
 
+	/// <summary>Unknown tool names are NotFound; known tools round-trip the handler payload.</summary>
 	[Fact]
 	public async Task Invoke_RoundTrip_And_Deny_Unknown()
 	{
@@ -178,6 +192,7 @@ public sealed class CatalogAndInvokerTests
 		Assert.Equal(McpErrorCode.NotFound, missing.Error!.Code);
 	}
 
+	/// <summary>Missing key fails before the handler; the same key replays without a second dispatch.</summary>
 	[Fact]
 	public async Task Idempotent_Write_Requires_Key_And_Does_Not_Double_Dispatch()
 	{
@@ -208,6 +223,10 @@ public sealed class CatalogAndInvokerTests
 		Assert.Equal(1, calls);
 	}
 
+	/// <summary>
+	/// In-process invoker (not HTTP MRTR): unconfirmed RequireConfirmation is ConfirmationRequired JSON;
+	/// confirmed then cancelled is Timeout; non-object args are Validation.
+	/// </summary>
 	[Fact]
 	public async Task Confirmation_Timeout_And_Invalid_Args()
 	{
@@ -242,6 +261,7 @@ public sealed class CatalogAndInvokerTests
 		Assert.Equal(McpErrorCode.Validation, bad.Error!.Code);
 	}
 
+	/// <summary>A deny-all filter hides tools from list and returns Forbidden on invoke.</summary>
 	[Fact]
 	public async Task Filter_Hides_Tool_From_List_And_Invoke()
 	{
@@ -260,6 +280,7 @@ public sealed class CatalogAndInvokerTests
 		Assert.Equal(McpErrorCode.Forbidden, call.Error!.Code);
 	}
 
+	/// <summary>Default error mapping must not leak exception messages (or stacks) to the client.</summary>
 	[Fact]
 	public async Task Handler_Throw_Is_Internal_Without_Stack()
 	{
@@ -273,6 +294,7 @@ public sealed class CatalogAndInvokerTests
 		Assert.DoesNotContain("secret-stack", result.Error.Message);
 	}
 
+	/// <summary><c>includeExceptionDetails</c> is opt-in for diagnostics; still Internal, but the message is included.</summary>
 	[Fact]
 	public async Task Handler_Throw_Includes_Exception_Message_When_Details_Enabled()
 	{
@@ -302,6 +324,7 @@ public sealed class CatalogAndInvokerTests
 		Assert.Contains(knownMessage, result.Error.Message);
 	}
 
+	/// <summary>Write tools are not retried by the invoker resilience path (one handler call on throw).</summary>
 	[Fact]
 	public async Task Writes_Are_Not_Retried_By_Invoker()
 	{
@@ -322,6 +345,7 @@ public sealed class CatalogAndInvokerTests
 		Assert.Equal(1, calls);
 	}
 
+	/// <summary>Pagination envelope JSON uses <c>items</c> / <c>nextCursor</c> (MCP page contract).</summary>
 	[Fact]
 	public void McpPage_Has_Items_And_Cursor()
 	{
@@ -331,6 +355,7 @@ public sealed class CatalogAndInvokerTests
 		Assert.Contains("nextCursor", json);
 	}
 
+	/// <summary>Dry-run is visible on the invoke context during the handler, then cleared from the accessor.</summary>
 	[Fact]
 	public async Task DryRun_Is_On_Context_And_Accessor_During_Invoke()
 	{
@@ -370,6 +395,7 @@ public sealed class CatalogAndInvokerTests
 		Assert.Null(accessor.Current);
 	}
 
+	/// <summary>Non-McpResult handler returns still map IsSuccess/Error/StatusCode (duck typing).</summary>
 	[Fact]
 	public void DuckTyped_Result_Maps_Failure()
 	{
@@ -406,6 +432,7 @@ public sealed class CatalogAndInvokerTests
 			includeExceptionDetails: false);
 	}
 
+	/// <summary>MapTool handlers run in a scope so scoped services resolve under ValidateScopes.</summary>
 	[Fact]
 	public async Task MapTool_Scoped_Service_Resolves_When_ValidateScopes()
 	{
@@ -435,6 +462,7 @@ public sealed class CatalogAndInvokerTests
 		Assert.Equal("ok", result.Value);
 	}
 
+	/// <summary>Rate-limiter deny becomes RateLimited with RetryAfterSeconds, before the handler.</summary>
 	[Fact]
 	public async Task RateLimiter_Deny_Is_RateLimited()
 	{
@@ -459,6 +487,7 @@ public sealed class CatalogAndInvokerTests
 		Assert.Equal(7, result.Error.RetryAfterSeconds);
 	}
 
+	/// <summary>Idempotency cache key is namespaced by tool name; the same key on two tools both dispatch.</summary>
 	[Fact]
 	public async Task Idempotency_Keys_Are_Namespaced_Per_Tool()
 	{
@@ -493,6 +522,7 @@ public sealed class CatalogAndInvokerTests
 		Assert.Equal(1, callsB);
 	}
 
+	/// <summary>Replay payload is stored JSON, so the second result.Value is a JsonElement.</summary>
 	[Fact]
 	public async Task Idempotency_Replay_Returns_JsonElement()
 	{
@@ -509,6 +539,7 @@ public sealed class CatalogAndInvokerTests
 		Assert.Contains("7", ((JsonElement)second.Value!).GetRawText(), StringComparison.Ordinal);
 	}
 
+	/// <summary>Memory store entries expire; a get after TTL is a miss (not a forever cache).</summary>
 	[Fact]
 	public async Task Idempotency_Store_Honors_Ttl()
 	{
@@ -519,6 +550,9 @@ public sealed class CatalogAndInvokerTests
 		Assert.Null(await store.GetAsync("k", CancellationToken.None));
 	}
 
+	/// <summary>
+	/// In-process wait-and-replay (Exp 14 analogue): one handler, both callers succeed with the cached payload.
+	/// </summary>
 	[Fact]
 	public async Task Idempotency_Lock_Single_Dispatch_Under_Concurrency()
 	{
@@ -534,12 +568,14 @@ public sealed class CatalogAndInvokerTests
 			},
 			store);
 		var args = JsonDocument.Parse("""{"qty":1,"idempotencyKey":"parallel"}""").RootElement;
-		await Task.WhenAll(
+		var results = await Task.WhenAll(
 			invoker.InvokeAsync("tests.create", args, McpInvokeContext.None, CancellationToken.None),
 			invoker.InvokeAsync("tests.create", args, McpInvokeContext.None, CancellationToken.None));
 		Assert.Equal(1, calls);
+		Assert.All(results, r => Assert.True(r.IsSuccess));
 	}
 
+	/// <summary>Public static methods with <c>[McpTool]</c> are catalogued and invokable (Minimal API style).</summary>
 	[Fact]
 	public async Task Scan_Public_Static_Method_Is_A_Tool()
 	{

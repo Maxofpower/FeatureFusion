@@ -100,6 +100,17 @@ Ollama is a Lab research convenience, not a FeatureFusion dependency. Choose a m
 
 This is research infrastructure only — not Exp 15 and not a BuildingBlock.
 
+### Distributed MCP idempotency (BuildingBlocks.Mcp 1.1.0 Lab overlay)
+
+**Status:** Package-shipped in **BuildingBlocks.Mcp 1.1.0**. Lab host overlay only — default `Program.cs` stays on `UseMemoryIdempotency`. No second AppHost.
+
+[`McpDistributedIdempotency/`](McpDistributedIdempotency/) uses Exp 16’s `WithWebHostBuilder` isolation: two WAF instances share Aspire Redis (`IDistributedCache` payloads + MCP `RedisMcpIdempotencyLock` on the host `IConnectionMultiplexer`). Wait-and-replay across factories; concurrent same-key; MRTR unconfirmed does not write the store; lease-expiry overlap is characterized (not exactly-once). `BuildingBlocks.Mcp` does not reference `BuildingBlocks.Idempotency`.
+
+```bash
+dotnet test tests/Lab/IntegrationTests/IntegrationTests.csproj \
+  --filter "FullyQualifiedName~McpDistributedIdempotency"
+```
+
 ### Workstream status — HTTP Redis idempotency (Exp 3, 4, 12)
 
 **COMPLETE — BuildingBlocks.Idempotency 1.0.1** (extraction evidence from 1.0.0; packaging/STJ polish in 1.0.1)
@@ -437,6 +448,8 @@ Experiments/
   McpToolStormRateLimit/            ← Exp 16 (MCP distinct-key storm + IMcpRateLimiter)
   ProcessedMessageDeduplication/    ← Exp 17 (EnableDeduplication + processed_messages)
   AsyncTraceCorrelation/            ← Exp 18 (HTTP→outbox→consumer TraceId correlation)
+  McpDistributedIdempotency/        ← prototype (Redis wait-and-replay; not Exp 21)
+  MafMcpPrototype/                  ← MAF spike (not numbered)
 
 Infrastructure/                      ← shared observation helpers (not experiments)
   Telemetry/

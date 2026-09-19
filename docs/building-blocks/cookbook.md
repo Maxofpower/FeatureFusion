@@ -167,7 +167,7 @@ api.MapPost("/items", CreateItem)
 
 ### Idempotency
 
-Commands ≈ POST/PUT; queries ≈ GET. Store: `UseMemoryIdempotency(ttl)`. Schema `format: uuid`; runtime any non-empty string. `Idempotent = false` to opt a command out. Queries never use the store. Multi-instance: `IMcpIdempotencyStore`. Lab: `orders.create` (key + `confirmed`), `demo.echo` (opt-out), `lab.ping` (query).
+Commands ≈ POST/PUT; queries ≈ GET. Store: `UseMemoryIdempotency(ttl)` (single process, wait-and-replay) or `UseDistributedIdempotency` + `UseRedisLock` (farms; host Redis multiplexer; wait-and-replay; 2-minute lease is not exactly-once; **no renewal**; wait-budget exhaustion is MCP `Conflict`, not HTTP 409). Custom `IMcpIdempotencyLock` instead of `UseRedisLock` is still allowed. Schema `format: uuid`; runtime any non-empty string. `Idempotent = false` to opt a command out. Queries never use the store or lock. `RequireConfirmation`: MCP `2026-07-28` elicits `confirmed`; `2025-11-25` returns `ConfirmationRequired` JSON. Lab: `orders.create` (key + `confirmed`), `demo.echo` (opt-out), `lab.ping` (query). Default Lab host stays on memory idempotency.
 
 Reload Cursor MCP after tool changes.
 

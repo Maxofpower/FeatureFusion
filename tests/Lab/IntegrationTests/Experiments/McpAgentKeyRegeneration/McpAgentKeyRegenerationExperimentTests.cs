@@ -55,6 +55,10 @@ public sealed class McpAgentKeyRegenerationExperimentTests
 		});
 	}
 
+	/// <summary>
+	/// Exp 13: same-key replay does not amplify; a new idempotency key is a new CreateOrder.
+	/// Confirmed writes only — regenerated keys are not an elicitation/MRTR concern.
+	/// </summary>
 	[Fact]
 	public async Task Agent_regenerated_idempotency_keys_amplify_mcp_writes_and_downstream_work()
 	{

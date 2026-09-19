@@ -12,19 +12,19 @@
     <IsPackable>true</IsPackable>
     <PackageId>BuildingBlocks.Mcp</PackageId>
     <Title>BuildingBlocks.Mcp</Title>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Authors>Mohammad Hasan Hosseini</Authors>
     <Company>Mohammad Hasan Hosseini</Company>
     <Copyright>Copyright (c) 2026 Mohammad Hasan Hosseini</Copyright>
-    <Description>Map application message types and public static endpoint methods to MCP tools on the official C# SDK, or MapTool handlers. Deny-by-default catalog, typed McpResult, HTTP + opt-in stdio. Does not require BuildingBlocks.Mediator.</Description>
-    <PackageTags>mcp;model-context-protocol;cqrs;tools;cursor;claude;aspnetcore;net8;net9;net10</PackageTags>
+    <Description>Map application message types and public static endpoint methods to MCP tools on the official C# SDK, or MapTool handlers. Deny-by-default catalog, typed McpResult, HTTP + opt-in stdio. Write idempotency (memory or distributed wait-and-replay with UseRedisLock). 2026 MRTR confirmation elicitation. Does not require BuildingBlocks.Mediator or BuildingBlocks.Idempotency.</Description>
+    <PackageTags>mcp;model-context-protocol;cqrs;tools;cursor;claude;aspnetcore;redis;idempotency;net8;net9;net10</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/Maxofpower/FeatureFusion</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Maxofpower/FeatureFusion</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>PACKAGE_README.md</PackageReadmeFile>
     <PackageIcon>mcp-icon.png</PackageIcon>
-    <PackageReleaseNotes>1.0.0: [McpTool] on types or static endpoint methods, or MapTool; inputSchema; structuredContent; namespaced idempotency (schema format uuid); analyzers BBMCP001–005. https://github.com/Maxofpower/FeatureFusion/blob/main/CHANGELOG.md</PackageReleaseNotes>
+    <PackageReleaseNotes>1.1.0: UseDistributedIdempotency + UseRedisLock (RedisMcpIdempotencyLock over host IConnectionMultiplexer; wait-and-replay, not HTTP 409; lease is not exactly-once); custom IMcpIdempotencyLock still supported; 2026 MRTR confirmation via InputRequiredException elicitation (2025-11-25 stays ConfirmationRequired JSON). https://github.com/Maxofpower/FeatureFusion/blob/main/CHANGELOG.md</PackageReleaseNotes>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <IncludeSymbols>true</IncludeSymbols>
@@ -47,6 +47,7 @@
   <ItemGroup>
     <PackageReference Include="ModelContextProtocol" Version="2.2.0" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
+    <PackageReference Include="StackExchange.Redis" Version="2.8.16" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.400" PrivateAssets="All" />
   </ItemGroup>
 

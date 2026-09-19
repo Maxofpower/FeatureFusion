@@ -17,7 +17,7 @@
 | Package | Version | NuGet | GitHub releases |
 |---------|---------|-------|-----------------|
 | BuildingBlocks.Mediator | 1.1.0 | [nuget.org](https://www.nuget.org/packages/BuildingBlocks.Mediator/1.1.0) | [mediator-v*](https://github.com/Maxofpower/FeatureFusion/releases?q=mediator-v) |
-| BuildingBlocks.Mcp | 1.0.0 | [nuget.org](https://www.nuget.org/packages/BuildingBlocks.Mcp/1.0.0) | [mcp-v*](https://github.com/Maxofpower/FeatureFusion/releases?q=mcp-v) |
+| BuildingBlocks.Mcp | 1.1.0 | [nuget.org](https://www.nuget.org/packages/BuildingBlocks.Mcp/1.1.0) | [mcp-v*](https://github.com/Maxofpower/FeatureFusion/releases?q=mcp-v) |
 | BuildingBlocks.Idempotency | 1.0.1 | [nuget.org](https://www.nuget.org/packages/BuildingBlocks.Idempotency/1.0.1) | [idempotency-v*](https://github.com/Maxofpower/FeatureFusion/releases?q=idempotency-v) |
 | BuildingBlocks.Pagination.EntityFrameworkCore | 1.1.0 | [nuget.org](https://www.nuget.org/packages/BuildingBlocks.Pagination.EntityFrameworkCore/1.1.0) | [pagination-v*](https://github.com/Maxofpower/FeatureFusion/releases?q=pagination-v) |
 | BuildingBlocks.Telemetry | 1.0.2 | [nuget.org](https://www.nuget.org/packages/BuildingBlocks.Telemetry/1.0.2) | [telemetry-v*](https://github.com/Maxofpower/FeatureFusion/releases?q=telemetry-v) |
@@ -25,7 +25,7 @@
 | BuildingBlocks.Domain | 1.0.0 (in-repo; not published yet) | `src/BuildingBlocks/Domain` | — |
 | BuildingBlocks.Domain.EntityFrameworkCore | 1.0.0 (in-repo; not published yet) | `src/BuildingBlocks/Domain.EntityFrameworkCore` | — |
 
-**Highlights:** Pagination **1.1.0** — any-width Npgsql row comparison, `NULLS FIRST/LAST` interceptor, `HasKeysetIndex` + `NullOrder`. Idempotency **1.0.1** — package icon, System.Text.Json only (no Newtonsoft).
+**Highlights:** MCP **1.1.0** — distributed wait-and-replay idempotency (`UseDistributedIdempotency` + `UseRedisLock`; not HTTP 409; lease is not exactly-once) and 2026 MRTR confirmation elicitation. Pagination **1.1.0** — any-width Npgsql row comparison, `NULLS FIRST/LAST` interceptor, `HasKeysetIndex` + `NullOrder`. Idempotency **1.0.1** — package icon, System.Text.Json only (no Newtonsoft).
 
 ## BuildingBlocks — NuGet READMEs
 
@@ -58,7 +58,7 @@
 - [Idempotency](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/idempotency.md) (1.0.1)
 - [Pagination](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/pagination.md) (1.1.0)
 - [Pagination test matrix](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/PAGINATION_TEST_MATRIX.md)
-- [MCP](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/mcp.md)
+- [MCP](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/mcp.md) (1.1.0)
 - [Telemetry](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/building-blocks/telemetry.md)
 - [ADR 0003 — pagination keyset](https://github.com/Maxofpower/FeatureFusion/blob/main/docs/adr/0003-pagination-keyset.md)
 

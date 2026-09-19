@@ -9,11 +9,16 @@ Map **application message types** (commands, queries, DTOs) and **public static 
 
 **When to use:** Cursor or Claude should call the **same logic** as HTTP. Opt-in with `[McpTool]` on a message type **or** a public static Minimal API method (`WithMcp` optional), or use `MapTool`. Unmarked types/methods are never tools. **MVC controllers are unsupported for now.** HTTP-only inputs (`FromHeader`) cannot be the MCP body.
 
+## What's new in 1.1.0
+
+- **Distributed write idempotency:** `UseDistributedIdempotency` + `UseRedisLock` (wait-and-replay across instances; not HTTP Processing/409). Completed payloads on host `IDistributedCache`; in-flight SET NX PX lease via MCP `RedisMcpIdempotencyLock` on the host `IConnectionMultiplexer` (default 2 minutes, **no renewal** — not exactly-once). Fail-closed if the lock is missing. Custom `IMcpIdempotencyLock` still works. Wait-budget exhaustion (`AcquireWaitBudget`, default 30 seconds) is MCP `Conflict` (client retries). MCP keys `mcp:idemp:…` are distinct from HTTP `Idempotency_*`. This package does not reference `BuildingBlocks.Idempotency`.
+- **2026 MRTR confirmation:** unconfirmed `RequireConfirmation` writes elicit `confirmed` via SDK `InputRequiredException` when the client is MCP `2026-07-28` (`requestState` `awaiting-confirmation`, opaque echo). Accept invokes; decline returns `ConfirmationRequired` without invoking. `2025-11-25` still returns `ConfirmationRequired` JSON. `confirmed: true` skips elicitation.
+
 ## What's in 1.0.0
 
 - Message types or public static endpoint methods as MCP tools (`[McpTool]`, deny-by-default scanner), **or** `MapTool` handlers
 - Scoped `MapTool` overload: handler receives `IServiceProvider` from a new DI scope
-- Idempotency: `UseMemoryIdempotency(ttl)` on the builder; commands (POST/PUT) require `idempotencyKey` (`format: uuid` in the schema; any non-empty string accepted); queries never use the store. Namespaced keys, lock, `JsonElement` replay. Redis via `IMcpIdempotencyStore`.
+- Idempotency: `UseMemoryIdempotency(ttl)` on the builder; commands (POST/PUT) require `idempotencyKey` (`format: uuid` in the schema; any non-empty string accepted); queries never use the store. Namespaced keys, in-process wait-and-replay, `JsonElement` replay.
 - `inputSchema` from CLR: defaults/nullable = optional, enum members, `[Description]` / Swagger parameter text
 - Successful calls return JSON text **and** `structuredContent`
 - Safe writes: `idempotencyKey`, confirmation, timeout, `IMcpToolFilter`, `IMcpRateLimiter`, `catalog://tools`
@@ -148,9 +153,28 @@ Register the in-memory store (single process) on the builder — do not add `IMc
 o.UseMemoryIdempotency(TimeSpan.FromHours(1));
 ```
 
-Multi-instance hosts: implement `IMcpIdempotencyStore` (Redis, etc.) and register it as a singleton. Keys are **namespaced per tool**. Concurrent calls with the same key share a lock. Successful results are stored as JSON and replayed as `JsonElement`.
+Multi-instance hosts call `UseDistributedIdempotency` **and** `UseRedisLock` (host already has `IDistributedCache` + `IConnectionMultiplexer`). A shared Get/Set cache without a lock does not serialize in-flight calls. Waiters poll and replay; they do not get HTTP Processing/409 while the lease is valid. Custom locks: register `IMcpIdempotencyLock` instead of `UseRedisLock`.
 
-Cursor/Claude fill `idempotencyKey` because the schema marks it **required**. They do not invent a key unless the field exists. Generate a **new UUID** for a new write; **reuse** the same key only when retrying that same write (timeouts, disconnects). `RequireConfirmation = true` adds required `confirmed: true` (lab `orders.create`). Lab `demo.echo` uses `Idempotent = false` so smoke calls need no key.
+```csharp
+o.UseDistributedIdempotency(opts =>
+{
+    opts.Lease = TimeSpan.FromMinutes(2);                 // in-flight window; no renewal
+    opts.PayloadTtl = TimeSpan.FromHours(1);
+    opts.AcquireWaitBudget = TimeSpan.FromSeconds(30);  // then MCP Conflict — client retries
+    opts.PollDelay = TimeSpan.FromMilliseconds(20);
+})
+.UseRedisLock(); // RedisMcpIdempotencyLock over host IConnectionMultiplexer
+```
+
+The lease (default 2 minutes) is the in-flight safety window, **not** exactly-once execution — there is no lease renewal in 1.1.0. Lease expiry, a crash before Set, or a Set failure after a successful invoke can cause a second execution (at-least-once). If waiters exhaust `AcquireWaitBudget` (default 30 seconds) they receive MCP `Conflict` and should retry (replay if Set completed). Payload keys use `mcp:idemp:{tool}\u001f{clientKey}` (lock key `{payloadKey}:lock`), distinct from HTTP `Idempotency_*`. This package does not reference `BuildingBlocks.Idempotency`. Queries never use the store or lock. Successful results are stored as JSON and replayed as `JsonElement`.
+
+## Confirmation (MRTR)
+
+`RequireConfirmation = true` adds required `confirmed: true` in the schema. The invoker still rejects missing confirmation with `McpErrorCode.ConfirmationRequired`.
+
+On MCP **2026-07-28** (`IsMrtrSupported`), that error is translated to SDK `InputRequiredException`: elicitation for `confirmed`, `requestState` `awaiting-confirmation` (opaque echo, not a session). Accept sets `Confirmed` and invokes once; decline returns `ConfirmationRequired` without invoking. On MCP **2025-11-25**, the tool error stays JSON. Sending `confirmed: true` skips elicitation on both revisions. Official C# clients auto-retry elicitation when `ElicitationHandler` is set.
+
+Cursor/Claude fill `idempotencyKey` because the schema marks it **required**. They do not invent a key unless the field exists. Generate a **new UUID** for a new write; **reuse** the same key only when retrying that same write (timeouts, disconnects). Lab `orders.create` uses confirmation + a key. Lab `demo.echo` uses `Idempotent = false` so smoke calls need no key.
 
 ## Transport and Cursor
 
@@ -184,7 +208,7 @@ Cursor HTTP (API must already be running):
 
 - **MVC controllers are unsupported for now** (actions, `[FromHeader]`, `ActionResult`). Use public static Minimal API methods, message types, or `MapTool`.
 - Not OpenAPI → MCP, not a SOLID linter. `[FromHeader]` DTOs stay HTTP-only.
-- No prompts, elicitation, or OAuth
+- No prompts, OAuth, or MCP Apps. Confirmation elicitation is only the 2026 MRTR `confirmed` flow above — not a general elicitation framework.
 - Do not call `UseStdioTransport()` on a web API
 - Production hosts should leave MCP unmapped (FeatureFusion registers it only in Development)
 

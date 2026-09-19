@@ -42,6 +42,10 @@ public sealed class McpPaginationAbuseExperimentTests
 		});
 	}
 
+	/// <summary>
+	/// Exp 2 observation: walk / replay / tamper / malformed cursor on MCP <c>products.list</c>
+	/// (query tool — no confirmation or MRTR).
+	/// </summary>
 	[Fact]
 	public async Task Cursor_abuse_against_mcp_products_list_is_observed()
 	{

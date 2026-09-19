@@ -55,7 +55,13 @@ api.MapPost("/items", CreateItem).WithMcp(app, "items.create", "Create an item")
 
 ## Idempotency
 
-Writes (Command / POST / PUT) are never retried. Commands default to requiring `idempotencyKey` when `UseMemoryIdempotency` (or another `IMcpIdempotencyStore`) is registered. Schema `format: uuid` is a hint; any non-empty string is accepted. Queries never use the store. `Idempotent = false` opts a command out (lab `demo.echo`). Keys are namespaced per tool; in-flight calls lock; success replays as `JsonElement`. Multi-instance: Redis via `IMcpIdempotencyStore`. `RequireConfirmation` adds required `confirmed: true`.
+Writes (Command / POST / PUT) are never retried. Commands default to requiring `idempotencyKey` when `UseMemoryIdempotency` / `UseDistributedIdempotency` (or another `IMcpIdempotencyStore`) is registered. Schema `format: uuid` is a hint; any non-empty string is accepted. Queries never use the store or lock. `Idempotent = false` opts a command out (lab `demo.echo`). Keys are namespaced per tool (`mcp:idemp:{tool}\u001f{clientKey}` on the distributed cache); in-flight calls wait and replay (not HTTP 409). Success replays as `JsonElement`.
+
+**Single instance:** `o.UseMemoryIdempotency(ttl)` (process `SemaphoreSlim` wait-and-replay).
+
+**Multi-instance:** `o.UseDistributedIdempotency().UseRedisLock()` (host `IDistributedCache` + `IConnectionMultiplexer`). Cache Get/Set alone does **not** serialize in-flight work. Resolving `IMcpInvoker` fails without a lock (never execute unlocked). Custom `IMcpIdempotencyLock` is still allowed instead of `UseRedisLock`. This package does **not** reference `BuildingBlocks.Idempotency`. Default lease is **2 minutes** (safety window, not exactly-once; **no renewal** in 1.1.0). Lease expiry, crash before Set, or Set failure after a successful invoke can overlap or retry (at-least-once). Default `AcquireWaitBudget` is **30 seconds**; exhaustion is MCP `Conflict` (client retries — not HTTP 409 Processing). MCP keys are distinct from HTTP `Idempotency_*`. Queries never use the store or lock.
+
+**Confirmation (1.1.0):** `RequireConfirmation` still requires `confirmed: true`. MCP `2026-07-28` clients get `InputRequiredException` elicitation (`requestState` `awaiting-confirmation`); accept invokes, decline does not. `2025-11-25` stays `ConfirmationRequired` JSON. `confirmed: true` skips elicitation.
 
 Agents: send a **new UUID** for a new write; **reuse** the key only on retry of that write. Do not invent keys for query tools.
 

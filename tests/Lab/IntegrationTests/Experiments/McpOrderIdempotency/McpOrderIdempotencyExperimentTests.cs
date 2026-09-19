@@ -23,6 +23,8 @@ namespace IntegrationTests.Experiments.McpOrderIdempotency;
 /// <c>CreateOrderCommand</c>, same-key/different-args behavior, and fresh execution on a new key.
 /// Does not re-prove HTTP Redis idempotency (Exp 3), outbox/async handler delivery (Exp 5),
 /// or gateway behavior.
+/// Down-level client: pinned to MCP <c>2025-11-25</c> so Unconfirmed still observes
+/// <c>ConfirmationRequired</c>. Protocol-native MRTR is the McpMrtrConfirmation lab experiment.
 /// </summary>
 [Collection(AspireCollection.Name)]
 public sealed class McpOrderIdempotencyExperimentTests
@@ -50,6 +52,12 @@ public sealed class McpOrderIdempotencyExperimentTests
 		});
 	}
 
+	/// <summary>
+	/// Five labeled calls on a pinned 2025-11-25 client: Unconfirmed (ConfirmationRequired JSON),
+	/// ConfirmedMiss, SameKeyReplay, SameKeyDifferentQuantity, NewKeyFresh.
+	/// The pin is required: a 2026 client would elicit (<c>input_required</c>) instead of returning
+	/// ConfirmationRequired on Unconfirmed — that protocol path is McpMrtrConfirmation, not Exp 6.
+	/// </summary>
 	[Fact]
 	public async Task Mcp_orders_create_confirmation_and_memory_idempotency_are_observed()
 	{
@@ -61,7 +69,8 @@ public sealed class McpOrderIdempotencyExperimentTests
 			"traceparent",
 			FormatTraceParent(transportTraceId, transportSpanId));
 
-		await using var mcp = await LabMcpClient.CreateAsync(_http);
+		// 2025-11-25: Unconfirmed must stay ConfirmationRequired JSON. A 2026 client would get input_required instead (see McpMrtrConfirmation).
+		await using var mcp = await LabMcpClient.CreateNovember2025Async(_http);
 		var seenToolTraces = new HashSet<string>(StringComparer.Ordinal);
 		var calls = new List<McpOrderIdempotencyCall>();
 		var cachedKey = System.Ulid.NewUlid().ToString();

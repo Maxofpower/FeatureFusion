@@ -31,6 +31,7 @@ public sealed class CatalogProductHttpMcpConvergenceTests
 		});
 	}
 
+	/// <summary>HTTP and MCP list the same Demo Commerce catalog page (shared Mediator query, not confirmation).</summary>
 	[Fact]
 	public async Task Http_and_mcp_list_catalog_products()
 	{
@@ -46,6 +47,7 @@ public sealed class CatalogProductHttpMcpConvergenceTests
 		mcpResult.StructuredContent.Should().NotBeNull();
 	}
 
+	/// <summary>Flagship product fields match across HTTP GET and MCP <c>catalog.product.get</c>.</summary>
 	[Fact]
 	public async Task Http_and_mcp_return_same_flagship_product()
 	{
@@ -77,6 +79,7 @@ public sealed class CatalogProductHttpMcpConvergenceTests
 		mcpDetail.Specifications.Should().HaveCount(httpDetail.Specifications.Count);
 	}
 
+	/// <summary>Unknown slug is a tool error on MCP (same domain outcome as HTTP 404, different envelope).</summary>
 	[Fact]
 	public async Task Mcp_unknown_slug_is_error()
 	{

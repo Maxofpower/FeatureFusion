@@ -7,8 +7,13 @@ using Xunit;
 
 namespace BuildingBlocks.Mcp.Tests;
 
+/// <summary>
+/// Adapter mapping from BuildingBlocks.Mcp descriptors to official SDK <c>Tool</c> / CallTool results.
+/// Not a live HTTP protocol test — see <see cref="ProtocolMrtrHttpTests"/> for Streamable HTTP MRTR.
+/// </summary>
 public sealed class ProtocolRegistrationTests
 {
+	/// <summary>Catalog resource URI matching is case-insensitive and allows a trailing slash.</summary>
 	[Theory]
 	[InlineData("catalog://tools")]
 	[InlineData("catalog://tools/")]
@@ -16,6 +21,7 @@ public sealed class ProtocolRegistrationTests
 	public void Catalog_Uri_Accepts_Trailing_Slash_And_Case(string uri)
 		=> Assert.True(McpProtocolRegistration.IsCatalogResourceUri(uri));
 
+	/// <summary>Non-catalog URIs are not treated as the tools catalog resource.</summary>
 	[Theory]
 	[InlineData(null)]
 	[InlineData("")]
@@ -23,6 +29,7 @@ public sealed class ProtocolRegistrationTests
 	public void Catalog_Uri_Rejects_Unknown(string? uri)
 		=> Assert.False(McpProtocolRegistration.IsCatalogResourceUri(uri));
 
+	/// <summary>Input schema carries enum names, descriptions, and omits optional properties from required.</summary>
 	[Fact]
 	public void ToTool_Schema_Has_Enums_Optional_And_Descriptions()
 	{
@@ -45,6 +52,7 @@ public sealed class ProtocolRegistrationTests
 		Assert.DoesNotContain("named", names);
 	}
 
+	/// <summary>Idempotent commands advertise <c>idempotencyKey</c> as a required UUID in the MCP schema.</summary>
 	[Fact]
 	public void ToTool_Idempotent_Command_Advertises_Uuid_Key()
 	{
@@ -63,6 +71,7 @@ public sealed class ProtocolRegistrationTests
 		Assert.Contains("idempotencyKey", doc.RootElement.GetProperty("required").EnumerateArray().Select(e => e.GetString()));
 	}
 
+	/// <summary>Primitive string results are wrapped as StructuredContent <c>{ value }</c> for MCP clients.</summary>
 	[Fact]
 	public void Success_String_Payload_Wraps_StructuredContent_As_Object()
 	{
@@ -72,6 +81,7 @@ public sealed class ProtocolRegistrationTests
 		Assert.Equal("pong:Ada", result.StructuredContent!.Value.GetProperty("value").GetString());
 	}
 
+	/// <summary>Object payloads stay objects in StructuredContent (not double-wrapped).</summary>
 	[Fact]
 	public void Success_Object_Payload_Keeps_StructuredContent_As_Object()
 	{
@@ -80,6 +90,7 @@ public sealed class ProtocolRegistrationTests
 		Assert.Equal("hello-mcp", result.StructuredContent!.Value.GetProperty("echo").GetString());
 	}
 
+	/// <summary>Queries are not write-idempotent, so the schema must not require <c>idempotencyKey</c>.</summary>
 	[Fact]
 	public void ToTool_Query_Omits_Idempotency_Key()
 	{

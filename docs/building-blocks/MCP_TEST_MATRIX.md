@@ -17,6 +17,9 @@ xUnit on **net8.0 / net9.0 / net10.0**. No coverlet gate. CI: `.github/workflows
 | Aspire live HTTP | `FeatureFusionMcpTests` — tools/list (`demo.echo`, `products.list`, `orders.create`, `lab.ping`), echo, orders.create, products.list schema, `structuredContent`, catalog://tools, `lab.ping` |
 | Cursor HTTP | `src/.cursor/mcp.json` → `http://localhost:5141/mcp`; API must be running (see [`mcp.md`](mcp.md)) |
 | Idempotency | Commands only; `UseMemoryIdempotency`; missing key; store prevents double dispatch; namespaced keys; TTL; in-flight lock; `JsonElement` replay; queries ignore store |
+| Distributed idempotency | `UseDistributedIdempotency` + `UseRedisLock` / `RedisMcpIdempotencyLock` (or custom `IMcpIdempotencyLock`); wait-and-replay (not HTTP 409); shared store+lock one handler; concurrent same key; completed replay; handler throw no Set; abandoned/expired lease; cancel releases; lease-expiry overlap characterized; wait-budget MCP Conflict; wrong-owner Release; acquire throw fail-closed; cache Get/Set failures; different keys; query/unconfirmed skip store+lock; confirmed then replay; negative cache-only two handlers; memory wait-and-replay preserved |
+| Redis lock | `RedisMcpIdempotencyLock`: acquire, contention, lease expiry, wrong-owner release, canceled token, Redis error, `UseRedisLock` DI |
+| 2026 MRTR / confirmation | Protocol HTTP: `2026-07-28` unconfirmed → `input_required` elicitation; accept invokes; decline `ConfirmationRequired` without invoke; `requestState` echo; `2025-11-25` stays `ConfirmationRequired` JSON; `confirmed: true` skips elicitation |
 | Rate limit | Deny → `RateLimited` |
 | Confirm / timeout | ConfirmationRequired; Timeout |
 | Filter | Hidden from list and invoke |

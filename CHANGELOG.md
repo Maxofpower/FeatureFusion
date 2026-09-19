@@ -5,6 +5,19 @@ All notable changes to **BuildingBlocks** packages in this repository are docume
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## BuildingBlocks.Mcp [1.1.0] - 2026-09-19
+
+### Added
+
+- **Distributed write idempotency** (`UseDistributedIdempotency` + `UseRedisLock` / `RedisMcpIdempotencyLock`): wait-and-replay across instances. Completed payloads live on the host `IDistributedCache` (`mcp:idemp:{tool}\u001f{clientKey}`); in-flight work is serialized with a SET NX PX lease (lock key `{payloadKey}:lock`) using the host `IConnectionMultiplexer`. Waiters poll and replay; they do not get HTTP Processing/409 while the lease is valid. Resolving `IMcpInvoker` fails if the lock is missing (never execute unlocked). Custom `IMcpIdempotencyLock` remains supported. The package does not reference `BuildingBlocks.Idempotency`.
+- **2026 MRTR confirmation:** when the client advertises MCP `2026-07-28` (`IsMrtrSupported`), an unconfirmed `RequireConfirmation` write becomes SDK `InputRequiredException` / `resultType: input_required` elicitation for `confirmed` (`requestState` `awaiting-confirmation`, opaque echo — not a server session). Accept sets `McpInvokeContext.Confirmed` and invokes; decline returns `ConfirmationRequired` without invoking. MCP `2025-11-25` clients still receive `ConfirmationRequired` JSON. `confirmed: true` skips elicitation on both revisions.
+
+### Notes
+
+- Distributed mode is **not** exactly-once. The default **2-minute lease** is an in-flight safety window with **no renewal**. Lease expiry can overlap executions. A crash before Set, or a Set failure after a successful invoke, can cause another execution (at-least-once). Wait-budget exhaustion (`AcquireWaitBudget`, default 30 seconds) returns MCP `Conflict`; the client should retry (replay if Set completed). Queries never use the store or lock.
+- Memory `UseMemoryIdempotency` is unchanged (process `SemaphoreSlim` wait-and-replay).
+- Drop-in for hosts that stay on memory idempotency and `confirmed: true`. Lab default host remains memory; distributed Redis is a `WithWebHostBuilder` overlay using `RedisMcpIdempotencyLock`.
+
 ## BuildingBlocks.Pagination.EntityFrameworkCore [1.1.0] - 2026-09-04
 
 ### Added
