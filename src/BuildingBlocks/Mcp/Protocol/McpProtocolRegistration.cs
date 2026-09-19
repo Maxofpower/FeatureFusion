@@ -34,25 +34,29 @@ internal static class McpProtocolRegistration
 		};
 	}
 
+	private const string ConfirmationInputRequestKey = "confirmation";
+	private const string ConfirmationRequestState = "awaiting-confirmation";
+
 	private static async ValueTask<CallToolResult> CallToolAsync(RequestContext<CallToolRequestParams> request, CancellationToken cancellationToken)
 	{
 		var invoker = GetInvoker(request.Services);
-		var ctx = CreateContext(request.Services);
 		var name = request.Params?.Name ?? string.Empty;
 		JsonElement args = default;
 		if (request.Params?.Arguments is { Count: > 0 } dict)
 			args = JsonSerializer.SerializeToElement(dict, McpJson.Options);
 
+		if (IsConfirmationDeclined(request.Params))
+			return ToErrorCallResult(ConfirmationRequired(name));
+
+		var ctx = CreateContext(request.Services, confirmed: IsConfirmationAccepted(request.Params));
 		var result = await invoker.InvokeAsync(name, args, ctx, cancellationToken).ConfigureAwait(false);
 		if (result.IsSuccess)
 			return ToSuccessCallResult(result.Value);
 
-		var errorJson = JsonSerializer.Serialize(result.Error, McpJson.Options);
-		return new CallToolResult
-		{
-			IsError = true,
-			Content = [new TextContentBlock { Text = errorJson }]
-		};
+		if (result.Error?.Code == McpErrorCode.ConfirmationRequired && request.Server.IsMrtrSupported)
+			throw CreateConfirmationInputRequired(name);
+
+		return ToErrorCallResult(result);
 	}
 
 	private static ValueTask<ListResourcesResult> ListResourcesAsync(RequestContext<ListResourcesRequestParams> request, CancellationToken cancellationToken)
@@ -124,14 +128,90 @@ internal static class McpProtocolRegistration
 		=> (services ?? throw new InvalidOperationException("MCP request has no IServiceProvider."))
 			.GetRequiredService<IMcpInvoker>();
 
-	private static McpInvokeContext CreateContext(IServiceProvider? services)
+	private static McpInvokeContext CreateContext(IServiceProvider? services, bool confirmed = false)
 	{
 		if (services is null)
 			return McpInvokeContext.None;
 		var accessor = services.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
 		var user = accessor?.HttpContext?.User;
-		return new McpInvokeContext(user, null, DryRun: false, Confirmed: false);
+		return new McpInvokeContext(user, null, DryRun: false, Confirmed: confirmed);
 	}
+
+	private static CallToolResult ToErrorCallResult(McpResult<object?> result)
+	{
+		var errorJson = JsonSerializer.Serialize(result.Error, McpJson.Options);
+		return new CallToolResult
+		{
+			IsError = true,
+			Content = [new TextContentBlock { Text = errorJson }]
+		};
+	}
+
+	private static McpResult<object?> ConfirmationRequired(string toolName)
+		=> McpResult.Fail<object?>(
+			McpErrorCode.ConfirmationRequired,
+			$"Tool '{toolName}' requires '{McpDefaults.ConfirmedArgument}' to be true.");
+
+	private static InputRequiredException CreateConfirmationInputRequired(string toolName)
+	{
+		return new InputRequiredException(
+			new Dictionary<string, InputRequest>
+			{
+				[ConfirmationInputRequestKey] = InputRequest.ForElicitation(new ElicitRequestParams
+				{
+					Message = $"Confirm execution of '{toolName}'. Accept to proceed, or decline to cancel.",
+					RequestedSchema = new ElicitRequestParams.RequestSchema
+					{
+						Properties = new Dictionary<string, ElicitRequestParams.PrimitiveSchemaDefinition>
+						{
+							[McpDefaults.ConfirmedArgument] = new ElicitRequestParams.BooleanSchema
+							{
+								Description = "Must be true to execute this write."
+							}
+						},
+						Required = [McpDefaults.ConfirmedArgument]
+					}
+				})
+			},
+			requestState: ConfirmationRequestState);
+	}
+
+	private static bool IsConfirmationAccepted(CallToolRequestParams? parameters)
+	{
+		if (!TryReadConfirmationElicit(parameters, out var elicit) || elicit is null)
+			return false;
+		if (!elicit.IsAccepted)
+			return false;
+		if (elicit.Content is { } content
+			&& content.TryGetValue(McpDefaults.ConfirmedArgument, out var confirmed)
+			&& IsJsonFalse(confirmed))
+			return false;
+		return true;
+	}
+
+	private static bool IsConfirmationDeclined(CallToolRequestParams? parameters)
+	{
+		if (!TryReadConfirmationElicit(parameters, out var elicit) || elicit is null)
+			return false;
+		return !IsConfirmationAccepted(parameters);
+	}
+
+	private static bool TryReadConfirmationElicit(CallToolRequestParams? parameters, out ElicitResult? elicit)
+	{
+		elicit = null;
+		if (parameters?.InputResponses is not { Count: > 0 } responses)
+			return false;
+		if (!responses.TryGetValue(ConfirmationInputRequestKey, out var response))
+			return false;
+		elicit = response.Deserialize(InputResponse.ElicitResultJsonTypeInfo);
+		return elicit is not null;
+	}
+
+	private static bool IsJsonFalse(JsonElement value)
+		=> value.ValueKind == JsonValueKind.False
+			|| (value.ValueKind == JsonValueKind.String
+				&& bool.TryParse(value.GetString(), out var parsed)
+				&& !parsed);
 
 	internal static Tool ToTool(McpToolDescriptor d)
 	{

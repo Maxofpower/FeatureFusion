@@ -42,7 +42,8 @@ public readonly record struct McpRateLimitDecision(bool Allowed, int? RetryAfter
 /// <summary>
 /// Optional idempotency store. When registered, duplicate keys return the cached payload without invoking again.
 /// The invoker namespaces keys as <c>toolName + key</c>. <see cref="MemoryIdempotencyStore"/> is single-instance with optional TTL.
-/// Multi-instance hosts should register a distributed implementation (for example Redis) of this interface.
+/// Multi-instance hosts must use <c>UseDistributedIdempotency</c> plus <c>UseRedisLock</c> (or a custom
+/// <see cref="IMcpIdempotencyLock"/>) — a Get/Set store alone does not serialize in-flight calls across processes.
 /// </summary>
 public interface IMcpIdempotencyStore
 {
@@ -51,6 +52,26 @@ public interface IMcpIdempotencyStore
 
 	/// <summary>Stores the success payload JSON for a namespaced key.</summary>
 	Task SetAsync(string key, string payloadJson, CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// Distributed in-flight lock for MCP write idempotency (wait-and-replay).
+/// SET NX + server-side lease; compare-and-delete release. Built-in Redis: <see cref="RedisMcpIdempotencyLock"/>.
+/// Not HTTP <c>IIdempotencyLock</c>.
+/// </summary>
+public interface IMcpIdempotencyLock
+{
+	/// <summary>
+	/// Attempts to acquire <paramref name="key"/> for <paramref name="ownerToken"/> until <paramref name="lease"/> elapses.
+	/// Returns <see langword="false"/> when another owner holds it. Does not wait.
+	/// </summary>
+	Task<bool> TryAcquireAsync(string key, string ownerToken, TimeSpan lease, CancellationToken cancellationToken);
+
+	/// <summary>
+	/// Releases <paramref name="key"/> only when <paramref name="ownerToken"/> matches the holder.
+	/// Returns <see langword="false"/> when this caller does not own the lock.
+	/// </summary>
+	Task<bool> ReleaseAsync(string key, string ownerToken, CancellationToken cancellationToken);
 }
 
 /// <summary>

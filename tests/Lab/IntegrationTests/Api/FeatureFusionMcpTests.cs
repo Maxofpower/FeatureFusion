@@ -11,6 +11,9 @@ namespace IntegrationTests.Api;
 
 /// <summary>
 /// Live Streamable HTTP MCP against FeatureFusion <c>/mcp</c> (same Aspire + WAF fixture as API smoke).
+/// Unpinned <see cref="LabMcpClient.CreateAsync(HttpClient)"/> — SDK probes protocol version (typically 2026-07-28).
+/// These are catalog/smoke checks, not MRTR protocol tests. Writes that must skip elicitation pass
+/// <c>confirmed: true</c>. Confirmation-revision experiments live in McpMrtrConfirmation and Exp 6.
 /// </summary>
 [Collection(AspireCollection.Name)]
 public sealed class FeatureFusionMcpTests
@@ -25,6 +28,9 @@ public sealed class FeatureFusionMcpTests
 		});
 	}
 
+	/// <summary>
+	/// Deny-by-default catalog: only tools registered on FeatureFusion appear; unmarked/void methods do not.
+	/// </summary>
 	[Fact]
 	public async Task Tools_List_Contains_Opt_In_Tools_Only()
 	{
@@ -48,6 +54,7 @@ public sealed class FeatureFusionMcpTests
 		names.Should().NotContain(n => n.Contains("void", StringComparison.OrdinalIgnoreCase));
 	}
 
+	/// <summary>Query smoke: <c>demo.echo</c> is not RequireConfirmation and must not elicit.</summary>
 	[Fact]
 	public async Task Call_Demo_Echo_Succeeds()
 	{
@@ -61,6 +68,11 @@ public sealed class FeatureFusionMcpTests
 		text.Should().Contain("hello-mcp");
 	}
 
+	/// <summary>
+	/// Write gate smoke: missing both <c>confirmed</c> and idempotency key must fail before CreateOrderCommand.
+	/// McpInvoker checks the key first, so 2026 typically returns IdempotencyKeyRequired (not input_required).
+	/// Protocol-native elicitation is McpMrtrConfirmation, not this test.
+	/// </summary>
 	[Fact]
 	public async Task Call_Orders_Create_Without_Confirm_And_Key_Is_Error()
 	{
@@ -83,6 +95,9 @@ public sealed class FeatureFusionMcpTests
 			|| t.Contains("idempotency", StringComparison.OrdinalIgnoreCase));
 	}
 
+	/// <summary>
+	/// <c>confirmed: true</c> plus a fresh idempotency key skips elicitation on both 2025 and 2026 and Creates an order.
+	/// </summary>
 	[Fact]
 	public async Task Call_Orders_Create_With_Confirm_And_Key_Succeeds()
 	{
@@ -106,6 +121,7 @@ public sealed class FeatureFusionMcpTests
 			|| t.Contains("id", StringComparison.OrdinalIgnoreCase));
 	}
 
+	/// <summary>Advertised <c>products.list</c> schema: sort enums and optional cursor/limit (pagination, not confirmation).</summary>
 	[Fact]
 	public async Task Products_List_Schema_Has_Enums_And_Optional_Cursor()
 	{
@@ -132,6 +148,7 @@ public sealed class FeatureFusionMcpTests
 		}
 	}
 
+	/// <summary>MCP 2025+ structured content: echo payload is both text and StructuredContent.</summary>
 	[Fact]
 	public async Task Call_Demo_Echo_Includes_StructuredContent()
 	{
@@ -146,6 +163,7 @@ public sealed class FeatureFusionMcpTests
 		result.StructuredContent!.Value.GetRawText().Should().Contain("hello-mcp");
 	}
 
+	/// <summary>Lab catalog resource (<c>catalog://tools</c>) lists the same opt-in tools as tools/list.</summary>
 	[Fact]
 	public async Task Catalog_Resource_Lists_Lab_Tools()
 	{
@@ -160,6 +178,9 @@ public sealed class FeatureFusionMcpTests
 		markdown.Should().Contain("lab.ping");
 	}
 
+	/// <summary>
+	/// Minimal-API <c>[McpTool]</c> method (<c>lab.ping</c>) is a query; 2026 without ElicitationHandler must still succeed.
+	/// </summary>
 	[Fact]
 	public async Task Call_Lab_Ping_From_Minimal_Api_Method_Succeeds()
 	{

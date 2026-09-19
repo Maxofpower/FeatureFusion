@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.Json;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace BuildingBlocks.Mcp.Invocation;
 
@@ -105,6 +106,20 @@ public sealed class McpInvoker : IMcpInvoker
 		if (tool.Kind == McpToolKind.Command && tool.Idempotent && ctx.IdempotencyKey is not null && _idempotency is not null)
 		{
 			var cacheKey = CacheKey(tool.Name, ctx.IdempotencyKey);
+			var distributedLock = _services.GetService<IMcpIdempotencyLock>();
+			if (distributedLock is not null)
+			{
+				try
+				{
+					return await InvokeDistributedIdempotentAsync(
+						tool, args, ctx, cacheKey, distributedLock, cancellationToken).ConfigureAwait(false);
+				}
+				catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+				{
+					return McpResult.Fail<object?>(McpErrorCode.Canceled, "The MCP tool call was canceled.");
+				}
+			}
+
 			var gate = _idempotencyGates.GetOrAdd(cacheKey, static _ => new SemaphoreSlim(1, 1));
 			await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
 			try
@@ -129,6 +144,152 @@ public sealed class McpInvoker : IMcpInvoker
 		}
 
 		return await InvokeCoreAsync(tool, args, ctx, cancellationToken).ConfigureAwait(false);
+	}
+
+	/// <summary>
+	/// Wait-and-replay across instances: Get → TryAcquire → Get → InvokeCore → Set → Release.
+	/// Waiters poll; they do not receive HTTP Processing/409 while the lease is valid.
+	/// </summary>
+	private async Task<McpResult<object?>> InvokeDistributedIdempotentAsync(
+		McpToolDescriptor tool,
+		JsonElement args,
+		McpInvokeContext ctx,
+		string cacheKey,
+		IMcpIdempotencyLock distributedLock,
+		CancellationToken cancellationToken)
+	{
+		var options = _services.GetService<McpIdempotencyOptions>() ?? new McpIdempotencyOptions();
+		var logger = _services.GetService<ILoggerFactory>()?.CreateLogger(typeof(McpInvoker))
+			?? NullLogger.Instance;
+		var clock = _services.GetService<TimeProvider>() ?? TimeProvider.System;
+		var lockKey = McpDefaults.FormatIdempotencyLockKey(tool.Name, ctx.IdempotencyKey!);
+		var waitUntil = clock.GetUtcNow() + options.AcquireWaitBudget;
+
+		while (true)
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+
+			string? cached;
+			try
+			{
+				cached = await _idempotency!.GetAsync(cacheKey, cancellationToken).ConfigureAwait(false);
+			}
+			catch (OperationCanceledException)
+			{
+				throw;
+			}
+			catch (Exception ex)
+			{
+				logger.LogError(ex, "MCP idempotency store Get failed for tool {Tool}.", tool.Name);
+				return StoreInfrastructureFailure(ex);
+			}
+
+			if (cached is not null)
+				return McpResult.Ok<object?>(ParseCachedPayload(cached));
+
+			var ownerToken = Guid.NewGuid().ToString("N");
+			bool acquired;
+			try
+			{
+				acquired = await distributedLock
+					.TryAcquireAsync(lockKey, ownerToken, options.Lease, cancellationToken)
+					.ConfigureAwait(false);
+			}
+			catch (OperationCanceledException)
+			{
+				throw;
+			}
+			catch (Exception ex)
+			{
+				logger.LogError(ex, "MCP idempotency lock acquire failed for tool {Tool}.", tool.Name);
+				return StoreInfrastructureFailure(ex);
+			}
+
+			if (acquired)
+			{
+				try
+				{
+					try
+					{
+						cached = await _idempotency.GetAsync(cacheKey, cancellationToken).ConfigureAwait(false);
+					}
+					catch (OperationCanceledException)
+					{
+						throw;
+					}
+					catch (Exception ex)
+					{
+						logger.LogError(ex, "MCP idempotency store Get failed after acquire for tool {Tool}.", tool.Name);
+						return StoreInfrastructureFailure(ex);
+					}
+
+					if (cached is not null)
+						return McpResult.Ok<object?>(ParseCachedPayload(cached));
+
+					McpResult<object?> computed;
+					try
+					{
+						computed = await InvokeCoreAsync(tool, args, ctx, cancellationToken).ConfigureAwait(false);
+					}
+					catch (OperationCanceledException)
+					{
+						throw;
+					}
+
+					if (computed.IsSuccess)
+					{
+						try
+						{
+							var json = JsonSerializer.Serialize(computed.Value, McpJson.Options);
+							await _idempotency.SetAsync(cacheKey, json, cancellationToken).ConfigureAwait(false);
+						}
+						catch (Exception ex)
+						{
+							logger.LogError(
+								ex,
+								"MCP idempotency store Set failed after a successful invoke for tool {Tool}. Returning the computed result; another instance may execute after lease expiry.",
+								tool.Name);
+						}
+					}
+
+					return computed;
+				}
+				finally
+				{
+					try
+					{
+						await distributedLock.ReleaseAsync(lockKey, ownerToken, CancellationToken.None)
+							.ConfigureAwait(false);
+					}
+					catch (Exception ex)
+					{
+						logger.LogError(ex, "MCP idempotency lock release failed for tool {Tool}.", tool.Name);
+					}
+				}
+			}
+
+			if (clock.GetUtcNow() >= waitUntil)
+			{
+				return McpResult.Fail<object?>(
+					McpErrorCode.Conflict,
+					$"Tool '{tool.Name}' is still in flight for this idempotency key; wait budget elapsed.");
+			}
+
+			try
+			{
+				await Task.Delay(options.PollDelay, cancellationToken).ConfigureAwait(false);
+			}
+			catch (OperationCanceledException)
+			{
+				throw;
+			}
+		}
+	}
+
+	private McpResult<object?> StoreInfrastructureFailure(Exception ex)
+	{
+		var message = _includeExceptionDetails ? ex.Message : "The tool failed.";
+		return McpResult.Fail<object?>(McpErrorCode.Internal, message);
 	}
 
 	private async Task<McpResult<object?>> InvokeCoreAsync(

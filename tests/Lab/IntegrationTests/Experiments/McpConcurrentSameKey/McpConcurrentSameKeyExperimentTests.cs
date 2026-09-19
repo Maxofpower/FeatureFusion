@@ -54,6 +54,10 @@ public sealed class McpConcurrentSameKeyExperimentTests
 		});
 	}
 
+	/// <summary>
+	/// Exp 14: concurrent same-key confirmed writes collapse to one business operation.
+	/// Confirmation is skipped with <c>confirmed: true</c> so the race is about the idempotency lock, not MRTR.
+	/// </summary>
 	[Fact]
 	public async Task Concurrent_same_key_mcp_write_produces_exactly_one_business_operation()
 	{

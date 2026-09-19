@@ -8,6 +8,10 @@ namespace IntegrationTests.Infrastructure.Mcp;
 /// </summary>
 public static class McpToolSpans
 {
+	/// <summary>
+	/// First unseen <c>mcp.tool</c> span for this tool after <paramref name="startedUtc"/>.
+	/// <paramref name="seenTraceIds"/> prevents counting spans from earlier calls in the same capture.
+	/// </summary>
 	public static CapturedActivity? TakeNew(
 		IReadOnlyList<CapturedActivity> all,
 		string toolName,

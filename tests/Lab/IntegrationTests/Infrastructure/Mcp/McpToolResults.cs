@@ -15,9 +15,11 @@ public static class McpToolResults
 		PropertyNameCaseInsensitive = true
 	};
 
+	/// <summary>Joins text content blocks; experiments that need StructuredContent parse separately.</summary>
 	public static string GetText(CallToolResult result)
 		=> string.Join("\n", result.Content.OfType<TextContentBlock>().Select(b => b.Text));
 
+	/// <summary>Truncates observation notes for JSON artifacts; does not change assertion text.</summary>
 	public static string Truncate(string text, int maxLength = 500)
 		=> text.Length <= maxLength ? text : text[..maxLength];
 

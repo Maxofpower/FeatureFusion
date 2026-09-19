@@ -52,7 +52,7 @@ A chat-like panel where a user "asks" the app and the UI renders MCP tool calls 
 - **UX:** user types a request → UI calls the MCP server → renders tool name, parameters, and result inline
 - **Fits the repo's MCP/MAF research thread:** the Cursor screenshot in the root README is a static proof; this is a live one
 
-**Mapped to:** [BuildingBlocks.Mcp](https://www.nuget.org/packages/BuildingBlocks.Mcp) 1.0.0 — `[McpTool]` / `MapTool` → MCP tools at `/mcp`.
+**Mapped to:** [BuildingBlocks.Mcp](https://www.nuget.org/packages/BuildingBlocks.Mcp) 1.1.0 — `[McpTool]` / `MapTool` → MCP tools at `/mcp`.
 
 ### 4. Feature-flag–gated UI
 

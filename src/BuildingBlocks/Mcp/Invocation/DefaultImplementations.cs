@@ -6,7 +6,7 @@ namespace BuildingBlocks.Mcp;
 /// <summary>
 /// In-memory <see cref="IMcpIdempotencyStore"/> for single-instance hosts and tests.
 /// Keys should already be namespaced by the invoker (<c>toolName + key</c>). Optional TTL; expired entries are ignored.
-/// Not a distributed store — register Redis (or similar) in production farms.
+/// Not a distributed store — multi-instance hosts use <c>UseDistributedIdempotency</c> plus <c>UseRedisLock</c> (or a custom <see cref="IMcpIdempotencyLock"/>).
 /// </summary>
 public sealed class MemoryIdempotencyStore : IMcpIdempotencyStore
 {

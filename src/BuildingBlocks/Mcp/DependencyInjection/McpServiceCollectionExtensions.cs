@@ -5,6 +5,7 @@ using BuildingBlocks.Mcp.Invocation;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using StackExchange.Redis;
 
 namespace BuildingBlocks.Mcp;
 
@@ -47,11 +48,47 @@ public sealed class McpBuilder
 
 	/// <summary>
 	/// Registers in-process <see cref="MemoryIdempotencyStore"/> (single instance). Optional TTL.
-	/// Commands require <c>idempotencyKey</c> when this store is registered. Multi-instance hosts should register Redis (or similar) as <see cref="IMcpIdempotencyStore"/> instead.
+	/// Commands require <c>idempotencyKey</c> when this store is registered.
+	/// Concurrent calls on this process wait and replay (not HTTP 409). Multi-instance hosts must
+	/// call <see cref="UseDistributedIdempotency"/> plus <see cref="UseRedisLock"/> (or a custom
+	/// <see cref="IMcpIdempotencyLock"/>) — Get/Set cache alone does not serialize in-flight work.
 	/// </summary>
 	public McpBuilder UseMemoryIdempotency(TimeSpan? timeToLive = null)
 	{
 		Services.TryAddSingleton<IMcpIdempotencyStore>(_ => new MemoryIdempotencyStore(timeToLive));
+		return this;
+	}
+
+	/// <summary>
+	/// Registers completed-payload storage on the host <see cref="Microsoft.Extensions.Caching.Distributed.IDistributedCache"/>.
+	/// Requires a registered <see cref="IMcpIdempotencyLock"/>; resolving <see cref="IMcpInvoker"/> fails without one
+	/// (unlocked distributed execution is never used). Chain <see cref="UseRedisLock"/> for the built-in Redis lock,
+	/// or register a custom <see cref="IMcpIdempotencyLock"/>. Keys are prefixed <c>mcp:idemp:</c>.
+	/// The lease (default 2 minutes) is the in-flight window, not exactly-once execution; there is no lease renewal.
+	/// </summary>
+	public McpBuilder UseDistributedIdempotency(Action<McpIdempotencyOptions>? configure = null)
+	{
+		var options = new McpIdempotencyOptions();
+		configure?.Invoke(options);
+		Services.RemoveAll<IMcpIdempotencyStore>();
+		Services.AddSingleton(options);
+		Services.AddSingleton<McpDistributedIdempotencyRequired>();
+		Services.AddSingleton<IMcpIdempotencyStore>(sp =>
+			new DistributedCacheIdempotencyStore(
+				sp.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>(),
+				options.PayloadTtl));
+		return this;
+	}
+
+	/// <summary>
+	/// Registers <see cref="RedisMcpIdempotencyLock"/> as <see cref="IMcpIdempotencyLock"/> using the host
+	/// <see cref="IConnectionMultiplexer"/>. Does not register Redis or <c>IDistributedCache</c> — the host
+	/// already owns those. Pair with <see cref="UseDistributedIdempotency"/>. For a non-Redis lock, register
+	/// <see cref="IMcpIdempotencyLock"/> instead of calling this method.
+	/// </summary>
+	public McpBuilder UseRedisLock()
+	{
+		Services.AddRedisMcpIdempotencyLock();
 		return this;
 	}
 
@@ -199,6 +236,19 @@ internal sealed class DelegateMessageDispatcher : IMcpMessageDispatcher
 public static class McpServiceCollectionExtensions
 {
 	/// <summary>
+	/// Registers <see cref="RedisMcpIdempotencyLock"/> as <see cref="IMcpIdempotencyLock"/> using the host
+	/// <see cref="IConnectionMultiplexer"/>. Prefer <see cref="McpBuilder.UseRedisLock"/> when chaining
+	/// <see cref="McpBuilder.UseDistributedIdempotency"/>.
+	/// </summary>
+	public static IServiceCollection AddRedisMcpIdempotencyLock(this IServiceCollection services)
+	{
+		ArgumentNullException.ThrowIfNull(services);
+		services.TryAddSingleton<IMcpIdempotencyLock>(sp =>
+			new RedisMcpIdempotencyLock(sp.GetRequiredService<IConnectionMultiplexer>()));
+		return services;
+	}
+
+	/// <summary>
 	/// Adds BuildingBlocks.Mcp services and official MCP server handlers.
 	/// </summary>
 	/// <exception cref="ArgumentNullException"><paramref name="services"/> is null.</exception>
@@ -234,6 +284,13 @@ public static class McpServiceCollectionExtensions
 
 		services.AddSingleton<IMcpInvoker>(sp =>
 		{
+			if (sp.GetService<McpDistributedIdempotencyRequired>() is not null
+				&& sp.GetService<IMcpIdempotencyLock>() is null)
+			{
+				throw new InvalidOperationException(
+					"UseDistributedIdempotency requires an IMcpIdempotencyLock. Call UseRedisLock() with the host IConnectionMultiplexer, or register a custom IMcpIdempotencyLock.");
+			}
+
 			var catalog = sp.GetRequiredService<IReadOnlyList<McpToolDescriptor>>();
 			var telemetry = sp.GetService<McpTelemetry>();
 			return new McpInvoker(
@@ -300,6 +357,8 @@ public static class McpServiceCollectionExtensions
 		return services;
 	}
 }
+
+internal sealed class McpDistributedIdempotencyRequired;
 
 /// <summary>Holds an optional feature-flag evaluator.</summary>
 public sealed class FeatureFlagCallbackOptions

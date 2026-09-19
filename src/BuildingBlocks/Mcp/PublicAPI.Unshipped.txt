@@ -1,1 +1,2 @@
 #nullable enable
+# New public API since 1.1.0 — move into PublicAPI.Shipped.txt when cutting the next version.

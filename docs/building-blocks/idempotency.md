@@ -71,4 +71,4 @@ Do not reintroduce Lab-local idempotency filter copies; use the package.
 
 ## Not this package
 
-MCP write idempotency (`UseMemoryIdempotency`) lives in **BuildingBlocks.Mcp**.
+MCP write idempotency (`UseMemoryIdempotency` / `UseDistributedIdempotency` + `UseRedisLock`) lives in **BuildingBlocks.Mcp**. It is wait-and-replay, not HTTP Processing/409, and does not reference this package.

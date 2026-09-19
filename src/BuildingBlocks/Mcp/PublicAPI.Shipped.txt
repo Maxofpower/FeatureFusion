@@ -22,6 +22,11 @@ namespace BuildingBlocks.Mcp
         System.Threading.Tasks.Task<string?> GetAsync(string key, System.Threading.CancellationToken cancellationToken);
         System.Threading.Tasks.Task SetAsync(string key, string payloadJson, System.Threading.CancellationToken cancellationToken);
     }
+    public interface IMcpIdempotencyLock
+    {
+        System.Threading.Tasks.Task<bool> TryAcquireAsync(string key, string ownerToken, System.TimeSpan lease, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<bool> ReleaseAsync(string key, string ownerToken, System.Threading.CancellationToken cancellationToken);
+    }
     public interface IMcpResultMapper
     {
         BuildingBlocks.Mcp.McpResult<object?> Map(object? handlerResult);
@@ -113,6 +118,9 @@ namespace BuildingBlocks.Mcp
         public const string DryRunArgument = "dryRun";
         public const string ConfirmedArgument = "confirmed";
         public const string CatalogResourceUri = "catalog://tools";
+        public const string IdempotencyPayloadKeyPrefix = "mcp:idemp:";
+        public const string IdempotencyLockKeySuffix = ":lock";
+        public static string FormatIdempotencyLockKey(string toolName, string clientIdempotencyKey) { throw null!; }
     }
     public enum McpErrorCode
     {
@@ -189,6 +197,26 @@ namespace BuildingBlocks.Mcp
         public System.Threading.Tasks.Task<string?> GetAsync(string key, System.Threading.CancellationToken cancellationToken) { throw null!; }
         public System.Threading.Tasks.Task SetAsync(string key, string payloadJson, System.Threading.CancellationToken cancellationToken) { throw null!; }
     }
+    public sealed class DistributedCacheIdempotencyStore : BuildingBlocks.Mcp.IMcpIdempotencyStore
+    {
+        public DistributedCacheIdempotencyStore(Microsoft.Extensions.Caching.Distributed.IDistributedCache cache, System.TimeSpan? payloadTtl = null) { }
+        public System.Threading.Tasks.Task<string?> GetAsync(string key, System.Threading.CancellationToken cancellationToken) { throw null!; }
+        public System.Threading.Tasks.Task SetAsync(string key, string payloadJson, System.Threading.CancellationToken cancellationToken) { throw null!; }
+    }
+    public sealed class RedisMcpIdempotencyLock : BuildingBlocks.Mcp.IMcpIdempotencyLock
+    {
+        public RedisMcpIdempotencyLock(StackExchange.Redis.IConnectionMultiplexer multiplexer) { }
+        public System.Threading.Tasks.Task<bool> TryAcquireAsync(string key, string ownerToken, System.TimeSpan lease, System.Threading.CancellationToken cancellationToken) { throw null!; }
+        public System.Threading.Tasks.Task<bool> ReleaseAsync(string key, string ownerToken, System.Threading.CancellationToken cancellationToken) { throw null!; }
+    }
+    public sealed class McpIdempotencyOptions
+    {
+        public McpIdempotencyOptions() { }
+        public System.TimeSpan Lease { get { throw null!; } set { } }
+        public System.TimeSpan? PayloadTtl { get { throw null!; } set { } }
+        public System.TimeSpan AcquireWaitBudget { get { throw null!; } set { } }
+        public System.TimeSpan PollDelay { get { throw null!; } set { } }
+    }
     public sealed class NoOpRateLimiter : BuildingBlocks.Mcp.IMcpRateLimiter
     {
         public NoOpRateLimiter() { }
@@ -219,6 +247,8 @@ namespace BuildingBlocks.Mcp
         public BuildingBlocks.Mcp.McpBuilder ScanAssemblyContaining<T>() { throw null!; }
         public BuildingBlocks.Mcp.McpBuilder UseTelemetry(System.Action<BuildingBlocks.Mcp.McpTelemetryOptions>? configure = null) { throw null!; }
         public BuildingBlocks.Mcp.McpBuilder UseMemoryIdempotency(System.TimeSpan? timeToLive = null) { throw null!; }
+        public BuildingBlocks.Mcp.McpBuilder UseDistributedIdempotency(System.Action<BuildingBlocks.Mcp.McpIdempotencyOptions>? configure = null) { throw null!; }
+        public BuildingBlocks.Mcp.McpBuilder UseRedisLock() { throw null!; }
         public BuildingBlocks.Mcp.McpBuilder UseStdioTransport() { throw null!; }
         public BuildingBlocks.Mcp.McpBuilder MapTool<TMessage, TResult>(string name, string description, System.Func<TMessage, BuildingBlocks.Mcp.McpInvokeContext, System.Threading.CancellationToken, System.Threading.Tasks.Task<BuildingBlocks.Mcp.McpResult<TResult>>> handler, System.Action<BuildingBlocks.Mcp.McpToolAttribute>? configure = null) where TMessage : class { throw null!; }
         public BuildingBlocks.Mcp.McpBuilder MapTool<TMessage, TResult>(string name, string description, System.Func<System.IServiceProvider, TMessage, BuildingBlocks.Mcp.McpInvokeContext, System.Threading.CancellationToken, System.Threading.Tasks.Task<BuildingBlocks.Mcp.McpResult<TResult>>> handler, System.Action<BuildingBlocks.Mcp.McpToolAttribute>? configure = null) where TMessage : class { throw null!; }
@@ -227,6 +257,7 @@ namespace BuildingBlocks.Mcp
     public static class McpServiceCollectionExtensions
     {
         public static BuildingBlocks.Mcp.McpBuilder AddBuildingBlocksMcp(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Action<BuildingBlocks.Mcp.McpBuilder>? configure = null) { throw null!; }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddRedisMcpIdempotencyLock(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { throw null!; }
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddMcpFeatureFlagEvaluator(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Func<string, BuildingBlocks.Mcp.McpInvokeContext, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<bool>> evaluator) { throw null!; }
     }
     public sealed class FeatureFlagCallbackOptions

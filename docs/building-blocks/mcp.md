@@ -166,7 +166,7 @@ The invoker **never retries** a write. Idempotency is “same key → same store
 | | Command | Query |
 |--|---------|--------|
 | Default `Idempotent` | `true` | ignored — store is never used |
-| Store registered (`UseMemoryIdempotency` or `IMcpIdempotencyStore`) | client **must** send `idempotencyKey` | no key in schema |
+| Store registered (`UseMemoryIdempotency`, `UseDistributedIdempotency`, or `IMcpIdempotencyStore`) | client **must** send `idempotencyKey` | no key in schema |
 | `Idempotent = false` | no key (lab `demo.echo`) | — |
 
 Without a store, command tools do not require a key (nothing to replay against). Register a store in any host that exposes write tools to agents.
@@ -181,15 +181,44 @@ Agents do not magically inject keys. If the field is required in `inputSchema`, 
 
 ### Store behavior
 
-`o.UseMemoryIdempotency(TimeSpan.FromHours(1))` registers a single in-process `MemoryIdempotencyStore` (optional TTL). Do not also `AddSingleton<IMcpIdempotencyStore>` unless you replace it.
+`o.UseMemoryIdempotency(TimeSpan.FromHours(1))` registers a single in-process `MemoryIdempotencyStore` (optional TTL, process `SemaphoreSlim` wait-and-replay). Do not also `AddSingleton<IMcpIdempotencyStore>` unless you replace it.
 
-Keys are namespaced as `toolName` + separator + client key so `orders.create` and another command cannot collide. Concurrent invokes with the same namespaced key share a `SemaphoreSlim`. Success is serialized to JSON and replayed as `JsonElement` (not `Deserialize<object>`).
+Keys are namespaced as `toolName` + separator + client key so `orders.create` and another command cannot collide. Concurrent invokes with the same namespaced key share a `SemaphoreSlim`. Success is serialized to JSON and replayed as `JsonElement` (not `Deserialize<object>`). Queries never use the store or lock.
 
-Multiple API instances: implement `IMcpIdempotencyStore` (Redis, etc.) and register it as singleton. Memory store is not shared across processes.
+### Distributed (multi-instance)
 
-### Confirmation
+`UseMemoryIdempotency` is process-local. Farms call `o.UseDistributedIdempotency(configure).UseRedisLock()`. Resolving `IMcpInvoker` throws if the lock is missing — unlocked distributed execution is not used. `UseRedisLock` registers MCP `RedisMcpIdempotencyLock` on the host `IConnectionMultiplexer` (does not register Redis). Custom `IMcpIdempotencyLock` remains supported instead of `UseRedisLock`.
 
-`RequireConfirmation = true` (lab `orders.create`) adds required `confirmed: true` in the schema. Agents must set it; the invoker rejects missing confirmation.
+Wait-and-replay (not HTTP Processing/409): Get completed payload → TryAcquire(owner token, lease) → if not acquired, poll Get / retry acquire until `AcquireWaitBudget` → Get again → InvokeCore if still missing → Set on success → Release in `finally`.
+
+| Fact | Meaning |
+|------|---------|
+| Lock is required | `IDistributedCache` Get/Set alone does not serialize in-flight work. Resolving `IMcpInvoker` fails without a lock. |
+| Lease (default 2 minutes) | In-flight safety window, **not** exactly-once. **No renewal in 1.1.0.** Keep it longer than the worst-case successful handler. |
+| `AcquireWaitBudget` (default 30 seconds) | Waiters poll Get / retry acquire. Exhaustion returns MCP `Conflict`; the client should retry (replay if Set completed). This is **not** HTTP 409 Processing. |
+| `PollDelay` (default 20 ms) | Delay between waiter poll attempts. |
+| Lease expiry | Another instance may acquire and execute (overlap is allowed and characterized, not exactly-once). |
+| Crash before Set | A later caller may execute again (at-least-once). |
+| Set after successful InvokeCore fails | The computed success is still returned; persistence failure is logged; a later caller may execute again. |
+| MCP vs HTTP keyspace | Payloads `mcp:idemp:{tool}\u001f{clientKey}`; lock `{payloadKey}:lock`. Not HTTP `Idempotency_*`. |
+| Package boundary | BuildingBlocks.Mcp does not reference BuildingBlocks.Idempotency. Redis: `UseRedisLock` / `RedisMcpIdempotencyLock`. Custom SET NX: register `IMcpIdempotencyLock`. |
+
+```csharp
+o.UseDistributedIdempotency(opts =>
+{
+    opts.Lease = TimeSpan.FromMinutes(2);
+    opts.PayloadTtl = TimeSpan.FromHours(1);
+    opts.AcquireWaitBudget = TimeSpan.FromSeconds(30);
+    opts.PollDelay = TimeSpan.FromMilliseconds(20);
+})
+.UseRedisLock();
+```
+
+### Confirmation (2026 MRTR)
+
+`RequireConfirmation = true` (lab `orders.create`) adds required `confirmed: true` in the schema. The invoker still rejects missing confirmation with `McpErrorCode.ConfirmationRequired`.
+
+On MCP **2026-07-28** (`IsMrtrSupported`), that error is translated by the protocol adapter to SDK `InputRequiredException` / `resultType: input_required`: elicitation for `confirmed`, `requestState` `awaiting-confirmation` (opaque echo, not a server session). Accept sets `McpInvokeContext.Confirmed` and invokes once. Decline returns `ConfirmationRequired` JSON without invoking. MCP **2025-11-25** clients still receive `ConfirmationRequired` JSON. Sending `confirmed: true` skips elicitation on both revisions. Official C# clients auto-retry elicitation when `ElicitationHandler` is set. This is the `confirmed` write gate only — not a general elicitation or OAuth framework.
 
 ### Filters and limits
 

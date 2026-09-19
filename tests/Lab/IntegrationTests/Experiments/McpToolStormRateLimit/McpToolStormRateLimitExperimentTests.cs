@@ -73,6 +73,10 @@ public sealed class McpToolStormRateLimitExperimentTests
 		});
 	}
 
+	/// <summary>
+	/// Exp 16: distinct-key storm hits <see cref="IMcpRateLimiter"/> before Mediator.
+	/// Writes use <c>confirmed: true</c>; this is not an MRTR or idempotency experiment.
+	/// </summary>
 	[Fact]
 	public async Task Distinct_key_mcp_write_storm_is_bounded_by_rate_limiter_before_production()
 	{

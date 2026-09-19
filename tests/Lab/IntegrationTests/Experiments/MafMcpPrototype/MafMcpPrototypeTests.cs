@@ -69,6 +69,7 @@ public sealed class MafMcpPrototypeTests
 		});
 	}
 
+	/// <summary>Transport-only: official client can list FeatureFusion tools without an LLM (no elicitation involved).</summary>
 	[Fact]
 	public async Task Maf_mcp_transport_connects_and_lists_featurefusion_tools()
 	{
@@ -79,6 +80,10 @@ public sealed class MafMcpPrototypeTests
 		names.Should().Contain(["demo.echo", "products.list", OrdersCreateTool, "lab.ping"]);
 	}
 
+	/// <summary>
+	/// Live agent: MAF drives FeatureFusion <c>/mcp</c> and records the tool sequence.
+	/// Agent instructions set <c>confirmed=true</c> so this spike does not exercise MRTR elicitation.
+	/// </summary>
 	[Fact]
 	public async Task Maf_agent_runs_goal_and_records_observed_tool_sequence()
 	{

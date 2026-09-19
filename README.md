@@ -29,6 +29,7 @@ Formerly [FeatureManagement](https://github.com/Maxofpower/FeatureManagement) (G
 ## Table of contents
 
 - [BuildingBlocks](#buildingblocks)
+  - [In-repo (not on NuGet)](#in-repo-not-on-nuget)
   - [How they work together](#how-they-work-together)
   - [BuildingBlocks.Mediator](#buildingblocksmediator)
   - [BuildingBlocks.Mcp](#buildingblocksmcp)
@@ -59,13 +60,25 @@ NuGet packages you can install in **your** hosts. The FeatureFusion API is a sho
 | Package | Version | Role | TFMs |
 |---------|---------|------|------|
 | **[BuildingBlocks.Mediator](https://www.nuget.org/packages/BuildingBlocks.Mediator)** | **1.1.0** | CQRS **Send** + ordered pipeline (`ICommand` / `IQuery`, typed behaviors, opt-in traces + metrics) | net8 / net9 / net10 |
-| **[BuildingBlocks.Mcp](https://www.nuget.org/packages/BuildingBlocks.Mcp)** | **1.0.0** | Message types → MCP tools on the official SDK (deny-by-default, `McpResult`, HTTP + opt-in stdio) | net8 / net9 / net10 |
+| **[BuildingBlocks.Mcp](https://www.nuget.org/packages/BuildingBlocks.Mcp)** | **1.1.0** | Message types → MCP tools on the official SDK (deny-by-default, `McpResult`, HTTP + opt-in stdio; distributed wait-and-replay idempotency, 2026 MRTR confirmation) | net8 / net9 / net10 |
 | **[BuildingBlocks.Idempotency](https://www.nuget.org/packages/BuildingBlocks.Idempotency)** | **1.0.1** | HTTP **Idempotency-Key** — MVC + Minimal API, 2xx envelope replay, ProblemDetails, optional Redis lock, fingerprint, ActivitySource | net8 / net9 / net10 |
 | **[BuildingBlocks.Pagination.EntityFrameworkCore](https://www.nuget.org/packages/BuildingBlocks.Pagination.EntityFrameworkCore)** | **1.1.0** | Typed keyset (cursor) pagination for EF Core (IR bundled): any-width Npgsql row comparison, `NULLS FIRST/LAST`, `HasKeysetIndex` + `NullOrder` | net8 / net9 / net10 |
 | **[BuildingBlocks.Telemetry](https://www.nuget.org/packages/BuildingBlocks.Telemetry)** | **1.0.2** | Config-driven OpenTelemetry (traces, metrics, logs) + `IntegrateMediator` / opt-in `IntegrateMcp` | net8 / net9 / net10 |
 | **[BuildingBlocks.Aspire.Hosting.SigNoz](https://www.nuget.org/packages/BuildingBlocks.Aspire.Hosting.SigNoz)** | **1.0.0** | Local-dev Aspire `AddSigNoz()` + `WithSigNozOtlpExporter` | net10 (AppHost) |
 
 Production apps use **Mediator + Telemetry** and export OTLP to any backend. SigNoz hosting is **local AppHost only**.
+
+### In-repo (not on NuGet)
+
+These BuildingBlocks live in the same solution and are used by the lab. They are **project-reference only** — not published to nuget.org. Do not treat the NuGet table above as the full catalog.
+
+| Project | Role | TFMs |
+|---------|------|------|
+| **[BuildingBlocks.Domain](src/BuildingBlocks/Domain/AGENTS.md)** | Focused DDD primitives: `Entity`, `AggregateRoot`, `ValueObject`, typed `Identity` / `AggregateId` / `EntityId`, `IBusinessRule` | net8 / net9 / net10 |
+| **[BuildingBlocks.Domain.EntityFrameworkCore](src/BuildingBlocks/Domain.EntityFrameworkCore/AGENTS.md)** | EF Core converters for Domain identities and value objects (`HasIdentityConversion` / `HasValueObjectConversion`) | net8 / net9 / net10 |
+| **[BuildingBlocks.Pagination.Dapper](src/BuildingBlocks/Pagination.Dapper/AGENTS.md)** | Same keyset IR as the EF package, over `IDbConnection` (`QueryCursorPageAsync`). Lab/dev adapter — not a nupkg | net8 / net9 / net10 |
+
+Pagination IR (`BuildingBlocks.Pagination`) is **bundled into** `BuildingBlocks.Pagination.EntityFrameworkCore`. Do not pack IR or Dapper separately. Domain is ready as a sibling; it has not earned a nuget.org boundary yet.
 
 ### How they work together
 
@@ -235,6 +248,10 @@ await sender.Send((object)new CreateOrder("SKU-1", 2), ct); // MCP / dynamic
 
 Map **application message types** (commands, queries, DTOs) and **public static Minimal API methods** to MCP tools. The official C# SDK owns the protocol; this package owns the catalog, `McpResult`, filters, and safe defaults. **Not** OpenAPI, **not** MVC controllers (unsupported for now), **not** a SOLID linter.
 
+**What's new in 1.1.0:**
+- **Distributed write idempotency** — `UseDistributedIdempotency` + `UseRedisLock` (wait-and-replay across instances; not HTTP Processing/409). Default 2-minute lease is a safety window with **no renewal**, not exactly-once. Wait-budget exhaustion is MCP `Conflict` (client retries). MCP keys `mcp:idemp:…` are distinct from HTTP `Idempotency_*`. Custom `IMcpIdempotencyLock` still works. This package does not reference `BuildingBlocks.Idempotency`.
+- **2026 MRTR confirmation** — unconfirmed `RequireConfirmation` writes elicit `confirmed` via SDK `InputRequiredException` when the client is MCP `2026-07-28`. Accept invokes; decline does not. `2025-11-25` still returns `ConfirmationRequired` JSON.
+
 ```bash
 dotnet add package BuildingBlocks.Mcp
 ```
@@ -336,7 +353,7 @@ MCP has no HTTP verb on Mediator messages. **Command ≈ POST/PUT**; **Query ≈
 | Schema | `string` + `format: uuid` (hint; host accepts any non-empty string, including ULID) | no key property |
 | Opt out | `Idempotent = false` (lab `demo.echo`) | — |
 
-Register a store with `o.UseMemoryIdempotency(ttl)` (single instance). Multi-instance: implement `IMcpIdempotencyStore` (Redis, etc.). Keys are namespaced per tool; in-flight calls share a lock; success is replayed as `JsonElement`. The library never retries writes. Cursor/Claude fill `idempotencyKey` from the tool schema (they do not inject a key unless it is required). Reuse the same UUID only when retrying the same write. `RequireConfirmation` adds required `confirmed: true`.
+Register a store with `o.UseMemoryIdempotency(ttl)` (single instance, process wait-and-replay). Multi-instance: `o.UseDistributedIdempotency().UseRedisLock()` (host `IDistributedCache` + `IConnectionMultiplexer`; wait-and-replay; 2-minute lease is a safety window, not exactly-once; **no renewal** in 1.1.0). Custom `IMcpIdempotencyLock` instead of `UseRedisLock` is still allowed. Cache Get/Set without a lock is not enough. Wait-budget exhaustion (`AcquireWaitBudget`, default 30 seconds) is MCP `Conflict` — not HTTP 409 Processing; the client should retry. MCP payload keys (`mcp:idemp:…`) are distinct from HTTP `Idempotency_*`. Queries never use this mechanism. The library never retries writes. Cursor/Claude fill `idempotencyKey` from the tool schema (they do not inject a key unless it is required). Reuse the same UUID only when retrying the same write. `RequireConfirmation` still requires `confirmed: true`; MCP `2026-07-28` clients get elicitation, `2025-11-25` stays `ConfirmationRequired` JSON.
 
 Cursor HTTP:
 
@@ -362,7 +379,7 @@ Cursor HTTP:
 [![NuGet](https://img.shields.io/nuget/v/BuildingBlocks.Idempotency.svg?logo=nuget)](https://www.nuget.org/packages/BuildingBlocks.Idempotency)
 [![GitHub Release](https://img.shields.io/github/v/release/Maxofpower/FeatureFusion?filter=idempotency-v*&logo=github&label=GitHub%20Release)](https://github.com/Maxofpower/FeatureFusion/releases?q=idempotency-v)
 
-ASP.NET Core HTTP **Idempotency-Key** for MVC and Minimal API. Host-owned `IDistributedCache`, **2xx** envelope replay, ProblemDetails on conflicts, optional Redis SET NX lock, opt-in method/path/body fingerprint, per-endpoint TTL, optional ActivitySource. Distinct from MCP write idempotency (`UseMemoryIdempotency` / `IMcpIdempotencyStore` above).
+ASP.NET Core HTTP **Idempotency-Key** for MVC and Minimal API. Host-owned `IDistributedCache`, **2xx** envelope replay, ProblemDetails on conflicts, optional Redis SET NX lock, opt-in method/path/body fingerprint, per-endpoint TTL, optional ActivitySource. Distinct from MCP write idempotency (`UseMemoryIdempotency` / `UseDistributedIdempotency` + `IMcpIdempotencyLock` above).
 
 **What's new in 1.0.1:** NuGet package icon; **System.Text.Json** for cache envelope and MVC `ObjectResult` capture (dropped Newtonsoft.Json). No API surface change from 1.0.0.
 
@@ -716,6 +733,7 @@ Install the packages above in your own hosts, **or** clone this repo and run **F
 | Area | What you get |
 |------|----------------|
 | Mediator (CQRS) | **`BuildingBlocks.Mediator`** — used by FeatureFusion handlers |
+| Domain | **`BuildingBlocks.Domain`** + **`Domain.EntityFrameworkCore`** — aggregates / identities (in-repo, not packed) |
 | MCP | **`BuildingBlocks.Mcp`** — opt-in tools (`[McpTool]` on types/methods or `MapTool`) at `/mcp` |
 | Telemetry | **`BuildingBlocks.Telemetry`** in ServiceDefaults; **`BuildingBlocks.Aspire.Hosting.SigNoz`** on AppHost |
 | Event bus | RabbitMQ + transactional outbox/inbox, DLQ, dedup hooks |
@@ -983,6 +1001,7 @@ See [Pagination showcase](#pagination-showcase) for the FeatureFusion catalog (`
 |---------|-------------------|
 | **Mediator / CQRS** | `BuildingBlocks.Mediator` — `ICommand`/`IQuery` Send + pipeline; host handlers in FeatureFusion |
 | **CQRS** | `Features/.../Commands` + `Queries` with dedicated handlers |
+| **DDD primitives** | `BuildingBlocks.Domain` — `Entity` / `AggregateRoot` / `ValueObject` / typed ids (in-repo, not packed) |
 | **Void command** | `ICommand : ICommand<Unit>` — concrete type in pipeline (no Adapter / `IRequest`) |
 | **Decorator** | Pipeline behaviors; EventBus handler decorators in tests |
 | **Singleton** | Cached mediator wrappers / long-lived Redis multiplexer |
@@ -991,7 +1010,7 @@ See [Pagination showcase](#pagination-showcase) for the FeatureFusion catalog (`
 | **Unit of work** | `ResilientTransaction` spanning business write + outbox |
 | **Strategy** | Feature filters & validation styles (endpoint filter vs ValidationBehavior) |
 | **Template method** | `BaseValidator.PostInitialize` |
-| **Keyset pagination** | `BuildingBlocks.Pagination.EntityFrameworkCore` — typed bidirectional cursors |
+| **Keyset pagination** | `BuildingBlocks.Pagination.EntityFrameworkCore` — typed bidirectional cursors; Dapper adapter is in-repo only |
 | **Chain of Responsibility** | Feature toggle rule evaluation; mediator pipeline chain |
 | **Observer / messaging** | RabbitMQ integration events (outbox → bus → handlers) |
 | **Outbox / Inbox** | `TransactionalOutbox` + `OutBoxWorker` |
@@ -1039,9 +1058,10 @@ dotnet test FeatureFusion.sln -c Release
 
 | Project | Notes |
 |---------|--------|
+| `BuildingBlocks.Domain.Tests` | DDD primitives (in-repo; not a nupkg) |
 | `BuildingBlocks.Mediator.Tests` | Package suite on **net8 / net9 / net10** |
 | `BuildingBlocks.Mediator.Analyzers.Tests` | BBM001 / BBM002 |
-| `BuildingBlocks.Mcp.Tests` | Catalog, invoker, endpoint methods, MapTool scoped SP, idempotency, filters |
+| `BuildingBlocks.Mcp.Tests` | Catalog, invoker, endpoint methods, MapTool scoped SP, memory + distributed idempotency, 2026 MRTR protocol HTTP, filters |
 | `BuildingBlocks.Mcp.Analyzers.Tests` | BBMCP001–005 |
 | `BuildingBlocks.Pagination.Tests` | Codec, registry, identifiers (net8 / net9 / net10) |
 | `BuildingBlocks.Pagination.EntityFrameworkCore.Tests` | Sqlite keyset + shadow + projection; Postgres Testcontainers when Docker is available |
