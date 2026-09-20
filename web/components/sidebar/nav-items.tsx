@@ -45,7 +45,7 @@ export function NavItems({
       <SidebarMenu className="gap-2">
         {projects.map((item) => (
           <SidebarMenuItem key={item.name}>
-            <SidebarMenuButton isActive={pathname.includes(item.url)} className="transition-all py-3">
+            <SidebarMenuButton isActive={pathname === item.url} className="transition-all py-3">
               <Link href={item.url} className="flex items-center gap-2 w-full ">
                 <item.icon />
                 <span className="group-data-[collapsible=icon]:hidden">{item.name}</span>
