@@ -15,7 +15,8 @@ import {
     Settings2,
     SquareTerminal,
     Users,
-    ShoppingCart ,
+    ShoppingCart,
+    Tag,
 } from "lucide-react"
 
 
@@ -48,6 +49,11 @@ const data = {
             name: "Catalog",
             url: APP_ROUTES.CATALOG,
             icon: BookOpen,
+        },
+        {
+            name: "Brands",
+            url: APP_ROUTES.BRANDS,
+            icon: Tag,
         },
         {
             name: "Orders",

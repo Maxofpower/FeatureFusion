@@ -1,4 +1,5 @@
 export const APP_ROUTES = {
   HOME: "/",
-  CATALOG: "/catalog"
+  CATALOG: "/catalog",
+  BRANDS: "/brands"
 } as const;
