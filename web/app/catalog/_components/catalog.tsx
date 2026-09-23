@@ -2,8 +2,10 @@
 
 import { Suspense } from "react"
 import { Card } from "@/components/ui/card"
+import { APP_ROUTES } from "@/lib/constants/routes"
 import { Catalog } from "@/models"
 import { BookOpen } from "lucide-react"
+import Link from "next/link"
 import { CatalogFilters } from "./catalog-filters"
 import { CatalogPagination } from "./catalog-pagination"
 
@@ -38,7 +40,12 @@ export const CatalogPage = (props: Props) => {
                         <div className="grid gap-x-5 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
                             {
                                 props.catalogs.items.map((product) => (
-                                    <article key={product.id} className="group">
+                                    <Link
+                                        key={product.id}
+                                        href={APP_ROUTES.catalogProduct(product.slug)}
+                                        className="group"
+                                    >
+                                    <article>
                                         <div className={`relative aspect-square overflow-hidden rounded-[1.25rem]`}>
                                             <img src="/image/apple.jpeg" alt={product.name} className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" />
                                         </div>
@@ -50,6 +57,7 @@ export const CatalogPage = (props: Props) => {
                                         <p className="mt-2 max-w-xs text-sm leading-6 text-muted-foreground">{product.shortDescription}</p>
 
                                     </article>
+                                    </Link>
                                 ))
 
                             }
