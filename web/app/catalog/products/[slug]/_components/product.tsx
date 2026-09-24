@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Skeleton } from "@/components/ui/skeleton"
 import { APP_ROUTES } from "@/lib/constants/routes"
 import type { ProductDetail } from "@/models"
 import { ArrowLeft, ShoppingBag } from "lucide-react"
@@ -38,38 +37,13 @@ export const ProductPage = (props: Props) => {
     return (
         <div className="bg-background">
             <main className="px-4 py-8 sm:px-6 lg:px-8 flex flex-col gap-6">
-                <Breadcrumb>
-                    <BreadcrumbList>
-                        <BreadcrumbItem>
-                            <BreadcrumbLink render={<Link href={APP_ROUTES.CATALOG} />}>
-                                Catalog
-                            </BreadcrumbLink>
-                        </BreadcrumbItem>
-                        <BreadcrumbSeparator className="hidden md:block" />
-                        <BreadcrumbItem>
-                            <BreadcrumbLink
-                                render={
-                                    <Link
-                                        href={`${APP_ROUTES.CATALOG}?category=${product.categorySlug}`}
-                                    />
-                                }
-                            >
-                                {product.categoryName}
-                            </BreadcrumbLink>
-                        </BreadcrumbItem>
-                        <BreadcrumbSeparator className="hidden md:block" />
-                        <BreadcrumbItem>
-                            <BreadcrumbPage>{product.name}</BreadcrumbPage>
-                        </BreadcrumbItem>
-                    </BreadcrumbList>
-                </Breadcrumb>
 
                 <div className="grid gap-x-8 gap-y-6 lg:grid-cols-2">
-                    {/* Gallery */}
+
                     <div className="flex flex-col gap-4">
                         <div className="relative aspect-square overflow-hidden rounded-[1.25rem] bg-muted">
                             <img
-                                src={resolveImage(selectedImage)}
+                                src="/image/apple.jpeg"
                                 alt={product.name}
                                 className="h-full w-full object-cover"
                             />
@@ -88,14 +62,13 @@ export const ProductPage = (props: Props) => {
                                         type="button"
                                         onClick={() => setSelectedImage(image.url)}
                                         aria-label={image.altText}
-                                        className={`relative aspect-square overflow-hidden rounded-xl bg-muted ring-2 transition-all outline-none focus-visible:ring-ring ${
-                                            selectedImage === image.url
+                                        className={`relative aspect-square overflow-hidden rounded-xl bg-muted ring-2 transition-all outline-none focus-visible:ring-ring ${selectedImage === image.url
                                                 ? "ring-foreground"
                                                 : "ring-transparent hover:ring-border"
-                                        }`}
+                                            }`}
                                     >
                                         <img
-                                            src={resolveImage(image.url)}
+                                            src="/image/apple.jpeg"
                                             alt={image.altText}
                                             className="h-full w-full object-cover"
                                         />
@@ -109,14 +82,14 @@ export const ProductPage = (props: Props) => {
                     <div className="flex flex-col gap-4">
                         <div className="flex items-center gap-2 text-xs uppercase tracking-[0.16em] text-muted-foreground">
                             <Link
-                                href={`${APP_ROUTES.CATALOG}?brand=${product.brandSlug}`}
+                                href="#"
                                 className="transition-colors hover:text-foreground"
                             >
                                 {product.brandName}
                             </Link>
                             <span aria-hidden="true">/</span>
                             <Link
-                                href={`${APP_ROUTES.CATALOG}?category=${product.categorySlug}`}
+                                href="#"
                                 className="transition-colors hover:text-foreground"
                             >
                                 {product.categoryName}
@@ -136,14 +109,12 @@ export const ProductPage = (props: Props) => {
 
                         <div className="flex items-center gap-2 text-sm">
                             <span
-                                className={`inline-flex items-center gap-1.5 font-medium ${
-                                    product.inStock ? "text-foreground" : "text-destructive"
-                                }`}
+                                className={`inline-flex items-center gap-1.5 font-medium ${product.inStock ? "text-foreground" : "text-destructive"
+                                    }`}
                             >
                                 <span
-                                    className={`size-2 rounded-full ${
-                                        product.inStock ? "bg-emerald-500" : "bg-destructive"
-                                    }`}
+                                    className={`size-2 rounded-full ${product.inStock ? "bg-emerald-500" : "bg-destructive"
+                                        }`}
                                 />
                                 {product.inStock ? "In stock" : "Out of stock"}
                             </span>
@@ -158,20 +129,10 @@ export const ProductPage = (props: Props) => {
                             </p>
                         )}
 
-                        <div className="flex gap-2">
-                            <Button size="lg" disabled={!product.inStock} className="flex-1">
-                                <ShoppingBag className="size-4" />
-                                Add to cart
-                            </Button>
-                            <Button
-                                render={<Link href={APP_ROUTES.CATALOG} />}
-                                variant="outline"
-                                size="lg"
-                            >
-                                <ArrowLeft className="size-4" />
-                                Back
-                            </Button>
-                        </div>
+                        {/* <Button size="lg" disabled={!product.inStock} className="flex-1">
+                            <ShoppingBag className="size-4" />
+                            Add to cart
+                        </Button> */}
 
                         <Separator />
 
@@ -232,7 +193,7 @@ export const ProductPage = (props: Props) => {
                                     <article>
                                         <div className="relative aspect-square overflow-hidden rounded-[1.25rem] bg-muted">
                                             <img
-                                                src={resolveImage(item.primaryImageUrl)}
+                                                src="/image/apple.jpeg"
                                                 alt={item.name}
                                                 className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
                                             />
@@ -249,43 +210,6 @@ export const ProductPage = (props: Props) => {
                         </div>
                     </section>
                 )}
-            </main>
-        </div>
-    )
-}
-
-export const ProductPageSkeleton = () => {
-    return (
-        <div className="bg-background">
-            <main className="px-4 py-8 sm:px-6 lg:px-8 flex flex-col gap-6">
-                <Skeleton className="h-5 w-64" />
-
-                <div className="grid gap-x-8 gap-y-6 lg:grid-cols-2">
-                    <div className="flex flex-col gap-4">
-                        <Skeleton className="aspect-square rounded-[1.25rem]" />
-                        <div className="grid grid-cols-5 gap-3">
-                            {Array.from({ length: 5 }).map((_, index) => (
-                                <Skeleton key={index} className="aspect-square rounded-xl" />
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="flex flex-col gap-4">
-                        <Skeleton className="h-4 w-48" />
-                        <Skeleton className="h-9 w-3/4" />
-                        <Skeleton className="h-4 w-40" />
-                        <Skeleton className="h-8 w-32" />
-                        <Skeleton className="h-5 w-44" />
-                        <Skeleton className="h-16 w-full" />
-                        <div className="flex gap-2">
-                            <Skeleton className="h-9 flex-1" />
-                            <Skeleton className="h-9 w-24" />
-                        </div>
-                        <Separator />
-                        <Skeleton className="h-6 w-40" />
-                        <Skeleton className="h-40 w-full" />
-                    </div>
-                </div>
             </main>
         </div>
     )
