@@ -17,7 +17,8 @@ import {
     Users,
     ShoppingCart,
     Tag,
-    CirclePile
+    CirclePile,
+    PackageSearch
 } from "lucide-react"
 
 
@@ -60,6 +61,11 @@ const data = {
             name: "Categories",
             url: APP_ROUTES.CATEGORIES,
             icon: CirclePile,
+        },
+        {
+            name: "Products",
+            url: APP_ROUTES.PRODUCTS,
+            icon: PackageSearch ,
         },
         {
             name: "Orders",
