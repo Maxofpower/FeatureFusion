@@ -1,6 +1,5 @@
 'use client'
 
-
 import { AppSidebar } from "@/components/sidebar/sidebar";
 import {
     Breadcrumb,
@@ -11,15 +10,36 @@ import {
     BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
     SidebarInset,
     SidebarProvider,
     SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Fragment } from "react/jsx-runtime";
-import { getProductName } from "./action";
+import { getOrderNumber, getProductName } from "./action";
+
+type DynamicType = "product" | "order";
+
+const getDynamicType = (
+    segments: string[],
+    index: number
+): DynamicType | null => {
+    if (segments[0] === "catalog" && segments[1] === "products" && index === 2) {
+        return "product";
+    }
+    if (segments[0] === "orders" && index === 1) {
+        return "order";
+    }
+    return null;
+};
+
+const makeKey = (type: DynamicType, value: string) => `${type}:${value}`;
+
+const formatSegment = (segment: string) =>
+    segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " ");
 
 export const SideBarProvider = ({
     children,
@@ -28,57 +48,72 @@ export const SideBarProvider = ({
 }) => {
     const pathname = usePathname();
 
-    const [productName, setProductName] = useState<string>();
+    const [names, setNames] = useState<Map<string, string | null>>(new Map());
+
+
+    const inFlight = useRef<Set<string>>(new Set());
 
     useEffect(() => {
-        const getName = async () => {
-            const segments = pathname.split("/").filter(Boolean);
+        const segments = pathname.split("/").filter(Boolean);
 
-            if (
-                segments[0] !== "catalog" ||
-                segments[1] !== "product" ||
-                !segments[2]
-            ) {
-                setProductName(undefined);
-                return;
-            }
+        segments.forEach((segment, index) => {
+            const type = getDynamicType(segments, index);
+            if (!type) return;
 
-            const slug = segments[2];
+            const key = makeKey(type, segment);
+            if (names.has(key) || inFlight.current.has(key)) return;
 
-            const name = await getProductName(
-                `slug=${encodeURIComponent(slug)}`
-            );
+            inFlight.current.add(key);
 
-            setProductName(name);
-        };
+            const load = async () => {
+                let name: string | undefined;
 
-        getName();
+                try {
+                    name =
+                        type === "product"
+                            ? await getProductName(segment)
+                            : await getOrderNumber(segment);
+                } catch (error) {
+                    console.error("Failed to fetch breadcrumb label:", error);
+                }
+
+                inFlight.current.delete(key);
+                setNames((prev) => new Map(prev).set(key, name ?? null));
+            };
+
+            load();
+        });
+
     }, [pathname]);
 
-    const breadcrumbs = useMemo(() => {
+    const generateBreadcrumbs = () => {
         const segments = pathname.split("/").filter(Boolean);
 
         return segments.map((segment, index) => {
             const href = "/" + segments.slice(0, index + 1).join("/");
+            const isLast = index === segments.length - 1;
 
-            const isProductSlug =
-                segments[0] === "catalog" &&
-                segments[1] === "product" &&
-                index === 2;
+            let label: React.ReactNode = formatSegment(segment);
 
-            const label =
-                isProductSlug && productName
-                    ? productName
-                    : segment.charAt(0).toUpperCase() +
-                      segment.slice(1).replace(/-/g, " ");
+            const type = getDynamicType(segments, index);
 
-            return {
-                href,
-                label,
-                isLast: index === segments.length - 1,
-            };
+            if (type) {
+                const key = makeKey(type, segment);
+
+                if (!names.has(key)) {
+
+                    label = <Skeleton className="h-4 w-24 inline-block" />;
+                } else {
+
+                    label = names.get(key) ?? label;
+                }
+            }
+
+            return { label, href, isLast };
         });
-    }, [pathname, productName]);
+    };
+
+    const breadcrumbs = generateBreadcrumbs();
 
     return (
         <SidebarProvider>
@@ -98,9 +133,7 @@ export const SideBarProvider = ({
                             <BreadcrumbList>
                                 {breadcrumbs.map((item, index) => (
                                     <Fragment key={item.href}>
-                                        {index > 0 && (
-                                            <BreadcrumbSeparator />
-                                        )}
+                                        {index > 0 && <BreadcrumbSeparator />}
 
                                         <BreadcrumbItem>
                                             {item.isLast ? (

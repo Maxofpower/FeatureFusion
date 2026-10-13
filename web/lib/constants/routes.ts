@@ -7,6 +7,7 @@ export const APP_ROUTES = {
   PRODUCTS: "/products",
   ORDERS: "/orders",
   CUSTOMERS: "/customers",
+  order: (id: number | string) => `/orders/${id}`,
 } as const;
 
 export const API_ROUTES = {

@@ -28,3 +28,29 @@ export interface OrderFilterValues {
 export interface OrderQueryFilters extends OrderFilterValues {
     cursor: string;
 }
+
+export interface OrderLine {
+    productId: number;
+    productName: string | null;
+    productSlug: string | null;
+    productSku: string | null;
+    quantity: number;
+    unitPrice: number;
+    lineTotal: number;
+}
+
+export interface OrderDetail {
+    id: number;
+    orderNumber: string;
+    customerId: number;
+    customerEmail: string | null;
+    customerDisplayName: string | null;
+    status: string;
+    subtotal: number;
+    taxAmount: number;
+    shippingAmount: number;
+    total: number;
+    currency: string;
+    createdAt: string;
+    lines: OrderLine[];
+}

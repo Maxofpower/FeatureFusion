@@ -1,7 +1,8 @@
 'use client'
 
 import { Suspense } from "react"
-import { Badge } from "@/components/ui/badge"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Card } from "@/components/ui/card"
 import {
     Table,
@@ -13,8 +14,10 @@ import {
 } from "@/components/ui/table"
 import type { Order, OrderPagedResult, OrderQueryFilters } from "@/models"
 import { ReceiptText } from "lucide-react"
+import { APP_ROUTES } from "@/lib/constants/routes"
 import { OrdersFilters } from "./orders-filters"
 import { OrdersPagination } from "./orders-pagination"
+import { OrderStatusBadge } from "./order-status-badge"
 import { format } from "date-fns"
 
 interface Props {
@@ -22,20 +25,8 @@ interface Props {
     currentFilters: OrderQueryFilters
 }
 
-const STATUS_COLORS: Record<string, string> = {
-    Pending: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-    Placed: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-    Cancelled: "bg-destructive/10 text-destructive dark:bg-destructive/20",
-    PaymentFailed: "bg-destructive/10 text-destructive dark:bg-destructive/20",
-}
-
-const StatusBadge = ({ status }: { status: string }) => (
-    <Badge variant="ghost" className={STATUS_COLORS[status] ?? "bg-muted text-muted-foreground"}>
-        {status}
-    </Badge>
-)
-
 export const OrdersPage = (props: Props) => {
+    const router = useRouter()
     return (
         <div className="bg-background">
             <main className=" px-4 py-8 sm:px-6 lg:px-8 flex flex-col gap-4">
@@ -73,10 +64,23 @@ export const OrdersPage = (props: Props) => {
                                 </TableHeader>
                                 <TableBody>
                                     {props.orders.items.map((order: Order) => (
-                                        <TableRow key={order.id}>
-                                            <TableCell className="font-medium">{order.orderNumber}</TableCell>
+                                        <TableRow
+                                            key={order.id}
+                                            className="cursor-pointer transition-colors hover:bg-muted/50"
+                                            onClick={() => router.push(APP_ROUTES.order(order.id))}
+                                        >
+                                            <TableCell className="font-medium">
+                                                <Link
+                                                    href={APP_ROUTES.order(order.id)}
+                                                    aria-label={`View order ${order.orderNumber}`}
+                                                    className="underline-offset-4 hover:underline"
+                                                    onClick={(event) => event.stopPropagation()}
+                                                >
+                                                    {order.orderNumber}
+                                                </Link>
+                                            </TableCell>
                                             <TableCell>#{order.customerId}</TableCell>
-                                            <TableCell><StatusBadge status={order.status} /></TableCell>
+                                            <TableCell><OrderStatusBadge status={order.status} /></TableCell>
                                             <TableCell className="text-right">{order.lineCount}</TableCell>
                                             <TableCell className="text-right">
                                                 {new Intl.NumberFormat("en-US", {
@@ -85,7 +89,7 @@ export const OrdersPage = (props: Props) => {
                                                 }).format(Number(order.total))}
                                             </TableCell>
                                             <TableCell className="text-right text-muted-foreground">
-                                               {format(order.createdAt, "MMM d, yyyy")}
+                                                {format(order.createdAt, "MMM d, yyyy")}
                                             </TableCell>
                                         </TableRow>
                                     ))}
