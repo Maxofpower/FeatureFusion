@@ -74,7 +74,7 @@ const data = {
         },
         {
             name: "Customers",
-            url: "#",
+            url: APP_ROUTES.CUSTOMERS,
             icon: Users,
         },
     ],

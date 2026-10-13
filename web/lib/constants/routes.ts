@@ -6,6 +6,7 @@ export const APP_ROUTES = {
   CATEGORIES: "/categories",
   PRODUCTS: "/products",
   ORDERS: "/orders",
+  CUSTOMERS: "/customers",
   order: (id: number | string) => `/orders/${id}`,
 } as const;
 
@@ -15,4 +16,5 @@ export const API_ROUTES = {
   CATEGORIES: "/catalog/categories",
   PRODUCTS: "/products-page",
   ORDERS: "/orders",
+  CUSTOMERS: "/customers",
 } as const;
