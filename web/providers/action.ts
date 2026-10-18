@@ -2,7 +2,7 @@
 
 import { API_ROUTES } from "@/lib/constants/routes"
 import { fetcher } from "@/lib/fetcher"
-import { OrderDetail, ProductDetail } from "@/models"
+import { CustomerDetail, OrderDetail, ProductDetail } from "@/models"
 
 export const getProductName = async (query: string) => {
     try {
@@ -28,6 +28,21 @@ export const getOrderNumber = async (orderId: string) => {
         }
 
         return getOrder.data.orderNumber
+    } catch (error) {
+
+        return undefined
+    }
+}
+
+export const getCustomerName = async (customerId: string) => {
+    try {
+        const getCustomer = await fetcher<CustomerDetail>(`${API_ROUTES.CUSTOMERS}/${encodeURIComponent(customerId)}`)
+
+        if (!getCustomer.success || getCustomer.data === undefined) {
+            return undefined
+        }
+
+        return getCustomer.data.displayName
     } catch (error) {
 
         return undefined
