@@ -19,9 +19,9 @@ import {
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Fragment } from "react/jsx-runtime";
-import { getOrderNumber, getProductName } from "./action";
+import { getCustomerName, getOrderNumber, getProductName } from "./action";
 
-type DynamicType = "product" | "order";
+type DynamicType = "product" | "order" | "customer";
 
 const getDynamicType = (
     segments: string[],
@@ -32,6 +32,9 @@ const getDynamicType = (
     }
     if (segments[0] === "orders" && index === 1) {
         return "order";
+    }
+    if (segments[0] === "customers" && index === 1) {
+        return "customer";
     }
     return null;
 };
@@ -69,10 +72,13 @@ export const SideBarProvider = ({
                 let name: string | undefined;
 
                 try {
-                    name =
-                        type === "product"
-                            ? await getProductName(segment)
-                            : await getOrderNumber(segment);
+                    if (type === "product") {
+                        name = await getProductName(segment);
+                    } else if (type === "order") {
+                        name = await getOrderNumber(segment);
+                    } else {
+                        name = await getCustomerName(segment);
+                    }
                 } catch (error) {
                     console.error("Failed to fetch breadcrumb label:", error);
                 }

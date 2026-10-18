@@ -39,13 +39,26 @@ export function NavItems({
 }) {
   const { isMobile } = useSidebar()
 
+
+  const pathnameArray = pathname.split('/')
+
+  const isAcitve = (url: string) => {
+    if (pathname !== "/") {
+      return url.includes(pathnameArray[1])
+    }
+
+    if (pathname === "/" && url === "/") {
+      return true
+    }
+  }
+
   return (
     <SidebarGroup>
 
       <SidebarMenu className="gap-2">
         {projects.map((item) => (
           <SidebarMenuItem key={item.name}>
-            <SidebarMenuButton isActive={pathname === item.url} className="transition-all py-3">
+            <SidebarMenuButton isActive={isAcitve(item.url)}>
               <Link href={item.url} className="flex items-center gap-2 w-full ">
                 <item.icon />
                 <span className="group-data-[collapsible=icon]:hidden">{item.name}</span>

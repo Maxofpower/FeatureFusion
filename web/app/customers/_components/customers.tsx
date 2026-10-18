@@ -1,6 +1,8 @@
 'use client'
 
 import { Suspense } from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Card } from "@/components/ui/card"
 import {
     Table,
@@ -12,6 +14,7 @@ import {
 } from "@/components/ui/table"
 import type { Customer, CustomerPagedResult, CustomerQueryFilters } from "@/models"
 import { Users } from "lucide-react"
+import { APP_ROUTES } from "@/lib/constants/routes"
 import { CustomersFilters } from "./customers-filters"
 import { CustomersPagination } from "./customers-pagination"
 import { format } from "date-fns"
@@ -22,6 +25,7 @@ interface Props {
 }
 
 export const CustomersPage = (props: Props) => {
+    const router = useRouter()
     return (
         <div className="bg-background">
             <main className=" px-4 py-8 sm:px-6 lg:px-8 flex flex-col gap-4">
@@ -51,9 +55,31 @@ export const CustomersPage = (props: Props) => {
                                 </TableHeader>
                                 <TableBody>
                                     {props.customers.items.map((customer: Customer) => (
-                                        <TableRow key={customer.id}>
-                                            <TableCell className="text-muted-foreground">#{customer.id}</TableCell>
-                                            <TableCell className="font-medium">{customer.displayName}</TableCell>
+                                        <TableRow
+                                            key={customer.id}
+                                            className="cursor-pointer transition-colors hover:bg-muted/50"
+                                            onClick={() => router.push(APP_ROUTES.customer(customer.id))}
+                                        >
+                                            <TableCell className="text-muted-foreground">
+                                                <Link
+                                                    href={APP_ROUTES.customer(customer.id)}
+                                                    aria-label={`View customer ${customer.displayName}`}
+                                                    className="underline-offset-4 hover:underline"
+                                                    onClick={(event) => event.stopPropagation()}
+                                                >
+                                                    #{customer.id}
+                                                </Link>
+                                            </TableCell>
+                                            <TableCell className="font-medium">
+                                                <Link
+                                                    href={APP_ROUTES.customer(customer.id)}
+                                                    aria-label={`View customer ${customer.displayName}`}
+                                                    className="underline-offset-4 hover:underline"
+                                                    onClick={(event) => event.stopPropagation()}
+                                                >
+                                                    {customer.displayName}
+                                                </Link>
+                                            </TableCell>
                                             <TableCell>{customer.email}</TableCell>
                                             <TableCell className="text-right text-muted-foreground">
                                                 {format(customer.createdAt, "MMM d, yyyy")}
